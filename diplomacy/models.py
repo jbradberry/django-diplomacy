@@ -1,9 +1,19 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+SEASON_CHOICES = (
+    ('S', 'Spring'),
+    ('SR', 'Spring Retreat'),
+    ('F', 'Fall'),
+    ('FR', 'Fall Retreat'),
+    ('FB', 'Fall Build')
+    )
+
 class Game(models.Model):
     name = models.CharField(max_length=100)
     owner = models.ForeignKey(User)
+    year = models.PositiveIntegerField()
+    season = models.CharField(max_length=2, choices=SEASON_CHOICES)
 
 class Ambassador(models.Model):
     user = models.ForeignKey(User)
@@ -37,13 +47,6 @@ class Unit(models.Model):
     subregion = models.ForeignKey(Subregion)
 
 class Order(models.Model):
-    SEASON_CHOICES = (
-        ('S', 'Spring'),
-        ('SR', 'Spring Retreat'),
-        ('F', 'Fall'),
-        ('FR', 'Fall Retreat'),
-        ('FB', 'Fall Build')
-        )
     ACTION_CHOICES = (
         ('H', 'Hold'),
         ('M', 'Move'),
