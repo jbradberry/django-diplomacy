@@ -24,10 +24,7 @@ class Subregion(models.Model):
     territory = models.ForeignKey(Territory)
     subname = models.CharField(max_length=10, blank=True)
     type = models.CharField(max_length=1, choices=SUBREGION_CHOICES)
-
-class Border(models.Model):
-    region1 = models.ForeignKey(Subregion)
-    region2 = models.ForeignKey(Subregion)
+    borders = models.ManyToManyField("self")
 
 class Unit(models.Model):
     UNIT_CHOICES = (
