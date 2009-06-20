@@ -2,13 +2,13 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class Game(models.Model):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=100)
     owner = models.ForeignKey(User)
 
 class Ambassador(models.Model):
     user = models.ForeignKey(User)
     game = models.ForeignKey(Game)
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=100)
     country = models.CharField(max_length=30, blank=True)
 
 class Territory(models.Model):
