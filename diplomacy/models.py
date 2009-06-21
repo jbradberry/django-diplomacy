@@ -21,21 +21,24 @@ class Ambassador(models.Model):
     name = models.CharField(max_length=100)
     country = models.CharField(max_length=30, blank=True)
 
-class Territory(models.Model):
-    game = models.ForeignKey(Game)
+class MTerritory(models.Model):
     name = models.CharField(max_length=30)
     is_supply = models.BooleanField()
-    owner = models.ForeignKey(Ambassador, null=True)
-
-class Subregion(models.Model):
+    
+class MSubregion(models.Model):
     SUBREGION_CHOICES = (
         ('L', 'Land'),
         ('S', 'Sea')
         )
-    territory = models.ForeignKey(Territory)
+    mterritory = models.ForeignKey(MTerritory)
     subname = models.CharField(max_length=10, blank=True)
     type = models.CharField(max_length=1, choices=SUBREGION_CHOICES)
     borders = models.ManyToManyField("self")
+
+class Territory(models.Model):
+    mterritory = models.ForeignKey(MTerritory)
+    game = models.ForeignKey(Game)
+    owner = models.ForeignKey(Ambassador, null=True)
 
 class Unit(models.Model):
     UNIT_CHOICES = (
@@ -44,7 +47,7 @@ class Unit(models.Model):
         )
     owner = models.ForeignKey(Ambassador)
     type = models.CharField(max_length=1, choices=UNIT_CHOICES)
-    subregion = models.ForeignKey(Subregion)
+    subregion = models.ForeignKey(MSubregion)
 
 class Order(models.Model):
     ACTION_CHOICES = (
