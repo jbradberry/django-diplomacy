@@ -12,6 +12,7 @@ SEASON_CHOICES = (
 class Game(models.Model):
     name = models.CharField(max_length=100)
     owner = models.ForeignKey(User)
+    created = models.DateTimeField(auto_now_add=True)
     year = models.PositiveIntegerField()
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
 
