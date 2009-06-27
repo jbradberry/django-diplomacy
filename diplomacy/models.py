@@ -9,9 +9,15 @@ SEASON_CHOICES = (
     ('FB', 'Fall Build')
     )
 
+class Scenario(models.Model):
+    name = models.CharField(max_length=100)
+    year = models.PositiveIntegerField()
+    season = models.CharField(max_length=2, choices=SEASON_CHOICES)
+
 class Game(models.Model):
     name = models.CharField(max_length=100)
     owner = models.ForeignKey(User)
+    scenario = models.ForeignKey(Scenario)
     created = models.DateTimeField(auto_now_add=True)
     year = models.PositiveIntegerField()
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
@@ -20,11 +26,13 @@ class Ambassador(models.Model):
     user = models.ForeignKey(User)
     game = models.ForeignKey(Game)
     name = models.CharField(max_length=100)
-    country = models.CharField(max_length=30, blank=True)
+    power = models.CharField(max_length=30, blank=True)
 
 class MTerritory(models.Model):
     name = models.CharField(max_length=30)
     is_supply = models.BooleanField()
+    scenario = models.ForeignKey(Scenario)
+    owners = models.ManyToManyField(Ambassador)
     
 class MSubregion(models.Model):
     SUBREGION_CHOICES = (
@@ -36,19 +44,20 @@ class MSubregion(models.Model):
     type = models.CharField(max_length=1, choices=SUBREGION_CHOICES)
     borders = models.ManyToManyField("self")
 
-class Territory(models.Model):
-    mterritory = models.ForeignKey(MTerritory)
-    game = models.ForeignKey(Game)
-    owner = models.ForeignKey(Ambassador, null=True)
+UNIT_CHOICES = (
+    ('A', 'Army'),
+    ('F', 'Fleet')
+    )
 
 class Unit(models.Model):
-    UNIT_CHOICES = (
-        ('A', 'Army'),
-        ('F', 'Fleet')
-        )
     owner = models.ForeignKey(Ambassador)
     type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(MSubregion)
+
+class MUnit(models.Model):
+    type = models.CharField(max_length=1, choices=UNIT_CHOICES)
+    subregion = models.ForeignKey(MSubregion)
+    
 
 class Order(models.Model):
     ACTION_CHOICES = (
@@ -61,7 +70,7 @@ class Order(models.Model):
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES)
     actor = models.ForeignKey(Unit)
-    target = models.ForeignKey(Territory, null=True,
+    target = models.ForeignKey(MTerritory, null=True,
                                related_name='targets')
-    destination = models.ForeignKey(Territory, null=True,
+    destination = models.ForeignKey(MTerritory, null=True,
                                     related_name='destinations')
