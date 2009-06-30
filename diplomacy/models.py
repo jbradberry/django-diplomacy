@@ -9,40 +9,50 @@ SEASON_CHOICES = (
     ('FB', 'Fall Build')
     )
 
-class Scenario(models.Model):
-    name = models.CharField(max_length=100)
-    year = models.PositiveIntegerField()
-    season = models.CharField(max_length=2, choices=SEASON_CHOICES)
-
 class Game(models.Model):
+    STATE_CHOICES = (
+        ('S', 'Setup'),
+        ('A', 'Active'),
+        ('P', 'Paused'),
+        ('F', 'Finished')
+        )
     name = models.CharField(max_length=100)
     owner = models.ForeignKey(User)
-    scenario = models.ForeignKey(Scenario)
     created = models.DateTimeField(auto_now_add=True)
+    state = models.CharField(max_length=1, choices=STATE_CHOICES)
     year = models.PositiveIntegerField()
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
+    requests = models.ManyToManyField(User, related_name='requests')
 
-class Ambassador(models.Model):
-    user = models.ForeignKey(User)
+class Turn(models.Model):
     game = models.ForeignKey(Game)
-    name = models.CharField(max_length=100)
-    power = models.CharField(max_length=30, blank=True)
+    year = models.PositiveIntegerField()
+    season = models.CharField(max_length=2, choices=SEASON_CHOICES)
+    generated = models.DateTimeField(auto_now_add=True)
 
-class MTerritory(models.Model):
+class Power(models.Model):
+    name = models.CharField(max_length=20)
+
+class Territory(models.Model):
     name = models.CharField(max_length=30)
     is_supply = models.BooleanField()
-    scenario = models.ForeignKey(Scenario)
-    owners = models.ManyToManyField(Ambassador)
     
-class MSubregion(models.Model):
+class Subregion(models.Model):
     SUBREGION_CHOICES = (
         ('L', 'Land'),
         ('S', 'Sea')
         )
-    mterritory = models.ForeignKey(MTerritory)
+    territory = models.ForeignKey(Territory)
     subname = models.CharField(max_length=10, blank=True)
     type = models.CharField(max_length=1, choices=SUBREGION_CHOICES)
     borders = models.ManyToManyField("self")
+
+class Ambassador(models.Model):
+    name = models.CharField(max_length=100)
+    user = models.ForeignKey(User)
+    game = models.ForeignKey(Game)
+    power = models.ForeignKey(Power, null=True)
+    owns = models.ManyToManyField(Territory)
 
 UNIT_CHOICES = (
     ('A', 'Army'),
@@ -52,12 +62,7 @@ UNIT_CHOICES = (
 class Unit(models.Model):
     owner = models.ForeignKey(Ambassador)
     type = models.CharField(max_length=1, choices=UNIT_CHOICES)
-    subregion = models.ForeignKey(MSubregion)
-
-class MUnit(models.Model):
-    type = models.CharField(max_length=1, choices=UNIT_CHOICES)
-    subregion = models.ForeignKey(MSubregion)
-    
+    subregion = models.ForeignKey(Subregion)
 
 class Order(models.Model):
     ACTION_CHOICES = (
@@ -70,7 +75,7 @@ class Order(models.Model):
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES)
     actor = models.ForeignKey(Unit)
-    target = models.ForeignKey(MTerritory, null=True,
+    target = models.ForeignKey(Territory, null=True,
                                related_name='targets')
-    destination = models.ForeignKey(MTerritory, null=True,
+    destination = models.ForeignKey(Territory, null=True,
                                     related_name='destinations')
