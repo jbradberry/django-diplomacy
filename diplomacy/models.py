@@ -19,9 +19,9 @@ class Game(models.Model):
     name = models.CharField(max_length=100)
     owner = models.ForeignKey(User)
     created = models.DateTimeField(auto_now_add=True)
-    state = models.CharField(max_length=1, choices=STATE_CHOICES)
-    year = models.PositiveIntegerField()
-    season = models.CharField(max_length=2, choices=SEASON_CHOICES)
+    state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
+    year = models.PositiveIntegerField(default=1901)
+    season = models.CharField(max_length=2, choices=SEASON_CHOICES, default='S')
     requests = models.ManyToManyField(User, related_name='requests')
 
 class Turn(models.Model):
