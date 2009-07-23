@@ -20,8 +20,6 @@ class Game(models.Model):
     owner = models.ForeignKey(User)
     created = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
-    year = models.PositiveIntegerField(default=1901)
-    season = models.CharField(max_length=2, choices=SEASON_CHOICES, default='S')
     requests = models.ManyToManyField(User, related_name='requests')
 
 class Turn(models.Model):
@@ -35,6 +33,7 @@ class Power(models.Model):
 
 class Territory(models.Model):
     name = models.CharField(max_length=30)
+    power = models.ForeignKey(Power, null=True)
     is_supply = models.BooleanField()
     
 class Subregion(models.Model):
@@ -42,6 +41,7 @@ class Subregion(models.Model):
         ('L', 'Land'),
         ('S', 'Sea')
         )
+    game = models.ForeignKey(Game)
     territory = models.ForeignKey(Territory)
     subname = models.CharField(max_length=10, blank=True)
     type = models.CharField(max_length=1, choices=SUBREGION_CHOICES)
@@ -71,8 +71,7 @@ class Order(models.Model):
         ('S', 'Support'),
         ('C', 'Convoy')
         )
-    year = models.PositiveIntegerField()
-    season = models.CharField(max_length=2, choices=SEASON_CHOICES)
+    turn = models.ForeignKey(Turn)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES)
     actor = models.ForeignKey(Unit)
     target = models.ForeignKey(Territory, null=True,
