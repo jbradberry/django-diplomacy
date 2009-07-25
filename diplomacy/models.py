@@ -19,6 +19,7 @@ class Game(models.Model):
     name = models.CharField(max_length=100)
     owner = models.ForeignKey(User)
     created = models.DateTimeField(auto_now_add=True)
+    started = models.DateTimeField(null=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
     requests = models.ManyToManyField(User, related_name='requests')
 
@@ -35,17 +36,22 @@ class Territory(models.Model):
     name = models.CharField(max_length=30)
     power = models.ForeignKey(Power, null=True)
     is_supply = models.BooleanField()
+
+UNIT_CHOICES = (
+    ('A', 'Army'),
+    ('F', 'Fleet')
+    )
     
 class Subregion(models.Model):
     SUBREGION_CHOICES = (
         ('L', 'Land'),
         ('S', 'Sea')
         )
-    game = models.ForeignKey(Game)
     territory = models.ForeignKey(Territory)
     subname = models.CharField(max_length=10, blank=True)
-    type = models.CharField(max_length=1, choices=SUBREGION_CHOICES)
+    sr_type = models.CharField(max_length=1, choices=SUBREGION_CHOICES)
     borders = models.ManyToManyField("self")
+    u_type = models.CharField(max_length=1, choices=UNIT_CHOICES, blank=True)
 
 class Ambassador(models.Model):
     name = models.CharField(max_length=100)
@@ -54,14 +60,9 @@ class Ambassador(models.Model):
     power = models.ForeignKey(Power, null=True)
     owns = models.ManyToManyField(Territory)
 
-UNIT_CHOICES = (
-    ('A', 'Army'),
-    ('F', 'Fleet')
-    )
-
 class Unit(models.Model):
     owner = models.ForeignKey(Ambassador)
-    type = models.CharField(max_length=1, choices=UNIT_CHOICES)
+    u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
 
 class Order(models.Model):
