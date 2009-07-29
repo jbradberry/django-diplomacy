@@ -31,6 +31,7 @@ class Game(models.Model):
     def save(self, force_insert=False, force_update=False):
         if self.old_state == 'S' and self.state == 'A':
             self.started = datetime.datetime.now()
+            Turn(game=self, year=1901, season='S').save()
         super(Game, self).save(force_insert, force_update)
         self.old_state = self.state
 
