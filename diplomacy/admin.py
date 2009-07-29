@@ -2,6 +2,6 @@ from diplomacy.models import Game
 from django.contrib import admin
 
 class GameAdmin(admin.ModelAdmin):
-    fields = ['name', 'owner']
+    fields = ['name', 'owner', 'state']
 
 admin.site.register(Game, GameAdmin)

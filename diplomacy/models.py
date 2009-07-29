@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+import datetime
 
 SEASON_CHOICES = (
     ('S', 'Spring'),
@@ -22,6 +23,16 @@ class Game(models.Model):
     started = models.DateTimeField(null=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
     requests = models.ManyToManyField(User, related_name='requests')
+
+    def __init__(self, *args, **kwargs):
+        super(Game, self).__init__(*args, **kwargs)
+        self.old_state = self.state
+
+    def save(self, force_insert=False, force_update=False):
+        if self.old_state == 'S' and self.state == 'A':
+            self.started = datetime.datetime.now()
+        super(Game, self).save(force_insert, force_update)
+        self.old_state = self.state
 
 class Turn(models.Model):
     game = models.ForeignKey(Game)
