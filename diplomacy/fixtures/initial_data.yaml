@@ -1,0 +1,1211 @@
+- fields: {name: Austria-Hungary}
+  model: diplomacy.power
+  pk: 1
+- fields: {name: England}
+  model: diplomacy.power
+  pk: 2
+- fields: {name: France}
+  model: diplomacy.power
+  pk: 3
+- fields: {name: Germany}
+  model: diplomacy.power
+  pk: 4
+- fields: {name: Italy}
+  model: diplomacy.power
+  pk: 5
+- fields: {name: Russia}
+  model: diplomacy.power
+  pk: 6
+- fields: {name: Turkey}
+  model: diplomacy.power
+  pk: 7
+
+
+- fields: {is_supply: false, name: Bohemia, power: 1}
+  model: diplomacy.territory
+  pk: 1
+- fields: {is_supply: true, name: Budapest, power: 1}
+  model: diplomacy.territory
+  pk: 2
+- fields: {is_supply: false, name: Galicia, power: 1}
+  model: diplomacy.territory
+  pk: 3
+- fields: {is_supply: true, name: Trieste, power: 1}
+  model: diplomacy.territory
+  pk: 4
+- fields: {is_supply: false, name: Tyrolia, power: 1}
+  model: diplomacy.territory
+  pk: 5
+- fields: {is_supply: true, name: Vienna, power: 1}
+  model: diplomacy.territory
+  pk: 6
+- fields: {is_supply: false, name: Clyde, power: 2}
+  model: diplomacy.territory
+  pk: 7
+- fields: {is_supply: true, name: Edinburgh, power: 2}
+  model: diplomacy.territory
+  pk: 8
+- fields: {is_supply: true, name: Liverpool, power: 2}
+  model: diplomacy.territory
+  pk: 9
+- fields: {is_supply: true, name: London, power: 2}
+  model: diplomacy.territory
+  pk: 10
+- fields: {is_supply: false, name: Wales, power: 2}
+  model: diplomacy.territory
+  pk: 11
+- fields: {is_supply: false, name: Yorkshire, power: 2}
+  model: diplomacy.territory
+  pk: 12
+- fields: {is_supply: true, name: Brest, power: 3}
+  model: diplomacy.territory
+  pk: 13
+- fields: {is_supply: false, name: Burgundy, power: 3}
+  model: diplomacy.territory
+  pk: 14
+- fields: {is_supply: false, name: Gascony, power: 3}
+  model: diplomacy.territory
+  pk: 15
+- fields: {is_supply: true, name: Marseilles, power: 3}
+  model: diplomacy.territory
+  pk: 16
+- fields: {is_supply: true, name: Paris, power: 3}
+  model: diplomacy.territory
+  pk: 17
+- fields: {is_supply: false, name: Picardy, power: 3}
+  model: diplomacy.territory
+  pk: 18
+- fields: {is_supply: true, name: Berlin, power: 4}
+  model: diplomacy.territory
+  pk: 19
+- fields: {is_supply: true, name: Kiel, power: 4}
+  model: diplomacy.territory
+  pk: 20
+- fields: {is_supply: true, name: Munich, power: 4}
+  model: diplomacy.territory
+  pk: 21
+- fields: {is_supply: false, name: Prussia, power: 4}
+  model: diplomacy.territory
+  pk: 22
+- fields: {is_supply: false, name: Ruhr, power: 4}
+  model: diplomacy.territory
+  pk: 23
+- fields: {is_supply: false, name: Silesia, power: 4}
+  model: diplomacy.territory
+  pk: 24
+- fields: {is_supply: false, name: Apulia, power: 5}
+  model: diplomacy.territory
+  pk: 25
+- fields: {is_supply: true, name: Naples, power: 5}
+  model: diplomacy.territory
+  pk: 26
+- fields: {is_supply: false, name: Piedmont, power: 5}
+  model: diplomacy.territory
+  pk: 27
+- fields: {is_supply: true, name: Rome, power: 5}
+  model: diplomacy.territory
+  pk: 28
+- fields: {is_supply: false, name: Tuscany, power: 5}
+  model: diplomacy.territory
+  pk: 29
+- fields: {is_supply: true, name: Venice, power: 5}
+  model: diplomacy.territory
+  pk: 30
+- fields: {is_supply: false, name: Finland, power: 6}
+  model: diplomacy.territory
+  pk: 31
+- fields: {is_supply: false, name: Livonia, power: 6}
+  model: diplomacy.territory
+  pk: 32
+- fields: {is_supply: true, name: Moscow, power: 6}
+  model: diplomacy.territory
+  pk: 33
+- fields: {is_supply: true, name: Sevastopol, power: 6}
+  model: diplomacy.territory
+  pk: 34
+- fields: {is_supply: true, name: St. Petersburg, power: 6}
+  model: diplomacy.territory
+  pk: 35
+- fields: {is_supply: false, name: Ukraine, power: 6}
+  model: diplomacy.territory
+  pk: 36
+- fields: {is_supply: true, name: Warsaw, power: 6}
+  model: diplomacy.territory
+  pk: 37
+- fields: {is_supply: true, name: Ankara, power: 7}
+  model: diplomacy.territory
+  pk: 38
+- fields: {is_supply: false, name: Armenia, power: 7}
+  model: diplomacy.territory
+  pk: 39
+- fields: {is_supply: true, name: Constantinople, power: 7}
+  model: diplomacy.territory
+  pk: 40
+- fields: {is_supply: true, name: Smyrna, power: 7}
+  model: diplomacy.territory
+  pk: 41
+- fields: {is_supply: false, name: Syria, power: 7}
+  model: diplomacy.territory
+  pk: 42
+- fields: {is_supply: false, name: Albania, power: null}
+  model: diplomacy.territory
+  pk: 43
+- fields: {is_supply: true, name: Belgium, power: null}
+  model: diplomacy.territory
+  pk: 44
+- fields: {is_supply: true, name: Bulgaria, power: null}
+  model: diplomacy.territory
+  pk: 45
+- fields: {is_supply: true, name: Denmark, power: null}
+  model: diplomacy.territory
+  pk: 46
+- fields: {is_supply: true, name: Greece, power: null}
+  model: diplomacy.territory
+  pk: 47
+- fields: {is_supply: true, name: Holland, power: null}
+  model: diplomacy.territory
+  pk: 48
+- fields: {is_supply: true, name: Norway, power: null}
+  model: diplomacy.territory
+  pk: 49
+- fields: {is_supply: false, name: North Africa, power: null}
+  model: diplomacy.territory
+  pk: 50
+- fields: {is_supply: true, name: Portugal, power: null}
+  model: diplomacy.territory
+  pk: 51
+- fields: {is_supply: true, name: Rumania, power: null}
+  model: diplomacy.territory
+  pk: 52
+- fields: {is_supply: true, name: Serbia, power: null}
+  model: diplomacy.territory
+  pk: 53
+- fields: {is_supply: true, name: Spain, power: null}
+  model: diplomacy.territory
+  pk: 54
+- fields: {is_supply: true, name: Sweden, power: null}
+  model: diplomacy.territory
+  pk: 55
+- fields: {is_supply: true, name: Tunis, power: null}
+  model: diplomacy.territory
+  pk: 56
+- fields: {is_supply: false, name: Adriatic Sea, power: null}
+  model: diplomacy.territory
+  pk: 57
+- fields: {is_supply: false, name: Aegean Sea, power: null}
+  model: diplomacy.territory
+  pk: 58
+- fields: {is_supply: false, name: Baltic Sea, power: null}
+  model: diplomacy.territory
+  pk: 59
+- fields: {is_supply: false, name: Barents Sea, power: null}
+  model: diplomacy.territory
+  pk: 60
+- fields: {is_supply: false, name: Black Sea, power: null}
+  model: diplomacy.territory
+  pk: 61
+- fields: {is_supply: false, name: Eastern Mediterranean, power: null}
+  model: diplomacy.territory
+  pk: 62
+- fields: {is_supply: false, name: English Channel, power: null}
+  model: diplomacy.territory
+  pk: 63
+- fields: {is_supply: false, name: Gulf of Bothnia, power: null}
+  model: diplomacy.territory
+  pk: 64
+- fields: {is_supply: false, name: Gulf of Lyon, power: null}
+  model: diplomacy.territory
+  pk: 65
+- fields: {is_supply: false, name: Helgoland Bight, power: null}
+  model: diplomacy.territory
+  pk: 66
+- fields: {is_supply: false, name: Ionian Sea, power: null}
+  model: diplomacy.territory
+  pk: 67
+- fields: {is_supply: false, name: Irish Sea, power: null}
+  model: diplomacy.territory
+  pk: 68
+- fields: {is_supply: false, name: Mid-Atlantic Ocean, power: null}
+  model: diplomacy.territory
+  pk: 69
+- fields: {is_supply: false, name: North Atlantic Ocean, power: null}
+  model: diplomacy.territory
+  pk: 70
+- fields: {is_supply: false, name: North Sea, power: null}
+  model: diplomacy.territory
+  pk: 71
+- fields: {is_supply: false, name: Norwegian Sea, power: null}
+  model: diplomacy.territory
+  pk: 72
+- fields: {is_supply: false, name: Skagerrak, power: null}
+  model: diplomacy.territory
+  pk: 73
+- fields: {is_supply: false, name: Tyrrhenian Sea, power: null}
+  model: diplomacy.territory
+  pk: 74
+- fields: {is_supply: false, name: Western Mediterranean, power: null}
+  model: diplomacy.territory
+  pk: 75
+
+
+- fields:
+    borders: [3, 5, 6, 21, 24]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 1
+  model: diplomacy.subregion
+  pk: 1
+- fields:
+    borders: [3, 4, 6, 93, 95]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 2
+  model: diplomacy.subregion
+  pk: 2
+- fields:
+    borders: [2, 3, 8, 60, 61, 93]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 3
+  model: diplomacy.subregion
+  pk: 3
+- fields:
+    borders: [3, 7, 8, 50, 72, 95]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 4
+  model: diplomacy.subregion
+  pk: 4
+- fields:
+    borders: [51, 73, 103]
+    init_unit: true
+    sr_type: S
+    subname: ''
+    territory: 4
+  model: diplomacy.subregion
+  pk: 5
+- fields:
+    borders: [2, 5, 8, 50]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 5
+  model: diplomacy.subregion
+  pk: 6
+- fields:
+    borders: [2, 3, 4, 5, 7]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 6
+  model: diplomacy.subregion
+  pk: 7
+- fields:
+    borders: [11, 13]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 7
+  model: diplomacy.subregion
+  pk: 8
+- fields:
+    borders: [14, 116, 119]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 7
+  model: diplomacy.subregion
+  pk: 9
+- fields:
+    borders: [9, 13, 19]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 8
+  model: diplomacy.subregion
+  pk: 10
+- fields:
+    borders: [20, 118, 119]
+    init_unit: true
+    sr_type: S
+    subname: ''
+    territory: 8
+  model: diplomacy.subregion
+  pk: 11
+- fields:
+    borders: [9, 11, 17, 19]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 9
+  model: diplomacy.subregion
+  pk: 12
+- fields:
+    borders: [10, 18, 114, 116]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 9
+  model: diplomacy.subregion
+  pk: 13
+- fields:
+    borders: [17, 19]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 10
+  model: diplomacy.subregion
+  pk: 14
+- fields:
+    borders: [18, 20, 109, 118]
+    init_unit: true
+    sr_type: S
+    subname: ''
+    territory: 10
+  model: diplomacy.subregion
+  pk: 15
+- fields:
+    borders: [13, 15, 19]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 11
+  model: diplomacy.subregion
+  pk: 16
+- fields:
+    borders: [14, 16, 109, 114]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 11
+  model: diplomacy.subregion
+  pk: 17
+- fields:
+    borders: [11, 13, 15, 17]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 12
+  model: diplomacy.subregion
+  pk: 18
+- fields:
+    borders: [12, 16, 118]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 12
+  model: diplomacy.subregion
+  pk: 19
+- fields:
+    borders: [24, 28, 29]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 13
+  model: diplomacy.subregion
+  pk: 20
+- fields:
+    borders: [25, 30, 109, 115]
+    init_unit: true
+    sr_type: S
+    subname: ''
+    territory: 13
+  model: diplomacy.subregion
+  pk: 21
+- fields:
+    borders: [24, 26, 28, 29]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 14
+  model: diplomacy.subregion
+  pk: 22
+- fields:
+    borders: [21, 23, 26, 28, 96]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 15
+  model: diplomacy.subregion
+  pk: 23
+- fields:
+    borders: [22, 97, 115]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 15
+  model: diplomacy.subregion
+  pk: 24
+- fields:
+    borders: [23, 24, 44, 96]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 16
+  model: diplomacy.subregion
+  pk: 25
+- fields:
+    borders: [45, 98, 111]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 16
+  model: diplomacy.subregion
+  pk: 26
+- fields:
+    borders: [21, 23, 24, 29]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 17
+  model: diplomacy.subregion
+  pk: 27
+- fields:
+    borders: [21, 23, 28, 74]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 18
+  model: diplomacy.subregion
+  pk: 28
+- fields:
+    borders: [22, 75, 109]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 18
+  model: diplomacy.subregion
+  pk: 29
+- fields:
+    borders: [33, 35, 36, 39]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 19
+  model: diplomacy.subregion
+  pk: 30
+- fields:
+    borders: [34, 37, 105]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 19
+  model: diplomacy.subregion
+  pk: 31
+- fields:
+    borders: [31, 35, 38, 79, 85]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 20
+  model: diplomacy.subregion
+  pk: 32
+- fields:
+    borders: [32, 80, 86, 105, 112]
+    init_unit: true
+    sr_type: S
+    subname: ''
+    territory: 20
+  model: diplomacy.subregion
+  pk: 33
+- fields:
+    borders: [31, 33, 38, 39]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 21
+  model: diplomacy.subregion
+  pk: 34
+- fields:
+    borders: [31, 39, 52, 61]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 22
+  model: diplomacy.subregion
+  pk: 35
+- fields:
+    borders: [32, 53, 105]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 22
+  model: diplomacy.subregion
+  pk: 36
+- fields:
+    borders: [33, 35, 85]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 23
+  model: diplomacy.subregion
+  pk: 37
+- fields:
+    borders: [31, 35, 36, 61]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 24
+  model: diplomacy.subregion
+  pk: 38
+- fields:
+    borders: [42, 46, 50]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 25
+  model: diplomacy.subregion
+  pk: 39
+- fields:
+    borders: [43, 51, 103, 113]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 25
+  model: diplomacy.subregion
+  pk: 40
+- fields:
+    borders: [40, 46]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 26
+  model: diplomacy.subregion
+  pk: 41
+- fields:
+    borders: [41, 47, 113, 120]
+    init_unit: true
+    sr_type: S
+    subname: ''
+    territory: 26
+  model: diplomacy.subregion
+  pk: 42
+- fields:
+    borders: [26, 48, 50]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 27
+  model: diplomacy.subregion
+  pk: 43
+- fields:
+    borders: [27, 49, 111]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 27
+  model: diplomacy.subregion
+  pk: 44
+- fields:
+    borders: [40, 42, 48, 50]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 28
+  model: diplomacy.subregion
+  pk: 45
+- fields:
+    borders: [43, 49, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 28
+  model: diplomacy.subregion
+  pk: 46
+- fields:
+    borders: [44, 46, 50]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 29
+  model: diplomacy.subregion
+  pk: 47
+- fields:
+    borders: [45, 47, 111, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 29
+  model: diplomacy.subregion
+  pk: 48
+- fields:
+    borders: [5, 7, 40, 44, 46, 48]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 30
+  model: diplomacy.subregion
+  pk: 49
+- fields:
+    borders: [6, 41, 103]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 30
+  model: diplomacy.subregion
+  pk: 50
+- fields:
+    borders: [36, 54, 57, 61]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 31
+  model: diplomacy.subregion
+  pk: 51
+- fields:
+    borders: [37, 59, 105, 110]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 31
+  model: diplomacy.subregion
+  pk: 52
+- fields:
+    borders: [52, 55, 57, 60, 61]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 32
+  model: diplomacy.subregion
+  pk: 53
+- fields:
+    borders: [54, 60, 64, 93]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 33
+  model: diplomacy.subregion
+  pk: 54
+- fields:
+    borders: [65, 94, 107]
+    init_unit: true
+    sr_type: S
+    subname: ''
+    territory: 33
+  model: diplomacy.subregion
+  pk: 55
+- fields:
+    borders: [52, 54, 81, 87]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 34
+  model: diplomacy.subregion
+  pk: 56
+- fields:
+    borders: [88, 106]
+    init_unit: false
+    sr_type: S
+    subname: NC
+    territory: 34
+  model: diplomacy.subregion
+  pk: 57
+- fields:
+    borders: [53, 82, 110]
+    init_unit: true
+    sr_type: S
+    subname: SC
+    territory: 34
+  model: diplomacy.subregion
+  pk: 58
+- fields:
+    borders: [4, 54, 55, 61, 93]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 35
+  model: diplomacy.subregion
+  pk: 59
+- fields:
+    borders: [4, 36, 39, 52, 54, 60]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 36
+  model: diplomacy.subregion
+  pk: 60
+- fields:
+    borders: [64, 66, 68]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 37
+  model: diplomacy.subregion
+  pk: 61
+- fields:
+    borders: [65, 67, 107]
+    init_unit: true
+    sr_type: S
+    subname: ''
+    territory: 37
+  model: diplomacy.subregion
+  pk: 62
+- fields:
+    borders: [55, 62, 68, 70]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 38
+  model: diplomacy.subregion
+  pk: 63
+- fields:
+    borders: [56, 63, 107]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 38
+  model: diplomacy.subregion
+  pk: 64
+- fields:
+    borders: [62, 68, 76]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 39
+  model: diplomacy.subregion
+  pk: 65
+- fields:
+    borders: [63, 69, 77, 78, 104, 107]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 39
+  model: diplomacy.subregion
+  pk: 66
+- fields:
+    borders: [62, 64, 66, 70]
+    init_unit: true
+    sr_type: L
+    subname: ''
+    territory: 40
+  model: diplomacy.subregion
+  pk: 67
+- fields:
+    borders: [67, 71, 104, 108]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 40
+  model: diplomacy.subregion
+  pk: 68
+- fields:
+    borders: [64, 68]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 41
+  model: diplomacy.subregion
+  pk: 69
+- fields:
+    borders: [69, 108]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 41
+  model: diplomacy.subregion
+  pk: 70
+- fields:
+    borders: [5, 83, 95]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 42
+  model: diplomacy.subregion
+  pk: 71
+- fields:
+    borders: [6, 84, 103, 113]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 42
+  model: diplomacy.subregion
+  pk: 72
+- fields:
+    borders: [29, 85]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 43
+  model: diplomacy.subregion
+  pk: 73
+- fields:
+    borders: [30, 86, 109, 118]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 43
+  model: diplomacy.subregion
+  pk: 74
+- fields:
+    borders: [66, 83, 93, 95]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 44
+  model: diplomacy.subregion
+  pk: 75
+- fields:
+    borders: [67, 94, 107]
+    init_unit: false
+    sr_type: S
+    subname: EC
+    territory: 44
+  model: diplomacy.subregion
+  pk: 76
+- fields:
+    borders: [67, 84, 104]
+    init_unit: false
+    sr_type: S
+    subname: SC
+    territory: 44
+  model: diplomacy.subregion
+  pk: 77
+- fields:
+    borders: [33, 99]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 45
+  model: diplomacy.subregion
+  pk: 78
+- fields:
+    borders: [34, 100, 112, 118, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 45
+  model: diplomacy.subregion
+  pk: 79
+- fields:
+    borders: [57, 87, 99]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 46
+  model: diplomacy.subregion
+  pk: 80
+- fields:
+    borders: [59, 100, 110]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 46
+  model: diplomacy.subregion
+  pk: 81
+- fields:
+    borders: [72, 76, 95]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 47
+  model: diplomacy.subregion
+  pk: 82
+- fields:
+    borders: [73, 78, 104, 113]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 47
+  model: diplomacy.subregion
+  pk: 83
+- fields:
+    borders: [33, 38, 74]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 48
+  model: diplomacy.subregion
+  pk: 84
+- fields:
+    borders: [34, 75, 112, 118]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 48
+  model: diplomacy.subregion
+  pk: 85
+- fields:
+    borders: [57, 81, 99]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 49
+  model: diplomacy.subregion
+  pk: 86
+- fields:
+    borders: [58, 100, 106, 118, 119, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 49
+  model: diplomacy.subregion
+  pk: 87
+- fields:
+    borders: [101]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 50
+  model: diplomacy.subregion
+  pk: 88
+- fields:
+    borders: [102, 115, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 50
+  model: diplomacy.subregion
+  pk: 89
+- fields:
+    borders: [96]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 51
+  model: diplomacy.subregion
+  pk: 90
+- fields:
+    borders: [97, 98, 115]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 51
+  model: diplomacy.subregion
+  pk: 91
+- fields:
+    borders: [3, 4, 55, 60, 76, 95]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 52
+  model: diplomacy.subregion
+  pk: 92
+- fields:
+    borders: [56, 77, 107]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 52
+  model: diplomacy.subregion
+  pk: 93
+- fields:
+    borders: [3, 5, 72, 76, 83, 93]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 53
+  model: diplomacy.subregion
+  pk: 94
+- fields:
+    borders: [24, 26, 91]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 54
+  model: diplomacy.subregion
+  pk: 95
+- fields:
+    borders: [25, 92, 115]
+    init_unit: false
+    sr_type: S
+    subname: NC
+    territory: 54
+  model: diplomacy.subregion
+  pk: 96
+- fields:
+    borders: [27, 92, 111, 115, 120]
+    init_unit: false
+    sr_type: S
+    subname: SC
+    territory: 54
+  model: diplomacy.subregion
+  pk: 97
+- fields:
+    borders: [79, 81, 87]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 55
+  model: diplomacy.subregion
+  pk: 98
+- fields:
+    borders: [80, 82, 88, 105, 110, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 55
+  model: diplomacy.subregion
+  pk: 99
+- fields:
+    borders: [89]
+    init_unit: false
+    sr_type: L
+    subname: ''
+    territory: 56
+  model: diplomacy.subregion
+  pk: 100
+- fields:
+    borders: [90, 113, 120, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 56
+  model: diplomacy.subregion
+  pk: 101
+- fields:
+    borders: [6, 41, 51, 73, 113]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 57
+  model: diplomacy.subregion
+  pk: 102
+- fields:
+    borders: [67, 69, 78, 84, 108, 113]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 58
+  model: diplomacy.subregion
+  pk: 103
+- fields:
+    borders: [32, 34, 37, 53, 100, 110, 112]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 59
+  model: diplomacy.subregion
+  pk: 104
+- fields:
+    borders: [58, 88, 119]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 60
+  model: diplomacy.subregion
+  pk: 105
+- fields:
+    borders: [56, 63, 65, 67, 77, 94]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 61
+  model: diplomacy.subregion
+  pk: 106
+- fields:
+    borders: [69, 71, 104, 113]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 62
+  model: diplomacy.subregion
+  pk: 107
+- fields:
+    borders: [16, 18, 22, 30, 75, 114, 115, 118]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 63
+  model: diplomacy.subregion
+  pk: 108
+- fields:
+    borders: [53, 59, 82, 100, 105]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 64
+  model: diplomacy.subregion
+  pk: 109
+- fields:
+    borders: [27, 45, 49, 98, 120, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 65
+  model: diplomacy.subregion
+  pk: 110
+- fields:
+    borders: [34, 80, 86, 105, 118]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 66
+  model: diplomacy.subregion
+  pk: 111
+- fields:
+    borders: [41, 43, 73, 84, 102, 103, 104, 108, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 67
+  model: diplomacy.subregion
+  pk: 112
+- fields:
+    borders: [14, 18, 109, 115, 116]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 68
+  model: diplomacy.subregion
+  pk: 113
+- fields:
+    borders: [97, 98, 109, 114, 22, 25, 90, 92, 116, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 69
+  model: diplomacy.subregion
+  pk: 114
+- fields:
+    borders: [10, 14, 114, 115, 119]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 70
+  model: diplomacy.subregion
+  pk: 115
+- fields:
+    borders: [12, 16, 20, 75, 80, 86, 88, 109, 112, 119, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 71
+  model: diplomacy.subregion
+  pk: 116
+- fields:
+    borders: [10, 12, 88, 106, 116, 118]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 72
+  model: diplomacy.subregion
+  pk: 117
+- fields:
+    borders: [80, 88, 100, 118]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 73
+  model: diplomacy.subregion
+  pk: 118
+- fields:
+    borders: [43, 47, 49, 102, 111, 113, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 74
+  model: diplomacy.subregion
+  pk: 119
+- fields:
+    borders: [90, 98, 102, 111, 115, 120]
+    init_unit: false
+    sr_type: S
+    subname: ''
+    territory: 75
+  model: diplomacy.subregion
+  pk: 120
+
