@@ -10,6 +10,16 @@ SEASON_CHOICES = (
     ('FB', 'Fall Build')
     )
 
+UNIT_CHOICES = (
+    ('A', 'Army'),
+    ('F', 'Fleet')
+    )
+
+SUBREGION_CHOICES = (
+    ('L', 'Land'),
+    ('S', 'Sea')
+    )
+
 class Game(models.Model):
     STATE_CHOICES = (
         ('S', 'Setup'),
@@ -23,6 +33,9 @@ class Game(models.Model):
     started = models.DateTimeField(null=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
     requests = models.ManyToManyField(User, related_name='requests')
+
+    def __unicode__(self):
+        return self.name
 
     def __init__(self, *args, **kwargs):
         super(Game, self).__init__(*args, **kwargs)
@@ -44,32 +57,35 @@ class Turn(models.Model):
 class Power(models.Model):
     name = models.CharField(max_length=20)
 
+    def __unicode__(self):
+        return self.name
+
 class Territory(models.Model):
     name = models.CharField(max_length=30)
-    power = models.ForeignKey(Power, null=True)
+    power = models.ForeignKey(Power, null=True, blank=True)
     is_supply = models.BooleanField()
 
-UNIT_CHOICES = (
-    ('A', 'Army'),
-    ('F', 'Fleet')
-    )
+    def __unicode__(self):
+        return self.name
     
 class Subregion(models.Model):
-    SUBREGION_CHOICES = (
-        ('L', 'Land'),
-        ('S', 'Sea')
-        )
     territory = models.ForeignKey(Territory)
     subname = models.CharField(max_length=10, blank=True)
     sr_type = models.CharField(max_length=1, choices=SUBREGION_CHOICES)
-    borders = models.ManyToManyField("self")
-    u_type = models.CharField(max_length=1, choices=UNIT_CHOICES, blank=True)
+    init_unit = models.BooleanField()
+    borders = models.ManyToManyField("self", null=True, blank=True)
+
+    def __unicode__(self):
+        if self.subname:
+            return u'%s (%s)' % (self.territory, self.subname)
+        else:
+            return u'%s [%s]' % (self.territory, self.sr_type)
 
 class Ambassador(models.Model):
     name = models.CharField(max_length=100)
     user = models.ForeignKey(User)
     game = models.ForeignKey(Game)
-    power = models.ForeignKey(Power, null=True)
+    power = models.ForeignKey(Power, null=True, blank=True)
     owns = models.ManyToManyField(Territory)
 
 class Unit(models.Model):
@@ -87,7 +103,7 @@ class Order(models.Model):
     turn = models.ForeignKey(Turn)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES)
     actor = models.ForeignKey(Unit)
-    target = models.ForeignKey(Territory, null=True,
+    target = models.ForeignKey(Territory, null=True, blank=True,
                                related_name='targets')
-    destination = models.ForeignKey(Territory, null=True,
+    destination = models.ForeignKey(Territory, null=True, blank=True,
                                     related_name='destinations')
