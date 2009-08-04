@@ -54,6 +54,9 @@ class Turn(models.Model):
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
     generated = models.DateTimeField(auto_now_add=True)
 
+    def __unicode__(self):
+        return "%s %s" % (self.season, self.year)
+
 class Power(models.Model):
     name = models.CharField(max_length=20)
 
@@ -88,10 +91,16 @@ class Ambassador(models.Model):
     power = models.ForeignKey(Power, null=True, blank=True)
     owns = models.ManyToManyField(Territory)
 
+    def __unicode__(self):
+        return self.name
+
 class Unit(models.Model):
     owner = models.ForeignKey(Ambassador)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
+
+    def __unicode__(self):
+        return self.subregion
 
 class Order(models.Model):
     ACTION_CHOICES = (
