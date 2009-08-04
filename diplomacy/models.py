@@ -107,11 +107,15 @@ class Order(models.Model):
         ('H', 'Hold'),
         ('M', 'Move'),
         ('S', 'Support'),
-        ('C', 'Convoy')
+        ('C', 'Convoy'),
+        ('B', 'Build'),
+        ('D', 'Disband')
         )
     turn = models.ForeignKey(Turn)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES)
-    actor = models.ForeignKey(Unit)
+    actor = models.ForeignKey(Territory, null=True, blank=True,
+                              related_name='actors')
+    u_type = models.CharField(max_length=1, choices=UNIT_CHOICES, blank=True) 
     target = models.ForeignKey(Territory, null=True, blank=True,
                                related_name='targets')
     destination = models.ForeignKey(Territory, null=True, blank=True,
