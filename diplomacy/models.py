@@ -2,6 +2,12 @@ from django.db import models
 from django.contrib.auth.models import User
 import datetime
 
+def get_next(current, choiceset):
+    choices = (i[0] for i in choiceset+choiceset[0])
+    for i in choices:
+        if i == current:
+            return choices.next()
+
 SEASON_CHOICES = (
     ('S', 'Spring'),
     ('SR', 'Spring Retreat'),
@@ -56,6 +62,12 @@ class Turn(models.Model):
 
     def __unicode__(self):
         return "%s %s" % (self.season, self.year)
+
+    def generate(self):
+        Y = self.year if self.season != 'FB' else self.year + 1 # Python 2.5
+        S = get_next(self.season, SEASON_CHOICES)
+        new = Turn(game=self.game, year=Y, season=S)
+        new.save()
 
 class Power(models.Model):
     name = models.CharField(max_length=20)
