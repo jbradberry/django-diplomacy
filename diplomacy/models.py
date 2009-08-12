@@ -39,6 +39,7 @@ class Game(models.Model):
     started = models.DateTimeField(null=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
     requests = models.ManyToManyField(User, related_name='requests')
+    accepts = models.ManyToManyField(User, related_name='accepts')
 
     def __unicode__(self):
         return self.name
@@ -50,7 +51,7 @@ class Game(models.Model):
     def save(self, force_insert=False, force_update=False):
         if self.old_state == 'S' and self.state == 'A':
             self.started = datetime.datetime.now()
-            Turn(game=self, year=1901, season='S').save()
+            self.turn_set.create(year=1901, season='S')
         super(Game, self).save(force_insert, force_update)
         self.old_state = self.state
 
