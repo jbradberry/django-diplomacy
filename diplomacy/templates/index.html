@@ -1,9 +1,0 @@
-{% if latest_game_list %}
-    <ul>
-    {% for game in latest_game_list %}
-        <li>{{ game.name }}</li>
-    {% endfor %}
-    </ul>
-{% else %}
-  <p>No games are available.</p>
-{% endif %}

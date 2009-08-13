@@ -1,0 +1,16 @@
+{% block content %}
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Turn</th>
+      <th>Last Generated</th>
+    </tr>
+    {% for game in game_list %}
+    <tr>
+      <td>{{ game.name }}</td>
+      <td>{{ game.turn_set.all.0 }}</td>
+      <td>{{ game.turn_set.all.0.generated }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+{% endblock %}

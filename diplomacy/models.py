@@ -61,8 +61,11 @@ class Turn(models.Model):
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
     generated = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-generated']
+
     def __unicode__(self):
-        return "%s %s" % (self.season, self.year)
+        return "%s %s" % (self.get_season_display(), self.year)
 
     def generate(self):
         Y = self.year if self.season != 'FB' else self.year + 1 # Python 2.5
