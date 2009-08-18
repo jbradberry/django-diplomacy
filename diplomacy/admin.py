@@ -2,8 +2,9 @@ from diplomacy.models import Game, Territory, Subregion
 from django.contrib import admin
 
 class GameAdmin(admin.ModelAdmin):
-    fields = ['name', 'owner', 'state']
+    fields = ['name', 'slug', 'owner', 'state']
     list_display = ('name', 'owner', 'created', 'state')
+    prepopulated_fields = {"slug": ("name",)}
 
 class TerritoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'power', 'is_supply')

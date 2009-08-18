@@ -34,6 +34,7 @@ class Game(models.Model):
         ('F', 'Finished')
         )
     name = models.CharField(max_length=100)
+    slug = models.SlugField()
     owner = models.ForeignKey(User)
     created = models.DateTimeField(auto_now_add=True)
     started = models.DateTimeField(null=True)
