@@ -3,5 +3,20 @@
     <h1>{{ game.name }}</h1>
     <h2>{{ game.turn_set.all.0 }}</h2>
 
+    <table>
+      <tr>
+	<th>Ambassador</th>
+	<th>Power</th>
+	<th>SC</th>
+      </tr>
+      {% for ambassador in game.ambassador_set.all %}
+      <tr>
+	<th>{{ ambassador.name }}</th>
+	<th>{{ ambassador.power }}</th>
+	<th>{{ ambassador.supplycenters }}</th>
+      </tr>
+      {% endfor %}
+    </table>
+
   </body>
 </html>

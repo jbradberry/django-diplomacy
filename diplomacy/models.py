@@ -114,6 +114,9 @@ class Ambassador(models.Model):
     def __unicode__(self):
         return self.name
 
+    def supplycenters(self):
+        return self.owns.filter(is_supply__exact=True).count()
+
 class Unit(models.Model):
     owner = models.ForeignKey(Ambassador)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)

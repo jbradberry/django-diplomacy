@@ -3,7 +3,7 @@ from django.views.generic.list_detail import object_list, object_detail
 from diplomacy.models import Game
 
 game_info = {
-    "queryset": Game.objects.all(), #.filter(state__in=('A', 'P')),
+    "queryset": Game.objects.all(),
     "template_object_name": "game",
     }
 
