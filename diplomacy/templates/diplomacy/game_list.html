@@ -7,7 +7,7 @@
     </tr>
     {% for game in game_list %}
     <tr>
-      <td><a href="games/{{ game.slug }}/">{{ game.name }}</a></td>
+      <td><a href="{{ game.get_absolute_url }}">{{ game.name }}</a></td>
       <td>{{ game.turn_set.all.0 }}</td>
       <td>{{ game.turn_set.all.0.generated }}</td>
     </tr>

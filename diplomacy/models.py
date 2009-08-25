@@ -56,6 +56,9 @@ class Game(models.Model):
         super(Game, self).save(force_insert, force_update)
         self.old_state = self.state
 
+    def get_absolute_url(self):
+        return "/diplomacy/games/%s/" % self.slug
+
 class Turn(models.Model):
     game = models.ForeignKey(Game)
     year = models.PositiveIntegerField()
