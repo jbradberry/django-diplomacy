@@ -59,14 +59,14 @@ class Game(models.Model):
     def get_absolute_url(self):
         return "/diplomacy/games/%s/" % self.slug
 
+    def current_turn(self):
+        return self.turn_set.order_by('-generated')[0]
+
 class Turn(models.Model):
     game = models.ForeignKey(Game)
     year = models.PositiveIntegerField()
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
     generated = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-generated']
 
     def __unicode__(self):
         return "%s %s" % (self.get_season_display(), self.year)
