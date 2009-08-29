@@ -54,8 +54,9 @@ class Game(models.Model):
             convert = {'L': 'A', 'S': 'F'}
             self.started = datetime.datetime.now()
             for sr in Subregion.objects.filter(init_unit__exact=True):
-                sr.unit_set.create(power=sr.territory.power,
-                                   u_type=convert[sr.sr_type])
+                self.unit_set.create(power=sr.territory.power,
+                                     u_type=convert[sr.sr_type],
+                                     subregion=sr)
             self.generate(start=True)
         super(Game, self).save(force_insert, force_update)
         self.old_state = self.state
@@ -75,9 +76,10 @@ class Game(models.Model):
             Y = turn.year if turn.season != 'FB' else turn.year + 1
             S = get_next(self.season, SEASON_CHOICES)
         turn = self.turn_set.create(year=Y, season=S)
-        turn.order_set.create(power=sr.territory.power,
-                              action='H',
-                              actor=sr.territory)
+        for u in self.unit_set.all():
+            turn.order_set.create(power=u.power,
+                                  action='H',
+                                  actor=u.subregion.territory)
     generate.alters_data = True
 
 class Turn(models.Model):
@@ -130,12 +132,13 @@ class Ambassador(models.Model):
         return self.owns.filter(is_supply__exact=True).count()
 
 class Unit(models.Model):
+    game = models.ForeignKey(Game)
     power = models.ForeignKey(Power)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
 
     def __unicode__(self):
-        return self.subregion
+        return u'%s %s' % (self.u_type, self.subregion.territory)
 
 class Order(models.Model):
     ACTION_CHOICES = (
