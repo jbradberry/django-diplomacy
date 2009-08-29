@@ -55,6 +55,7 @@ class Game(models.Model):
             self.turn_set.create(year=1901, season='S')
         super(Game, self).save(force_insert, force_update)
         self.old_state = self.state
+    save.alters_data = True
 
     def get_absolute_url(self):
         return "/diplomacy/games/%s/" % self.slug
@@ -76,6 +77,7 @@ class Turn(models.Model):
         S = get_next(self.season, SEASON_CHOICES)
         new = Turn(game=self.game, year=Y, season=S)
         new.save()
+    generate.alters_data = True
 
 class Power(models.Model):
     name = models.CharField(max_length=20)
