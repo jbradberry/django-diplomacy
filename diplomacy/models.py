@@ -51,8 +51,12 @@ class Game(models.Model):
 
     def save(self, force_insert=False, force_update=False):
         if self.old_state == 'S' and self.state == 'A':
+            convert = {'L': 'A', 'S': 'F'}
             self.started = datetime.datetime.now()
-            self.turn_set.create(year=1901, season='S')
+            for sr in Subregion.objects.filter(init_unit__exact=True):
+                sr.unit_set.create(power=sr.territory.power,
+                                   u_type=convert[sr.sr_type])
+            self.generate(start=True)
         super(Game, self).save(force_insert, force_update)
         self.old_state = self.state
     save.alters_data = True
@@ -63,6 +67,19 @@ class Game(models.Model):
     def current_turn(self):
         return self.turn_set.order_by('-generated')[0]
 
+    def generate(self, start=False):
+        if start:
+            Y, S = 1901, 'S'
+        else:
+            turn = self.current_turn()
+            Y = turn.year if turn.season != 'FB' else turn.year + 1
+            S = get_next(self.season, SEASON_CHOICES)
+        turn = self.turn_set.create(year=Y, season=S)
+        turn.order_set.create(power=sr.territory.power,
+                              action='H',
+                              actor=sr.territory)
+    generate.alters_data = True
+
 class Turn(models.Model):
     game = models.ForeignKey(Game)
     year = models.PositiveIntegerField()
@@ -71,13 +88,6 @@ class Turn(models.Model):
 
     def __unicode__(self):
         return "%s %s" % (self.get_season_display(), self.year)
-
-    def generate(self):
-        Y = self.year if self.season != 'FB' else self.year + 1 # Python 2.5
-        S = get_next(self.season, SEASON_CHOICES)
-        new = Turn(game=self.game, year=Y, season=S)
-        new.save()
-    generate.alters_data = True
 
 class Power(models.Model):
     name = models.CharField(max_length=20)
@@ -120,7 +130,7 @@ class Ambassador(models.Model):
         return self.owns.filter(is_supply__exact=True).count()
 
 class Unit(models.Model):
-    owner = models.ForeignKey(Ambassador)
+    power = models.ForeignKey(Power)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
 
@@ -137,6 +147,7 @@ class Order(models.Model):
         ('D', 'Disband')
         )
     turn = models.ForeignKey(Turn)
+    power = models.ForeignKey(Power)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES)
     actor = models.ForeignKey(Territory, null=True, blank=True,
                               related_name='actors')
