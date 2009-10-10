@@ -2,6 +2,7 @@ from django.views.generic.list_detail import object_list
 from django.shortcuts import render_to_response
 from django.forms.models import modelformset_factory
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseRedirect
 from diplomacy.models import Game, Order
 
 def state_lists(request, state):
@@ -21,6 +22,7 @@ def orders(request, slug):
                                    turn__exact=g.current_turn()))
         if formset.is_valid():
             formset.save()
+            return HttpResponseRedirect('../')
     else:
         formset = OrderFormSet(queryset=Order.objects.filter(
             power__exact=a.power).filter(
