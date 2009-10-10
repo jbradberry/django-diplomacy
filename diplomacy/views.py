@@ -14,7 +14,8 @@ def state_lists(request, state):
 def orders(request, slug):
     g = Game.objects.get(slug=slug)
     a = g.ambassador_set.get(user=request.user)
-    OrderFormSet = modelformset_factory(Order, exclude=('turn', 'power'))
+    OrderFormSet = modelformset_factory(Order, extra=0,
+                                        exclude=('turn', 'power'))
     if request.method == 'POST':
         formset = OrderFormSet(request.POST,
                                queryset=Order.objects.filter(
