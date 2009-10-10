@@ -74,7 +74,7 @@ class Game(models.Model):
         else:
             turn = self.current_turn()
             Y = turn.year if turn.season != 'FB' else turn.year + 1
-            S = get_next(self.season, SEASON_CHOICES)
+            S = get_next(turn.season, SEASON_CHOICES)
         turn = self.turn_set.create(year=Y, season=S)
         for u in self.unit_set.all():
             turn.order_set.create(power=u.power,
