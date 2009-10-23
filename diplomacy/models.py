@@ -81,8 +81,9 @@ class Game(models.Model):
         turn = self.turn_set.create(year=Y, season=S)
         for u in self.unit_set.all():
             turn.order_set.create(power=u.power,
-                                  action='H',
-                                  actor=u.subregion.territory)
+                                  u_type=u.u_type,
+                                  actor=u.subregion.territory,
+                                  action='H')
     generate.alters_data = True
 
 class Turn(models.Model):
