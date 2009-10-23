@@ -151,10 +151,10 @@ class Order(models.Model):
         )
     turn = models.ForeignKey(Turn)
     power = models.ForeignKey(Power)
-    action = models.CharField(max_length=1, choices=ACTION_CHOICES)
+    u_type = models.CharField(max_length=1, choices=UNIT_CHOICES, blank=True) 
     actor = models.ForeignKey(Territory, null=True, blank=True,
                               related_name='actors')
-    u_type = models.CharField(max_length=1, choices=UNIT_CHOICES, blank=True) 
+    action = models.CharField(max_length=1, choices=ACTION_CHOICES)
     target = models.ForeignKey(Territory, null=True, blank=True,
                                related_name='targets')
     destination = models.ForeignKey(Territory, null=True, blank=True,
