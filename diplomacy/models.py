@@ -66,7 +66,10 @@ class Game(models.Model):
         return "/diplomacy/games/%s/" % self.slug
 
     def current_turn(self):
-        return self.turn_set.order_by('-generated')[0]
+        if self.turn_set.count() > 0:
+            return self.turn_set.order_by('-generated')[0]
+        else:
+            return "Setup"
 
     def generate(self, start=False):
         if start:
