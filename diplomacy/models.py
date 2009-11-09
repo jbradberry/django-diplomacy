@@ -58,6 +58,8 @@ class Game(models.Model):
                                      u_type=convert[sr.sr_type],
                                      subregion=sr)
             for a in Ambassador.objects.filter(game=self):
+                # FIXME: new Ambassadors coming in, regardless of game phase
+                # need to get their Territory ownership list.
                 a.owns.add(*list(Territory.objects.filter(
                     power__ambassador=a)))
             self.generate(start=True)

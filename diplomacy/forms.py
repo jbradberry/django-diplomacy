@@ -75,9 +75,9 @@ class OrderForm(ModelForm):
 
     def _filter(self, fn, allow_null, **kwargs):
         empty_label = u"---------"
-        choices = [(k, ((u'', empty_label) if k in allow_null else ()) +
+        choices = [(k, (((u'', empty_label),) if k in allow_null else ()) +
                     tuple((i.pk, smart_unicode(i)) for i in v))
-                   for k, v in kwargs]
+                   for k, v in kwargs.items()]
         self.fields[fn].choices = choices
 
     def _constrain(self, fn, lst):
@@ -89,7 +89,7 @@ class OrderForm(ModelForm):
             choice = self.initial[fn]
         old = self.fields[fn].choices
         self.fields[fn].choices = [c for c in old if c[0] == choice]
-        self.fields[fn].attrs['disabled'] = True
+        self.fields[fn].widget.attrs['disabled'] = True
 
     def _remove(self, *args):
         for fn in args:
