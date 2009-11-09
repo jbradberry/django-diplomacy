@@ -135,6 +135,12 @@ class Ambassador(models.Model):
     def supplycenters(self):
         return self.owns.filter(is_supply__exact=True).count()
 
+    def units(self):
+        return Unit.objects.filter(power__ambassador=self).count()
+
+    def builds_available(self):
+        return self.supplycenters() - self.units()
+
 class Unit(models.Model):
     game = models.ForeignKey(Game)
     power = models.ForeignKey(Power)

@@ -4,6 +4,7 @@ from django.forms.models import modelformset_factory
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect
 from diplomacy.models import Game, Order
+from diplomacy.forms import OrderForm, OrderFormSet
 
 def state_lists(request, state):
     game_list = Game.objects.filter(state__iexact=state)
@@ -14,19 +15,16 @@ def state_lists(request, state):
 def orders(request, slug):
     g = Game.objects.get(slug=slug)
     a = g.ambassador_set.get(user=request.user)
-    OrderFormSet = modelformset_factory(Order, extra=0,
-                                        exclude=('turn', 'power'))
+    qs = Order.objects.filter(power=a.power, turn=g.current_turn())
+    OFormSet = modelformset_factory(Order, form=OrderForm,
+                                    formset=OrderFormSet, extra=0,
+                                    exclude=('turn', 'power'))
     if request.method == 'POST':
-        formset = OrderFormSet(request.POST,
-                               queryset=Order.objects.filter(
-                                   power__exact=a.power).filter(
-                                   turn__exact=g.current_turn()))
+        formset = OFormSet(request.POST, g, a, queryset=qs)
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect('../')
     else:
-        formset = OrderFormSet(queryset=Order.objects.filter(
-            power__exact=a.power).filter(
-            turn__exact=g.current_turn()))
+        formset = OFormSet(g, a, queryset=qs)
     return render_to_response('diplomacy/manage_orders.html',
                               {'formset': formset})
