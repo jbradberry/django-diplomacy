@@ -57,6 +57,9 @@ class Game(models.Model):
                 self.unit_set.create(power=sr.territory.power,
                                      u_type=convert[sr.sr_type],
                                      subregion=sr)
+            for a in Ambassador.objects.filter(game=self):
+                a.owns.add(*list(Territory.objects.filter(
+                    power__ambassador=a)))
             self.generate(start=True)
         super(Game, self).save(force_insert, force_update)
         self.old_state = self.state
@@ -82,7 +85,7 @@ class Game(models.Model):
         for u in self.unit_set.all():
             turn.order_set.create(power=u.power,
                                   u_type=u.u_type,
-                                  actor=u.subregion.territory,
+                                  actor=u.subregion,
                                   action='H')
     generate.alters_data = True
 
@@ -162,10 +165,10 @@ class Order(models.Model):
     turn = models.ForeignKey(Turn)
     power = models.ForeignKey(Power)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES, blank=True) 
-    actor = models.ForeignKey(Territory, null=True, blank=True,
+    actor = models.ForeignKey(Subregion, null=True, blank=True,
                               related_name='actors')
     action = models.CharField(max_length=1, choices=ACTION_CHOICES)
-    target = models.ForeignKey(Territory, null=True, blank=True,
+    target = models.ForeignKey(Subregion, null=True, blank=True,
                                related_name='targets')
-    destination = models.ForeignKey(Territory, null=True, blank=True,
+    destination = models.ForeignKey(Subregion, null=True, blank=True,
                                     related_name='destinations')
