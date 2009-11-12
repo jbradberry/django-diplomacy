@@ -24,12 +24,18 @@
           grandparent.find("select[name$='target'] > optgroup"
           ).each(function() {
             if ( this.label != act ) { $(this).hide(); }
-            else { $(this).show(); }
+            else {
+              $(this).show();
+              $(this).find("option:first").attr("selected", "selected");
+            }
           });
           grandparent.find("select[name$='destination'] > optgroup"
           ).each(function() {
             if ( this.label != act ) { $(this).hide(); }
-            else { $(this).show(); }
+            else {
+              $(this).show();
+              $(this).find("option:first").attr("selected", "selected");
+            }
           });
       
         }).trigger("change");
