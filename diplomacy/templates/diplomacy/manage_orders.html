@@ -5,6 +5,18 @@
     </script>
     <script type="text/javascript">
       $(document).ready(function() {
+        $("select[name$='u_type']").change(function() {
+
+          var u_type = $(this).find("option:selected").val();
+          var grandparent = $(this).parent().parent();
+          grandparent.find("select[name$='actor'] > optgroup"
+          ).each(function() {
+            if ( this.label != u_type ) { $(this).hide(); }
+            else { $(this).show(); }
+          });
+
+        }).trigger("change");
+      
         $("select[name$='action']").change(function() {
       
           var act = $(this).find("option:selected").val();
