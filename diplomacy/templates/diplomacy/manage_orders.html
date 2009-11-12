@@ -1,4 +1,29 @@
 <html>
+  <head>
+    <script type="text/javascript"
+    src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js">
+    </script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+        $("select[name$='action']").change(function() {
+      
+          var act = $(this).find("option:selected").val();
+          var grandparent = $(this).parent().parent();
+          grandparent.find("select[name$='target'] > optgroup"
+          ).each(function() {
+            if ( this.label != act ) { $(this).hide(); }
+            else { $(this).show(); }
+          });
+          grandparent.find("select[name$='destination'] > optgroup"
+          ).each(function() {
+            if ( this.label != act ) { $(this).hide(); }
+            else { $(this).show(); }
+          });
+      
+        }).trigger("change");
+      });
+    </script>
+  </head>
   <body>
     <form method="POST" action="">
       {{ formset.management_form }}
