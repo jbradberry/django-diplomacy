@@ -21,22 +21,30 @@
       
           var act = $(this).find("option:selected").val();
           var grandparent = $(this).parent().parent();
-          grandparent.find("select[name$='target'] > optgroup"
-          ).each(function() {
+          var target = grandparent.find("select[name$='target']");
+          var dest = grandparent.find("select[name$='destination']");
+
+          target.show();
+          target.find("optgroup").each(function() {
             if ( this.label != act ) { $(this).hide(); }
             else {
               $(this).show();
               $(this).find("option:first").attr("selected", "selected");
             }
           });
-          grandparent.find("select[name$='destination'] > optgroup"
-          ).each(function() {
+          var T = target.find("optgroup[label='" +act+ "'] option");
+          if ( T.length == 1 && T[0].value == "" ) { target.hide(); }
+
+          dest.show();
+          dest.find("optgroup").each(function() {
             if ( this.label != act ) { $(this).hide(); }
             else {
               $(this).show();
               $(this).find("option:first").attr("selected", "selected");
             }
           });
+          var D = dest.find("optgroup[label='" +act+ "'] option");
+          if ( D.length == 1 && D[0].value == "" ) { dest.hide(); }
       
         }).trigger("change");
       });
