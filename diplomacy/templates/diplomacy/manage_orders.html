@@ -13,8 +13,8 @@
           var grandparent = $(this).parent().parent();
           grandparent.find("select[name$='actor'] > optgroup"
           ).each(function() {
-            if ( this.label != u_type ) { $(this).hide(); }
-            else { $(this).show(); }
+            if ( this.label != u_type ) { $(this).fadeOut("def"); }
+            else { $(this).fadeIn("def"); }
           });
 
         }).trigger("change");
@@ -26,28 +26,28 @@
           var target = grandparent.find("select[name$='target']");
           var dest = grandparent.find("select[name$='destination']");
 
-          target.show();
           target.find("optgroup").each(function() {
-            if ( this.label != act ) { $(this).hide(); }
+            if ( this.label != act ) { $(this).fadeOut("def"); }
             else {
-              $(this).show();
+              $(this).fadeIn("def");
               $(this).find("option:first").attr("selected", "selected");
             }
           });
           var T = target.find("optgroup[label='" +act+ "'] option");
-          if ( T.length == 1 && T[0].value == "" ) { target.hide(); }
+          if ( T.length == 1 && T[0].value == "" ) { target.fadeOut("def"); }
+	  else { target.fadeIn("def"); }
 
-          dest.show();
           dest.find("optgroup").each(function() {
-            if ( this.label != act ) { $(this).hide(); }
+            if ( this.label != act ) { $(this).fadeOut("def"); }
             else {
-              $(this).show();
+              $(this).fadeIn("def");
               $(this).find("option:first").attr("selected", "selected");
             }
           });
           var D = dest.find("optgroup[label='" +act+ "'] option");
-          if ( D.length == 1 && D[0].value == "" ) { dest.hide(); }
-      
+          if ( D.length == 1 && D[0].value == "" ) { dest.fadeOut("def"); }
+	  else { dest.fadeIn("def"); }
+	
         }).trigger("change");
       });
     </script>
