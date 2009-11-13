@@ -8,6 +8,10 @@ game_info = {
     }
 
 urlpatterns = patterns('',
+    # DEVELOPMENT ONLY
+    (r'^media/(?P<path>.*)$', 'django.views.static.serve',
+     {'document_root': '/home/jrb/dev/apps/diplomacy/media/'}),
+    # END DEVELOPMENT ONLY
     (r'^$', object_list, game_info),
     (r'^games/$', object_list, game_info),
     (r'^(?P<state>\w+)/$', 'diplomacy.views.state_lists'),

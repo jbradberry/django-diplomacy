@@ -17,6 +17,14 @@ class OrderForm(ModelForm):
         self.ambassador = ambassador
         self.season = game.current_turn().season
 
+        my_css = {'u_type': 'u_type',
+                  'actor': 'subregion',
+                  'action': 'action',
+                  'target': 'subregion',
+                  'destination': 'subregion'}
+        for w, c in my_css.items():
+            self.fields[w].widget.attrs['class'] = c
+
         sr = Subregion.objects
         if self.season in ('S', 'F'):
             u = Unit.objects.get(subregion=self.initial['actor'])
