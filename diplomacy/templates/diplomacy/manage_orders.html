@@ -15,8 +15,8 @@
           var grandparent = $(this).parent().parent();
           grandparent.find("select[name$='actor'] > optgroup"
           ).each(function() {
-            if ( this.label != u_type ) { $(this).fadeOut("def"); }
-            else { $(this).fadeIn("def"); }
+            if ( this.label != u_type ) { $(this).hide(); }
+            else { $(this).show(); }
           });
 
         }).trigger("change");
@@ -29,9 +29,9 @@
           var dest = grandparent.find("select[name$='destination']");
 
           target.find("optgroup").each(function() {
-            if ( this.label != act ) { $(this).fadeOut("def"); }
+            if ( this.label != act ) { $(this).hide(); }
             else {
-              $(this).fadeIn("def");
+              $(this).show();
               $(this).find("option:first").attr("selected", "selected");
             }
           });
@@ -40,9 +40,9 @@
 	  else { target.fadeIn("def"); }
 
           dest.find("optgroup").each(function() {
-            if ( this.label != act ) { $(this).fadeOut("def"); }
+            if ( this.label != act ) { $(this).hide(); }
             else {
-              $(this).fadeIn("def");
+              $(this).show();
               $(this).find("option:first").attr("selected", "selected");
             }
           });
