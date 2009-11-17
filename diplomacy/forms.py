@@ -9,12 +9,12 @@ class OrderForm(ModelForm):
     
     class Meta:
         model = Order
-        exclude = ('turn', 'power')
+        exclude = ('turn', 'government')
         
-    def __init__(self, game, ambassador, *args, **kwargs):
+    def __init__(self, game, government, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
         self.game = game
-        self.ambassador = ambassador
+        self.government = government
         self.season = game.current_turn().season
 
         my_css = {'u_type': 'u_type',
@@ -62,20 +62,20 @@ class OrderForm(ModelForm):
                          D=sr.none())
         if self.season == 'FB':
             self._remove('target', 'destination')
-            if ambassador.builds_available() < 0: # need to disband
+            if government.builds_available() < 0: # need to disband
                 self._one('action', 'D')
-                qs = sr.filter(unit__power__ambassador=me)
+                qs = sr.filter(unit__government=me)
                 self._filter('actor', (), F=qs.filter(sr_type='S'),
                              A=qs.filter(sr_type='L'))
-            if ambassador.builds_available() > 0: # allowed to build
+            if government.builds_available() > 0: # allowed to build
                 self._one('action', 'B')
-                qs = sr.filter(territory__ambassador=me,
-                               territory__power__ambassador=me,
+                qs = sr.filter(territory__government=me,
+                               territory__power__government=me,
                                territory__is_supply=True).exclude(
                     territory__subregion__unit__u_type__in=('A', 'F'))
                 self._filter('actor', (), F=qs.filter(sr_type='S'),
                              A=qs.filter(sr_type='L'))
-            if ambassador.builds_available() == 0:
+            if government.builds_available() == 0:
                 raise ValueError("No orders are permitted.")
         else: # unless it is a build phase, there is a fixed set of orders.
             self._one('u_type')
@@ -104,13 +104,13 @@ class OrderForm(ModelForm):
             del self.fields[fn]
 
 class OrderFormSet(BaseModelFormSet):
-    def __init__(self, game, ambassador, queryset=None, **kwargs):
+    def __init__(self, game, government, queryset=None, **kwargs):
         self.game = game
-        self.ambassador = ambassador
+        self.government = government
         super(OrderFormSet, self).__init__(queryset=queryset, **kwargs)
 
     def _construct_forms(self):
         self.forms = []
         for i in xrange(self.total_form_count()):
             self.forms.append(self._construct_form(i, game=self.game,
-                                                   ambassador=self.ambassador))
+                                                   government=self.government))

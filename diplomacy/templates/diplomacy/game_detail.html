@@ -5,15 +5,15 @@
 
     <table>
       <tr>
-	<th>Ambassador</th>
+	<th>Name</th>
 	<th>Power</th>
 	<th>SC</th>
       </tr>
-      {% for ambassador in game.ambassador_set.all %}
+      {% for government in game.government_set.all %}
       <tr>
-	<th>{{ ambassador.name }}</th>
-	<th>{{ ambassador.power }}</th>
-	<th>{{ ambassador.supplycenters }}</th>
+	<th>{{ government }}</th>
+	<th>{{ government.power }}</th>
+	<th>{{ government.supplycenters }}</th>
       </tr>
       {% endfor %}
     </table>

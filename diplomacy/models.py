@@ -53,15 +53,14 @@ class Game(models.Model):
         if self.old_state == 'S' and self.state == 'A':
             convert = {'L': 'A', 'S': 'F'}
             self.started = datetime.datetime.now()
-            for sr in Subregion.objects.filter(init_unit__exact=True):
-                self.unit_set.create(power=sr.territory.power,
-                                     u_type=convert[sr.sr_type],
-                                     subregion=sr)
-            for a in Ambassador.objects.filter(game=self):
-                # FIXME: new Ambassadors coming in, regardless of game phase
-                # need to get their Territory ownership list.
-                a.owns.add(*list(Territory.objects.filter(
-                    power__ambassador=a)))
+            for pwr in Power.objects.all():
+                t_set = Territory.objects.filter(power=pwr)
+                gvt = self.government_set.create(name=pwr.name, power=pwr,
+                                                 owns=t_set)
+                for sr in Subregion.objects.filter(init_unit=True,
+                                                   territory__power=pwr):
+                    gvt.unit_set.create(u_type=convert[sr.sr_type],
+                                        subregion=sr)
             self.generate(start=True)
         super(Game, self).save(force_insert, force_update)
         self.old_state = self.state
@@ -83,9 +82,9 @@ class Game(models.Model):
             turn = self.current_turn()
             Y = turn.year if turn.season != 'FB' else turn.year + 1
             S = get_next(turn.season, SEASON_CHOICES)
-        turn = self.turn_set.create(year=Y, season=S)
-        for u in self.unit_set.all():
-            turn.order_set.create(power=u.power,
+        turn = self.turn_set.create(year=Y, season=S) # FIXME
+        for u in Unit.objects.filter(government__game=self):
+            turn.order_set.create(government=u.government,
                                   u_type=u.u_type,
                                   actor=u.subregion,
                                   action='H')
@@ -127,28 +126,27 @@ class Subregion(models.Model):
         else:
             return u'%s [%s]' % (self.territory, self.sr_type)
 
-class Ambassador(models.Model):
+class Government(models.Model):
     name = models.CharField(max_length=100)
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, null=True, blank=True)
     game = models.ForeignKey(Game)
-    power = models.ForeignKey(Power, null=True, blank=True)
+    power = models.ForeignKey(Power)
     owns = models.ManyToManyField(Territory)
 
     def __unicode__(self):
         return self.name
 
     def supplycenters(self):
-        return self.owns.filter(is_supply__exact=True).count()
+        return self.owns.filter(is_supply=True).count()
 
     def units(self):
-        return Unit.objects.filter(power__ambassador=self).count()
+        return Unit.objects.filter(government=self).count()
 
     def builds_available(self):
         return self.supplycenters() - self.units()
 
 class Unit(models.Model):
-    game = models.ForeignKey(Game)
-    power = models.ForeignKey(Power)
+    government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
 
@@ -165,7 +163,7 @@ class Order(models.Model):
         ('D', 'Disband')
         )
     turn = models.ForeignKey(Turn)
-    power = models.ForeignKey(Power)
+    government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES, blank=True) 
     actor = models.ForeignKey(Subregion, null=True, blank=True,
                               related_name='actors')
