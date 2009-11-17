@@ -11,7 +11,7 @@
 	  <th>SC</th>
 	</tr>
       </thead>
-      {% for government in game.government_set.all %}
+      {% for government in game.governments %}
       <tr>
 	<td>{{ government }}</td>
 	<td>{{ government.power }}</td>

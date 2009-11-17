@@ -75,6 +75,10 @@ class Game(models.Model):
         else:
             return "Setup"
 
+    def governments(self):
+        return self.government_set.all().annotate(
+            sc=models.Count('owns__is_supply')).order_by('-sc', 'power__name')
+
     def generate(self, start=False):
         if start:
             Y, S = 1901, 'S'
