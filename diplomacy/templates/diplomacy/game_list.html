@@ -1,10 +1,12 @@
 {% block content %}
   <table>
-    <tr>
-      <th>Name</th>
-      <th>Turn</th>
-      <th>Last Generated</th>
-    </tr>
+    <thead>
+      <tr>
+	<th>Name</th>
+	<th>Turn</th>
+	<th>Last Generated</th>
+      </tr>
+    </thead>
     {% for game in game_list %}
     <tr>
       <td><a href="{{ game.get_absolute_url }}">{{ game.name }}</a></td>

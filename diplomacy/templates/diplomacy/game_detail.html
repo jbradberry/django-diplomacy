@@ -4,16 +4,18 @@
     <h2>{{ game.current_turn }}</h2>
 
     <table>
-      <tr>
-	<th>Name</th>
-	<th>Power</th>
-	<th>SC</th>
-      </tr>
+      <thead>
+	<tr>
+	  <th>Name</th>
+	  <th>Power</th>
+	  <th>SC</th>
+	</tr>
+      </thead>
       {% for government in game.government_set.all %}
       <tr>
-	<th>{{ government }}</th>
-	<th>{{ government.power }}</th>
-	<th>{{ government.supplycenters }}</th>
+	<td>{{ government }}</td>
+	<td>{{ government.power }}</td>
+	<td>{{ government.supplycenters }}</td>
       </tr>
       {% endfor %}
     </table>
