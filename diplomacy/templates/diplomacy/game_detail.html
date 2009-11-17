@@ -1,4 +1,8 @@
 <html>
+  <head>
+    <link rel="stylesheet" href="/diplomacy/media/css/game.css"
+      type="text/css">
+  </head>
   <body>
     <h1>{{ game.name }}</h1>
     <h2>{{ game.current_turn }}</h2>
@@ -12,7 +16,7 @@
 	</tr>
       </thead>
       {% for government in game.governments %}
-      <tr>
+      <tr class="{{ government.power }}">
 	<td>{{ government }}</td>
 	<td>{{ government.power }}</td>
 	<td>{{ government.supplycenters }}</td>

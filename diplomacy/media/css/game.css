@@ -1,0 +1,11 @@
+table { border: solid 2px black; }
+td { border: solid 1px black; padding-left: 2em; padding-right: 2em; }
+/* In case I want to color the table with the traditional colors
+tr.Austria-Hungary { background-color: #f33; }
+tr.England { background-color: #22f; }
+tr.France { background-color: #77f; }
+tr.Germany { background-color: #444; }
+tr.Italy { background-color: #2f2; }
+tr.Russia { background-color: #fff; }
+tr.Turkey { background-color: #ff2; }
+*/
