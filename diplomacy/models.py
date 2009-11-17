@@ -55,8 +55,8 @@ class Game(models.Model):
             self.started = datetime.datetime.now()
             for pwr in Power.objects.all():
                 t_set = Territory.objects.filter(power=pwr)
-                gvt = self.government_set.create(name=pwr.name, power=pwr,
-                                                 owns=t_set)
+                gvt = self.government_set.create(name=pwr.name, power=pwr)
+                gvt.owns.add(*list(t_set))
                 for sr in Subregion.objects.filter(init_unit=True,
                                                    territory__power=pwr):
                     gvt.unit_set.create(u_type=convert[sr.sr_type],
