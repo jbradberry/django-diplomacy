@@ -18,15 +18,10 @@
       {% for government in game.governments %}
       <tr class="{{ government.power }}">
 	<td>{{ government }}</td>
-	<td>{{ government.power }}</td>
+	<td><a href="orders/{{ government.power|lower }}/">{{ government.power }}</a></td>
 	<td>{{ government.supplycenters }}</td>
       </tr>
       {% endfor %}
     </table>
-
-    <p>
-      <a href="orders">Your orders?</a>
-    </p>
-
   </body>
 </html>
