@@ -104,10 +104,11 @@ class OrderForm(ModelForm):
             del self.fields[fn]
 
 class OrderFormSet(BaseModelFormSet):
-    def __init__(self, game, government, queryset=None, **kwargs):
+    def __init__(self, game, government, data=None, queryset=None, **kwargs):
         self.game = game
         self.government = government
-        super(OrderFormSet, self).__init__(queryset=queryset, **kwargs)
+        super(OrderFormSet, self).__init__(data=data,
+                                           queryset=queryset, **kwargs)
 
     def _construct_forms(self):
         self.forms = []

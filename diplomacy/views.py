@@ -25,7 +25,7 @@ def orders(request, slug, power):
                                     formset=OrderFormSet, extra=0,
                                     exclude=('turn', 'government'))
     if request.method == 'POST':
-        formset = OFormSet(request.POST, g, gvt, queryset=qs)
+        formset = OFormSet(g, gvt, request.POST, queryset=qs)
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect('../')
