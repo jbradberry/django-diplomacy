@@ -86,6 +86,8 @@ class OrderForm(ModelForm):
             self._one('actor')
 
     def _filter(self, fn, allow_null, **kwargs):
+        if allow_null:
+            self.fields[fn].required = False
         empty_label = u"---------"
         choices = [(k, (((u'', empty_label),) if k in allow_null else ()) +
                     tuple((i.pk, self.names[i.pk]) for i in v))
@@ -101,11 +103,19 @@ class OrderForm(ModelForm):
             choice = self.initial[fn]
         old = self.fields[fn].choices
         self.fields[fn].choices = [c for c in old if c[0] == choice]
-        self.fields[fn].widget.attrs['disabled'] = True
 
     def _remove(self, *args):
         for fn in args:
             del self.fields[fn]
+
+    def clean(self):
+        for i in ('actor', 'target', 'destination'):
+            value = self.cleaned_data[i]
+            if value:
+                self.cleaned_data[i] = Subregion.objects.get(pk=value)
+            else:
+                self.cleaned_data[i] = None
+        return self.cleaned_data
 
 class OrderFormSet(BaseModelFormSet):
     def __init__(self, game, government, data=None, queryset=None, **kwargs):
