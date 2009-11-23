@@ -28,7 +28,7 @@ def orders(request, slug, power):
         formset = OFormSet(g, gvt, request.POST, queryset=qs)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect('../')
+            return HttpResponseRedirect('../../')
     else:
         formset = OFormSet(g, gvt, queryset=qs)
     return render_to_response('diplomacy/manage_orders.html',
