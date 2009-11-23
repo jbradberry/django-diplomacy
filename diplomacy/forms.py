@@ -28,20 +28,21 @@ class OrderForm(ModelForm):
             self.fields[w].widget.attrs['class'] = c
 
         self.fields['actor'].choices = self.names.items()
+        u = Subregion.objects.get(id=self.initial['actor'])
         if self.season in ('S', 'F'):
-            u = Unit.objects.get(subregion=self.initial['actor'])
             if self.initial['u_type'] == 'F':
                 self._constrain('action', ('H', 'M', 'S', 'C'))
                 self._filter('target', ('H',),
                              H=sr.none(),
-                             M=sr.filter(borders__unit=u),
-                             S=sr.filter(unit__u_type__in=('A','F')),
-                             C=sr.filter(unit__u_type='A',
+                             M=sr.filter(borders=u),
+                             S=sr.filter(unit__government__game=self.game),
+                             C=sr.filter(unit__government__game=self.game,
+                                         unit__u_type='A',
                                          territory__subregion__sr_type='S'))
                 self._filter('destination', ('H', 'M', 'S'),
                              H=sr.none(),
                              M=sr.none(),
-                             S=sr.filter(borders__unit=u),
+                             S=sr.filter(borders=u),
                              C=sr.filter(sr_type='L').filter(
                                  territory__subregion__sr_type='S'
                                  ).distinct())
@@ -50,19 +51,18 @@ class OrderForm(ModelForm):
                 self._filter('target', ('H',),
                              H=sr.none(),
                              M=sr.filter(sr_type='L').filter(
-                                 Q(borders__unit=u) |
-                                 Q(borders__territory__subregion__sr_type='S')
+                                 Q(borders=u) |
+                                 Q(territory__subregion__sr_type='S')
                                  ).distinct(),
-                             S=sr.filter(unit__u_type__in=('A', 'F')))
+                             S=sr.filter(unit__government__game=self.game))
                 self._filter('destination', ('H', 'M', 'S'),
                              H=sr.none(),
                              M=sr.none(),
-                             S=sr.filter(borders__unit=u))
+                             S=sr.filter(borders=u))
         if self.season in ('SR', 'FR'):
-            u = Unit.objects.get(subregion=self.initial['actor'])
             self._constrain('action', ('R', 'D'))
             self._remove('destination')
-            self._filter('target', ('D',), R=sr.filter(borders__unit=u),
+            self._filter('target', ('D',), R=sr.filter(borders=u),
                          D=sr.none())
         if self.season == 'FB':
             self._remove('target', 'destination')
@@ -76,7 +76,7 @@ class OrderForm(ModelForm):
                 qs = sr.filter(territory__government=me,
                                territory__power__government=me,
                                territory__is_supply=True).exclude(
-                    territory__subregion__unit__u_type__in=('A', 'F'))
+                    territory__subregion__unit__government__game=self.game)
                 self._filter('actor', (), F=qs.filter(sr_type='S'),
                              A=qs.filter(sr_type='L'))
             if government.builds_available() == 0:
