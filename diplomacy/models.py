@@ -126,9 +126,9 @@ class Subregion(models.Model):
 
     def __unicode__(self):
         if self.subname:
-            return u'%s (%s)' % (self.territory, self.subname)
+            return u'%s (%s)' % (self.territory.name, self.subname)
         else:
-            return u'%s [%s]' % (self.territory, self.sr_type)
+            return u'%s [%s]' % (self.territory.name, self.sr_type)
 
 class Government(models.Model):
     name = models.CharField(max_length=100)

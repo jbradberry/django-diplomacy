@@ -4,6 +4,7 @@ from django.forms.fields import ChoiceField
 from diplomacy.models import Order, Subregion, Unit
 
 class OrderForm(ModelForm):
+    actor = ChoiceField()
     target = ChoiceField()
     destination = ChoiceField()
     
@@ -11,10 +12,11 @@ class OrderForm(ModelForm):
         model = Order
         exclude = ('turn', 'government')
         
-    def __init__(self, game, government, *args, **kwargs):
+    def __init__(self, game, government, names, sr, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
         self.game = game
         self.government = government
+        self.names = names
         self.season = game.current_turn().season
 
         my_css = {'u_type': 'u_type',
@@ -25,7 +27,7 @@ class OrderForm(ModelForm):
         for w, c in my_css.items():
             self.fields[w].widget.attrs['class'] = c
 
-        sr = Subregion.objects
+        self.fields['actor'].choices = self.names.items()
         if self.season in ('S', 'F'):
             u = Unit.objects.get(subregion=self.initial['actor'])
             if self.initial['u_type'] == 'F':
@@ -84,7 +86,7 @@ class OrderForm(ModelForm):
     def _filter(self, fn, allow_null, **kwargs):
         empty_label = u"---------"
         choices = [(k, (((u'', empty_label),) if k in allow_null else ()) +
-                    tuple((i.pk, smart_unicode(i)) for i in v))
+                    tuple((i.pk, self.names[i.pk]) for i in v))
                    for k, v in kwargs.items()]
         self.fields[fn].choices = choices
 
@@ -107,6 +109,8 @@ class OrderFormSet(BaseModelFormSet):
     def __init__(self, game, government, data=None, queryset=None, **kwargs):
         self.game = game
         self.government = government
+        self.sr = Subregion.objects.select_related('territory__name').all()
+        self.names = dict((i.pk, unicode(i)) for i in self.sr)
         super(OrderFormSet, self).__init__(data=data,
                                            queryset=queryset, **kwargs)
 
@@ -114,4 +118,6 @@ class OrderFormSet(BaseModelFormSet):
         self.forms = []
         for i in xrange(self.total_form_count()):
             self.forms.append(self._construct_form(i, game=self.game,
-                                                   government=self.government))
+                                                   government=self.government,
+                                                   names=self.names,
+                                                   sr=self.sr,))
