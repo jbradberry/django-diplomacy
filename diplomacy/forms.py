@@ -1,6 +1,6 @@
-from django.utils.encoding import smart_unicode
 from django.forms.models import ModelForm, BaseModelFormSet
 from django.forms.fields import ChoiceField
+from django.db.models import Q
 from diplomacy.models import Order, Subregion, Unit
 
 class OrderForm(ModelForm):
@@ -36,20 +36,22 @@ class OrderForm(ModelForm):
                              H=sr.none(),
                              M=sr.filter(borders__unit=u),
                              S=sr.filter(unit__u_type__in=('A','F')),
-                             C=sr.filter(unit__u_type='A'))
+                             C=sr.filter(unit__u_type='A',
+                                         territory__subregion__sr_type='S'))
                 self._filter('destination', ('H', 'M', 'S'),
                              H=sr.none(),
                              M=sr.none(),
                              S=sr.filter(borders__unit=u),
                              C=sr.filter(sr_type='L').filter(
-                                 borders__territory__subregion__sr_type='S'
+                                 territory__subregion__sr_type='S'
                                  ).distinct())
             if self.initial['u_type'] == 'A':
                 self._constrain('action', ('H', 'M', 'S'))
                 self._filter('target', ('H',),
                              H=sr.none(),
                              M=sr.filter(sr_type='L').filter(
-                                 borders__territory__subregion__sr_type='S'
+                                 Q(borders__unit=u) |
+                                 Q(borders__territory__subregion__sr_type='S')
                                  ).distinct(),
                              S=sr.filter(unit__u_type__in=('A', 'F')))
                 self._filter('destination', ('H', 'M', 'S'),
