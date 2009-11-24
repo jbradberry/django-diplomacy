@@ -9,48 +9,69 @@
       $(document).ready(function() {
 	$("col").each(function() { $(this).width( $(this).width() ); });
 	
-        $("select[name$='u_type']").change(function() {
+        $("select[name$='u_type']").each(function() {
 
-          var u_type = $(this).find("option:selected").val();
-          var grandparent = $(this).parent().parent();
-          grandparent.find("select[name$='actor'] > optgroup"
-          ).each(function() {
-            if ( this.label != u_type ) { $(this).hide(); }
-            else { $(this).show(); }
-          });
+	  var form = $(this).parent().parent();
+	  var actor = form.find("select[name$='actor']");
+	  var orig_a = actor.val();
 
-        }).trigger("change");
+	  $(this).change(function() {
+
+            var u_type = $(this).val();
+
+            actor.find("optgroup").each(function() {
+              if ( this.label != u_type ) { $(this).hide(); }
+              else {
+	        $(this).show();
+	        $(this).find("option:first").attr("selected", "selected");
+	        opt = $(this).find("option[value='" +orig_a+ "']");
+	        if ( opt.length ) { opt.attr("selected", "selected"); }
+	      }
+            });
+          }).trigger("change");
+	});
       
-        $("select[name$='action']").change(function() {
+        $("select[name$='action']").each(function() {
+
+	  var form = $(this).parent().parent();
+	  var target = form.find("select[name$='target']");
+	  var orig_t = target.val();
+	  var dest   = form.find("select[name$='destination']");
+	  var orig_d = dest.val();
+
+	  $(this).change(function() {
       
-          var act = $(this).find("option:selected").val();
-          var grandparent = $(this).parent().parent();
-          var target = grandparent.find("select[name$='target']");
-          var dest = grandparent.find("select[name$='destination']");
+            var act = $(this).val();
+          
+            target.find("optgroup").each(function() {
+              if ( this.label != act ) { $(this).hide(); }
+              else {
+                $(this).show();
+	        $(this).find("option:first").attr("selected", "selected");
+	        opt = $(this).find("option[value='" +orig_t+ "']");
+	        if ( opt.length ) { opt.attr("selected", "selected"); }
+              }
+            });
+            var T = target.find("optgroup[label='" +act+ "'] option");
+            if ( T.length == 1 && T[0].value == "" ) {
+	      target.fadeOut("def"); }
+	    else { target.fadeIn("def"); }
 
-          target.find("optgroup").each(function() {
-            if ( this.label != act ) { $(this).hide(); }
-            else {
-              $(this).show();
-              $(this).find("option:first").attr("selected", "selected");
-            }
-          });
-          var T = target.find("optgroup[label='" +act+ "'] option");
-          if ( T.length == 1 && T[0].value == "" ) { target.fadeOut("def"); }
-	  else { target.fadeIn("def"); }
-
-          dest.find("optgroup").each(function() {
-            if ( this.label != act ) { $(this).hide(); }
-            else {
-              $(this).show();
-              $(this).find("option:first").attr("selected", "selected");
-            }
-          });
-          var D = dest.find("optgroup[label='" +act+ "'] option");
-          if ( D.length == 1 && D[0].value == "" ) { dest.fadeOut("def"); }
-	  else { dest.fadeIn("def"); }
+            dest.find("optgroup").each(function() {
+              if ( this.label != act ) { $(this).hide(); }
+              else {
+                $(this).show();
+	        $(this).find("option:first").attr("selected", "selected");
+	        opt = $(this).find("option[value='" +orig_d+ "']");
+	        if ( opt.length ) { opt.attr("selected", "selected"); }
+              }
+            });
+            var D = dest.find("optgroup[label='" +act+ "'] option");
+            if ( D.length == 1 && D[0].value == "" ) { dest.fadeOut("def"); }
+	    else { dest.fadeIn("def"); }
 	
-        }).trigger("change");
+          }).trigger("change");
+	});
       });
     </script>
   </head>
