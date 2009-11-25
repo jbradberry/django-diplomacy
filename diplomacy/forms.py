@@ -60,9 +60,9 @@ class OrderForm(ModelForm):
                              M=sr.none(),
                              S=sr.filter(borders=u))
         if self.season in ('SR', 'FR'):
-            self._constrain('action', ('R', 'D'))
+            self._constrain('action', ('M', 'D'))
             self._remove('destination')
-            self._filter('target', ('D',), R=sr.filter(borders=u),
+            self._filter('target', ('D',), M=sr.filter(borders=u),
                          D=sr.none())
         if self.season == 'FB':
             self._remove('target', 'destination')
