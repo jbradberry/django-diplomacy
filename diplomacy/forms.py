@@ -1,5 +1,6 @@
 from django.forms.models import ModelForm, BaseModelFormSet
 from django.forms.fields import ChoiceField
+from django.forms.util import ValidationError
 from django.db.models import Q
 from diplomacy.models import Order, Subregion, Unit
 
@@ -110,6 +111,8 @@ class OrderForm(ModelForm):
 
     def clean(self):
         for i in ('actor', 'target', 'destination'):
+            if i not in self.cleaned_data:
+                continue
             value = self.cleaned_data[i]
             if value:
                 self.cleaned_data[i] = Subregion.objects.get(pk=value)

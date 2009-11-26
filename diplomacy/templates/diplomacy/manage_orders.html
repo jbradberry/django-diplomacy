@@ -93,15 +93,14 @@
 	  </tr>
 	</thead>
 	{% endif %}
-	<tr class="{% cycle row1,row2 %}">
+	<tr{% if form.errors %} class="errorform"{% endif %}>
 	  {% for field in form.visible_fields %}
-	  <td>
+	  <td{% if field.errors %} class="errorfield"{% endif %}>
 	    {% if forloop.first %}
 	    {% for hidden in form.hidden_fields %}
 	    {{ hidden }}
 	    {% endfor %}
 	    {% endif %}
-	    {{ field.errors.as_ul }}
 	    {{ field }}
 	  </td>
 	  {% endfor %}
