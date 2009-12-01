@@ -1,23 +1,91 @@
 from django.forms.models import ModelForm, BaseModelFormSet
 from django.forms.fields import ChoiceField
 from django.forms.util import ValidationError
-from django.db.models import Q
 from diplomacy.models import Order, Subregion, Unit
 
+def validtree(game, gvt):
+    season = game.current_turn().season
+    convert = {'L': 'A', 'S': 'F'}
+    tree = {}
+
+    sr = Subregion.objects.all()
+    if season == 'FB' and gvt.builds_available() > 0:
+        actor = sr.filter(territory__power__government=gvt,
+                          territory__government=gvt,
+                          territory__is_supply=True).exclude(
+            territory__subregion__unit__government__game=game)
+    else:
+        if season in ('SR', 'FR'):
+            actor = sr.filter(unit__government=gvt,
+                              unit__displaced_by__isnull=False)
+        else:
+            actor = sr.filter(unit__government=gvt)
+
+    for i in actor:
+        lvl1 = tree.setdefault(convert[i.sr_type], {})
+        lvl2 = lvl1.setdefault(i.id, {})
+        for j in ('H', 'M', 'S', 'C', 'B', 'D'):
+            if season in ('S', 'F') and j in ('B', 'D'):
+                continue
+            if season in ('SR', 'FR') and j not in ('M', 'D'):
+                continue
+            if season == 'FB':
+                if j not in ('B', 'D'):
+                    continue
+                if j == 'B' and gvt.builds_available() <= 0:
+                    continue
+                if j == 'D' and gvt.builds_available() >= 0:
+                    continue
+            else:
+                unit = Unit.objects.get(government=gvt, subregion=i)
+            
+            if j in ('H', 'B', 'D'):
+                target, dest = [u''], [u'']
+            if j in ('M', 'S'):
+                dest = [u'']
+
+            if j == 'M':
+                target = sr.filter(borders=i)
+                if season in ('SR', 'FR'):
+                    target.exclude(
+                        unit__government__game=game).exclude(
+                        territory__subregion=unit.displaced_by).exclude(
+                        territory__standoff=True)
+                target = target.values_list('id', flat=True)
+                if season in ('S', 'F') and unit.u_type = 'A':
+                    coastal = sr.filter(sr_type='L', territory__sr_type='S'
+                                        ).values_list('id', flat=True)
+                    if i.id in coastal:
+                        target = list(set(target + coastal))
+                        target.remove(i.id)
+                        target.sort()
+            if j == 'S':
+                target = sr.filter(
+                    unit__government__game=game
+                    ).exclude(id=i.id).values_list('id', flat=True)
+                dest += sr.filter(borders=i).values_list('id', flat=True)
+            if j == 'C':
+                if unit.u_type != 'F':
+                    continue
+                coastal = sr.filter(sr_type='L', territory__sr_type='S'
+                                    ).distinct()
+                target = coastal.filter(unit__government__game=game
+                                        ).values_list('id', flat=True)
+                dest = coastal.values_list('id', flat=True)
+
+            lvl2.update({j: (target, dest)})
+
+    return tree
+
 class OrderForm(ModelForm):
-    actor = ChoiceField()
-    target = ChoiceField()
-    destination = ChoiceField()
-    
     class Meta:
         model = Order
         exclude = ('turn', 'government')
         
-    def __init__(self, game, government, names, sr, *args, **kwargs):
+    def __init__(self, game, government, sr, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
         self.game = game
         self.government = government
-        self.names = names
         self.season = game.current_turn().season
 
         my_css = {'u_type': 'u_type',
@@ -27,98 +95,6 @@ class OrderForm(ModelForm):
                   'destination': 'subregion'}
         for w, c in my_css.items():
             self.fields[w].widget.attrs['class'] = c
-
-        self.fields['actor'].choices = self.names.items()
-        u = Subregion.objects.get(id=self.initial['actor'])
-        if self.season in ('S', 'F'):
-            if self.initial['u_type'] == 'F':
-                self._constrain('action', ('H', 'M', 'S', 'C'))
-                self._filter('target', ('H',),
-                             H=sr.none(),
-                             M=sr.filter(borders=u),
-                             S=sr.filter(unit__government__game=self.game),
-                             C=sr.filter(unit__government__game=self.game,
-                                         unit__u_type='A',
-                                         territory__subregion__sr_type='S'))
-                self._filter('destination', ('H', 'M', 'S'),
-                             H=sr.none(),
-                             M=sr.none(),
-                             S=sr.filter(borders=u),
-                             C=sr.filter(sr_type='L').filter(
-                                 territory__subregion__sr_type='S'
-                                 ).distinct())
-            if self.initial['u_type'] == 'A':
-                self._constrain('action', ('H', 'M', 'S'))
-                self._filter('target', ('H',),
-                             H=sr.none(),
-                             M=sr.filter(sr_type='L').filter(
-                                 Q(borders=u) |
-                                 Q(territory__subregion__sr_type='S')
-                                 ).distinct(),
-                             S=sr.filter(unit__government__game=self.game))
-                self._filter('destination', ('H', 'M', 'S'),
-                             H=sr.none(),
-                             M=sr.none(),
-                             S=sr.filter(borders=u))
-        if self.season in ('SR', 'FR'):
-            self._constrain('action', ('M', 'D'))
-            self._remove('destination')
-            self._filter('target', ('D',), M=sr.filter(borders=u),
-                         D=sr.none())
-        if self.season == 'FB':
-            self._remove('target', 'destination')
-            if government.builds_available() < 0: # need to disband
-                self._one('action', 'D')
-                qs = sr.filter(unit__government=me)
-                self._filter('actor', (), F=qs.filter(sr_type='S'),
-                             A=qs.filter(sr_type='L'))
-            if government.builds_available() > 0: # allowed to build
-                self._one('action', 'B')
-                qs = sr.filter(territory__government=me,
-                               territory__power__government=me,
-                               territory__is_supply=True).exclude(
-                    territory__subregion__unit__government__game=self.game)
-                self._filter('actor', (), F=qs.filter(sr_type='S'),
-                             A=qs.filter(sr_type='L'))
-            if government.builds_available() == 0:
-                raise ValueError("No orders are permitted.")
-        else: # unless it is a build phase, there is a fixed set of orders.
-            self._one('u_type')
-            self._one('actor')
-
-    def _filter(self, fn, allow_null, **kwargs):
-        if allow_null:
-            self.fields[fn].required = False
-        empty_label = u"---------"
-        choices = [(k, (((u'', empty_label),) if k in allow_null else ()) +
-                    tuple((i.pk, self.names[i.pk]) for i in v))
-                   for k, v in kwargs.items()]
-        self.fields[fn].choices = choices
-
-    def _constrain(self, fn, lst):
-        self.fields[fn].choices = [i for i in self.fields[fn].choices
-                                   if i[0] in lst]
-
-    def _one(self, fn, choice=None):
-        if choice is None:
-            choice = self.initial[fn]
-        old = self.fields[fn].choices
-        self.fields[fn].choices = [c for c in old if c[0] == choice]
-
-    def _remove(self, *args):
-        for fn in args:
-            del self.fields[fn]
-
-    def clean(self):
-        for i in ('actor', 'target', 'destination'):
-            if i not in self.cleaned_data:
-                continue
-            value = self.cleaned_data[i]
-            if value:
-                self.cleaned_data[i] = Subregion.objects.get(pk=value)
-            else:
-                self.cleaned_data[i] = None
-        return self.cleaned_data
 
 class OrderFormSet(BaseModelFormSet):
     def __init__(self, game, government, data=None, queryset=None, **kwargs):
