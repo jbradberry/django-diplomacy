@@ -47,11 +47,13 @@ def validtree(game, gvt):
             if j == 'M':
                 target = sr.filter(borders=i)
                 if season in ('SR', 'FR'):
-                    target.exclude(
+                    target = target.exclude(
                         unit__government__game=game).exclude(
                         territory__subregion=unit.displaced_by).exclude(
                         territory__standoff=True)
                 target = target.values_list('id', flat=True)
+                if not target:
+                    continue
                 if season in ('S', 'F') and unit.u_type = 'A':
                     coastal = sr.filter(sr_type='L', territory__sr_type='S'
                                         ).values_list('id', flat=True)
