@@ -153,6 +153,10 @@ class Unit(models.Model):
     government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
+    displaced_from = models.ForeignKey(Territory, null=True, blank=True,
+                                       related_name='displaced')
+    standoff_from = models.ForeignKey(Territory, null=True, blank=True,
+                                      related_name='standoff')
 
     def __unicode__(self):
         return u'%s %s' % (self.u_type, self.subregion.territory)

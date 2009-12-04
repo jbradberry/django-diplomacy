@@ -17,7 +17,7 @@ def validtree(game, gvt):
     else:
         if season in ('SR', 'FR'):
             actor = sr.filter(unit__government=gvt,
-                              unit__displaced_by__isnull=False)
+                              unit__displaced_from__isnull=False)
         else:
             actor = sr.filter(unit__government=gvt)
 
@@ -49,12 +49,12 @@ def validtree(game, gvt):
                 if season in ('SR', 'FR'):
                     target = target.exclude(
                         unit__government__game=game).exclude(
-                        territory__subregion=unit.displaced_by).exclude(
-                        territory__standoff=True)
+                        territory=unit.displaced_from).exclude(
+                        territory__standoff__government__game=game)
                 target = target.values_list('id', flat=True)
                 if not target:
                     continue
-                if season in ('S', 'F') and unit.u_type = 'A':
+                if season in ('S', 'F') and unit.u_type == 'A':
                     coastal = sr.filter(sr_type='L', territory__sr_type='S'
                                         ).values_list('id', flat=True)
                     if i.id in coastal:
