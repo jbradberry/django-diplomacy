@@ -55,21 +55,24 @@ def validtree(game, gvt):
                 if not target:
                     continue
                 if season in ('S', 'F') and unit.u_type == 'A':
-                    coastal = sr.filter(sr_type='L', territory__sr_type='S'
+                    coastal = sr.filter(sr_type='L',
+                                        territory__subregion__sr_type='S'
                                         ).values_list('id', flat=True)
                     if i.id in coastal:
-                        target = list(set(target + coastal))
+                        target = list(set(list(target) + list(coastal)))
                         target.remove(i.id)
                         target.sort()
             if j == 'S':
                 target = sr.filter(
                     unit__government__game=game
                     ).exclude(id=i.id).values_list('id', flat=True)
-                dest += sr.filter(borders=i).values_list('id', flat=True)
+                dest += list(sr.filter(borders=i
+                                       ).values_list('id', flat=True))
             if j == 'C':
                 if unit.u_type != 'F':
                     continue
-                coastal = sr.filter(sr_type='L', territory__sr_type='S'
+                coastal = sr.filter(sr_type='L',
+                                    territory__subregion__sr_type='S'
                                     ).distinct()
                 target = coastal.filter(unit__government__game=game
                                         ).values_list('id', flat=True)
