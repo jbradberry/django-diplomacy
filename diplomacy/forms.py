@@ -78,7 +78,7 @@ def validtree(game, gvt):
                                         ).values_list('id', flat=True)
                 dest = coastal.values_list('id', flat=True)
 
-            lvl2.update({j: (target, dest)})
+            lvl2.update({j: (list(target), list(dest))})
 
     return tree
 
