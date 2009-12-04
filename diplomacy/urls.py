@@ -17,4 +17,5 @@ urlpatterns = patterns('',
     (r'^(?P<state>\w+)/$', 'diplomacy.views.state_lists'),
     (r'^games/(?P<slug>[-\w]+)/$', object_detail, game_info),
     (r'^games/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/$', 'diplomacy.views.orders'),
+    (r'^games/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/filter/$', 'diplomacy.views.select_filter'),
 )

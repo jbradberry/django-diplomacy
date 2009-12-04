@@ -3,9 +3,10 @@ from django.shortcuts import render_to_response
 from django.forms.models import modelformset_factory
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponseRedirect, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
+from django.utils import simplejson
 from diplomacy.models import Game, Order
-from diplomacy.forms import OrderForm, OrderFormSet
+from diplomacy.forms import OrderForm, OrderFormSet, validtree
 
 def state_lists(request, state):
     game_list = Game.objects.filter(state__iexact=state)
@@ -33,3 +34,12 @@ def orders(request, slug, power):
         formset = OFormSet(g, gvt, queryset=qs)
     return render_to_response('diplomacy/manage_orders.html',
                               {'formset': formset})
+
+def select_filter(request, slug, power):
+    g = Game.objects.get(slug=slug)
+    try:
+        gvt = g.government_set.get(power__name__iexact=power,
+                                   user=request.user)
+    except ObjectDoesNotExist:
+        return HttpResponseForbidden("<h1>Permission denied</h1>")
+    return HttpResponse(simplejson.dumps(validtree(g, gvt)))
