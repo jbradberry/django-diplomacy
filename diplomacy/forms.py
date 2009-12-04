@@ -87,7 +87,7 @@ class OrderForm(ModelForm):
         model = Order
         exclude = ('turn', 'government')
         
-    def __init__(self, game, government, sr, *args, **kwargs):
+    def __init__(self, game, government, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
         self.game = game
         self.government = government
@@ -105,8 +105,6 @@ class OrderFormSet(BaseModelFormSet):
     def __init__(self, game, government, data=None, queryset=None, **kwargs):
         self.game = game
         self.government = government
-        self.sr = Subregion.objects.select_related('territory__name').all()
-        self.names = dict((i.pk, unicode(i)) for i in self.sr)
         super(OrderFormSet, self).__init__(data=data,
                                            queryset=queryset, **kwargs)
 
@@ -114,6 +112,4 @@ class OrderFormSet(BaseModelFormSet):
         self.forms = []
         for i in xrange(self.total_form_count()):
             self.forms.append(self._construct_form(i, game=self.game,
-                                                   government=self.government,
-                                                   names=self.names,
-                                                   sr=self.sr,))
+                                                   government=self.government))
