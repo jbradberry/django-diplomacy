@@ -3,7 +3,7 @@ from django.shortcuts import render_to_response
 from django.forms.models import modelformset_factory
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden, Http404
 from django.utils import simplejson
 from diplomacy.models import Game, Order
 from diplomacy.forms import OrderForm, OrderFormSet, validtree
@@ -38,8 +38,8 @@ def orders(request, slug, power):
 def select_filter(request, slug, power):
     g = Game.objects.get(slug=slug)
     try:
-        gvt = g.government_set.get(power__name__iexact=power,
-                                   user=request.user)
+        gvt = g.government_set.get(power__name__iexact=power)
     except ObjectDoesNotExist:
-        return HttpResponseForbidden("<h1>Permission denied</h1>")
-    return HttpResponse(simplejson.dumps(validtree(g, gvt)))
+        raise Http404
+    return HttpResponse(simplejson.dumps(validtree(g, gvt)),
+                        mimetype='application/json')
