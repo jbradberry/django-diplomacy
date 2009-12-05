@@ -37,9 +37,11 @@ def orders(request, slug, power):
 
 def select_filter(request, slug, power):
     g = Game.objects.get(slug=slug)
+    uf = (g.current_turn().season != 'FB')
     try:
         gvt = g.government_set.get(power__name__iexact=power)
     except ObjectDoesNotExist:
         raise Http404
-    return HttpResponse(simplejson.dumps(validtree(g, gvt)),
+    return HttpResponse(simplejson.dumps({'unit_fixed': uf,
+                                          'tree': validtree(g, gvt)})),
                         mimetype='application/json')

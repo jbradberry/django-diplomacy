@@ -6,71 +6,78 @@
     src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js">
     </script>
     <script type="text/javascript">
+      function objlen(obj) {
+	var len = 0;
+	$.each(obj, function() { len++; });
+	return len;
+      }
+
+      function in_obj(item, obj) {
+	if ( obj instanceof Array ) {
+	  return ( $.inArray(parseInt(item), obj) >= 0 );
+	}
+	return ( typeof obj[item] != 'undefined' );
+      }
+	
+      function filter(widget, data) {
+	if ( objlen(data) == 1 && data[0] == "" ) {
+	  widget.val("");
+	  widget.fadeOut("def");
+	}
+	else {
+	  if ( widget.is(":hidden") ) { widget.fadeIn(); }
+	  if ( !in_obj(widget.val(), data) ) { widget.val(data[0]); }
+
+	  widget.find("option").each(function() {
+	    if ( in_obj($(this).val(), data) ) { $(this).show(); }
+	    else { $(this).hide(); }
+	  });
+	}
+      }
+
+      function readonly() {
+	$(this).hide();
+	$(this).parent().append( $(this).find(":selected").text() );
+      }
+	
       $(document).ready(function() {
 	$("col").each(function() { $(this).width( $(this).width() ); });
+
+	$.getJSON("filter/", {}, function(data) {
+	  var unit_fixed = data.unit_fixed;
+	  var tree = data.tree;
+
+	  $("tr.form").each(function() {
+	    var form = $(this);
+	    var u_type, actor, action;
 	
-        $("select[name$='u_type']").each(function() {
+	    if ( unit_fixed ) {
+	      u_type = form.find("select[name$=u_type]");
+	      u_type.each(readonly);
+	      u_type = u_type.val();
+	      actor = form.find("select[name$=actor]");
+	      actor.each(readonly);
+	      actor = actor.val();
+	    } else {
+	      form.find("select[name$=u_type]").change(function() {
+	        u_type = $(this).val();
+	        filter(form.find("select[name$=actor]"), tree[u_type]);
+	      }).trigger("change");
+	    }
 
-	  var form = $(this).parent().parent();
-	  var actor = form.find("select[name$='actor']");
-	  var orig_a = actor.val();
+	    form.find("select[name$=actor]").change(function() {
+	      actor = $(this).val();
+	      filter(form.find("select[name$=action]"), tree[u_type][actor]);
+	    }).trigger("change");
 
-	  $(this).change(function() {
+	    form.find("select[name$=action]").change(function() {
+	      action = $(this).val();
+	      var current = tree[u_type][actor][action];
+	      filter(form.find("select[name$=target]"), current[0]);
+	      filter(form.find("select[name$=destination]"), current[1]);
+	    }).trigger("change");
 
-            var u_type = $(this).val();
-
-            actor.find("optgroup").each(function() {
-              if ( this.label != u_type ) { $(this).hide(); }
-              else {
-	        $(this).show();
-	        $(this).find("option:first").attr("selected", "selected");
-	        opt = $(this).find("option[value='" +orig_a+ "']");
-	        if ( opt.length ) { opt.attr("selected", "selected"); }
-	      }
-            });
-          }).trigger("change");
-	});
-      
-        $("select[name$='action']").each(function() {
-
-	  var form = $(this).parent().parent();
-	  var target = form.find("select[name$='target']");
-	  var orig_t = target.val();
-	  var dest   = form.find("select[name$='destination']");
-	  var orig_d = dest.val();
-
-	  $(this).change(function() {
-      
-            var act = $(this).val();
-          
-            target.find("optgroup").each(function() {
-              if ( this.label != act ) { $(this).hide(); }
-              else {
-                $(this).show();
-	        $(this).find("option:first").attr("selected", "selected");
-	        opt = $(this).find("option[value='" +orig_t+ "']");
-	        if ( opt.length ) { opt.attr("selected", "selected"); }
-              }
-            });
-            var T = target.find("optgroup[label='" +act+ "'] option");
-            if ( T.length == 1 && T[0].value == "" ) {
-	      target.fadeOut("def"); }
-	    else { target.fadeIn("def"); }
-
-            dest.find("optgroup").each(function() {
-              if ( this.label != act ) { $(this).hide(); }
-              else {
-                $(this).show();
-	        $(this).find("option:first").attr("selected", "selected");
-	        opt = $(this).find("option[value='" +orig_d+ "']");
-	        if ( opt.length ) { opt.attr("selected", "selected"); }
-              }
-            });
-            var D = dest.find("optgroup[label='" +act+ "'] option");
-            if ( D.length == 1 && D[0].value == "" ) { dest.fadeOut("def"); }
-	    else { dest.fadeIn("def"); }
-	
-          }).trigger("change");
+	  });
 	});
       });
     </script>
@@ -79,7 +86,7 @@
     <form method="POST" action="">
       {{ formset.management_form }}
       {{ formset.non_form_errors.as_ul }}
-      <table id="formset" class="form">
+      <table class="formset">
 	{% for form in formset.forms %}
 	{% if forloop.first %}
 	{% for field in form.visible_fields %}
@@ -93,7 +100,7 @@
 	  </tr>
 	</thead>
 	{% endif %}
-	<tr{% if form.errors %} class="errorform"{% endif %}>
+	<tr class="form{% if form.errors %} errorform{% endif %}">
 	  {% for field in form.visible_fields %}
 	  <td{% if field.errors %} class="errorfield"{% endif %}>
 	    {% if forloop.first %}

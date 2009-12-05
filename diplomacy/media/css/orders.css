@@ -1,7 +1,7 @@
 select.u_type { width: 5em; }
 select.action { width: 7em; }
 select.subregion { width: 13em; }
-table#formset { border-collapse: collapse; }
+table.formset { border-collapse: collapse; }
 td { padding: 2px; }
 tr.errorform td { background: red; }
 /* td.errorfield { background: red; } */
