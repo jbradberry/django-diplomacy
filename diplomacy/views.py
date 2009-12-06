@@ -43,5 +43,5 @@ def select_filter(request, slug, power):
     except ObjectDoesNotExist:
         raise Http404
     return HttpResponse(simplejson.dumps({'unit_fixed': uf,
-                                          'tree': validtree(g, gvt)})),
+                                          'tree': validtree(g, gvt)}),
                         mimetype='application/json')
