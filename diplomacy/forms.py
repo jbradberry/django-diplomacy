@@ -1,6 +1,6 @@
 from django.forms.models import ModelForm, BaseModelFormSet
 from django.forms.fields import ChoiceField
-from django.forms.util import ValidationError
+from django.forms import ValidationError
 from diplomacy.models import Order, Subregion, Unit
 
 def validtree(game, gvt):
@@ -100,6 +100,27 @@ class OrderForm(ModelForm):
                   'destination': 'subregion'}
         for w, c in my_css.items():
             self.fields[w].widget.attrs['class'] = c
+
+    def clean(self):
+        cleaned_data = self.cleaned_data
+        tree = validtree(self.game, self.government)
+        u_type = cleaned_data.get("u_type")
+        actor = cleaned_data.get("actor")
+        actor = actor.id if actor else ""
+        action = cleaned_data.get("action")
+        target = cleaned_data.get("target")
+        target = target.id if target else ""
+        dest = cleaned_data.get("destination")
+        dest = dest.id if dest else ""
+
+        try:
+            T, D = tree[u_type][actor][action]
+            if target not in T or dest not in D:
+                raise ValidationError("Invalid order.")
+        except KeyError:
+            raise ValidationError("Invalid order.")
+
+        return cleaned_data
 
 class OrderFormSet(BaseModelFormSet):
     def __init__(self, game, government, data=None, queryset=None, **kwargs):
