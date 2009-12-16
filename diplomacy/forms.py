@@ -134,3 +134,16 @@ class OrderFormSet(BaseModelFormSet):
         for i in xrange(self.total_form_count()):
             self.forms.append(self._construct_form(i, game=self.game,
                                                    government=self.government))
+
+    def clean(self):
+        if any(self.errors):
+            return
+
+        actors = []
+        for i in range(self.total_form_count()):
+            form = self.forms[i]
+            actor = form.cleaned_data["actor"].territory
+            if actor in actors:
+                raise ValidationError(
+                    "Multiple orders may not apply to the same territory.")
+            actors.append(actor)
