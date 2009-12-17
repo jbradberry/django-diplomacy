@@ -150,5 +150,5 @@ class OrderFormSet(BaseModelFormSet):
             actor = form.cleaned_data["actor"].territory
             if actor in actors:
                 raise ValidationError(
-                    "Multiple orders may not apply to the same territory.")
+                    "Territories may not have multiple orders.")
             actors.append(actor)
