@@ -113,6 +113,11 @@ class OrderForm(ModelForm):
         dest = cleaned_data.get("destination")
         dest = dest.id if dest else ""
 
+        if self.season != 'FB':
+            u, a = self.initial['u_type'], self.initial['actor']
+            if u_type != u or actor != a:
+                raise ValidationError("You may not change the acting unit.")
+
         try:
             T, D = tree[u_type][actor][action]
             if target not in T or dest not in D:
