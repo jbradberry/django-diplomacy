@@ -145,11 +145,29 @@ class OrderFormSet(BaseModelFormSet):
         if any(self.errors):
             return
 
+        if self.total_form_count() > self.initial_form_count():
+            raise ValidationError("You may not add orders.")
+        if self.total_form_count() < self.initial_form_count():
+            raise ValidationError("You may not delete orders.")
+
         actors = []
         for i in range(self.total_form_count()):
             form = self.forms[i]
             actor = form.cleaned_data["actor"].territory
+            if not actor:
+                continue
             if actor in actors:
                 raise ValidationError(
-                    "Territories may not have multiple orders.")
+                    "You may not give a territory multiple orders.")
             actors.append(actor)
+
+        if self.game.current_turn().season == 'FB':
+            builds = self.government.builds_available()
+            if builds >= 0:
+                if len(actors) > builds:
+                    raise ValidationError("You may not build more units than you have supply centers.")
+            if builds < 0:
+                if len(actors) != abs(builds):
+                    u = "unit" if builds == -1 else "units"
+                    msg = "You must disband exactly %d %s." % (abs(builds), u)
+                    raise ValidationError(msg)
