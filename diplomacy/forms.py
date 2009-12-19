@@ -10,6 +10,7 @@ def validtree(game, gvt):
 
     sr = Subregion.objects.all()
     if season == 'FB' and gvt.builds_available() > 0:
+        tree[''] = {'': {'B': ([u''], [u''])}}
         actor = sr.filter(territory__power__government=gvt,
                           territory__government=gvt,
                           territory__is_supply=True).exclude(
