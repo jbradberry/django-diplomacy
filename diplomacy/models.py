@@ -86,12 +86,33 @@ class Game(models.Model):
             turn = self.current_turn()
             Y = turn.year if turn.season != 'FB' else turn.year + 1
             S = get_next(turn.season, SEASON_CHOICES)
-        turn = self.turn_set.create(year=Y, season=S) # FIXME
-        for u in Unit.objects.filter(government__game=self):
-            turn.order_set.create(government=u.government,
-                                  u_type=u.u_type,
-                                  actor=u.subregion,
-                                  action='H')
+        turn = self.turn_set.create(year=Y, season=S)
+        for g in self.government_set.all():
+            uset = Unit.objects.filter(government=g)
+            if S in ('S', 'F'):
+                action = 'H'
+            if S in ('SR', 'FR'):
+                uset = uset.filter(displaced_from__isnull=False)
+                action = 'M'
+            if S == 'FB':
+                builds = g.builds_available()
+                if builds > 0:
+                    for i in range(g.builds_available()):
+                        turn.order_set.create(government=g,
+                                              u_type=None,
+                                              actor=None,
+                                              action='B')
+                    continue
+                if builds == 0:
+                    continue
+                if builds < 0:
+                    action = 'D'
+
+            for u in uset:
+                turn.order_set.create(government=g,
+                                      u_type=u.u_type,
+                                      actor=u.subregion,
+                                      action=action)
     generate.alters_data = True
 
 class Turn(models.Model):
