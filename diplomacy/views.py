@@ -1,11 +1,12 @@
 from django.views.generic.list_detail import object_list
 from django.shortcuts import render_to_response
-from django.forms.models import modelformset_factory
+from django.forms.models import modelformset_factory, ModelChoiceField
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden, Http404
 from django.utils import simplejson
-from diplomacy.models import Game, Order
+from django.db.models import ForeignKey
+from diplomacy.models import Game, Order, Subregion
 from diplomacy.forms import OrderForm, OrderFormSet, validtree
 
 def state_lists(request, state):
@@ -22,7 +23,15 @@ def orders(request, slug, power):
     except ObjectDoesNotExist:
         return HttpResponseForbidden("<h1>Permission denied</h1>")
     qs = Order.objects.filter(government=gvt, turn=g.current_turn())
+    sr = Subregion.objects.select_related('territory__name').all()
+    def caching_qs(f):
+        if isinstance(f, ForeignKey):
+            return ModelChoiceField(queryset=sr)
+        else:
+            return f.formfield()
+        
     OFormSet = modelformset_factory(Order, form=OrderForm,
+                                    formfield_callback=caching_qs,
                                     formset=OrderFormSet, extra=0,
                                     exclude=('turn', 'government'))
     if request.method == 'POST':
