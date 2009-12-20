@@ -26,7 +26,7 @@ def orders(request, slug, power):
     sr = Subregion.objects.select_related('territory__name').all()
     def caching_qs(f):
         if isinstance(f, ForeignKey):
-            return ModelChoiceField(queryset=sr)
+            return ModelChoiceField(queryset=sr, required=False)
         else:
             return f.formfield()
         
