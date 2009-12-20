@@ -67,7 +67,7 @@ class Game(models.Model):
     save.alters_data = True
 
     def get_absolute_url(self):
-        return "/diplomacy/games/%s/" % self.slug
+        return "/diplomacy/games/name/%s/" % self.slug
 
     def current_turn(self):
         if self.turn_set.count() > 0:

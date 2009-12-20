@@ -1,21 +1,20 @@
 from django.conf.urls.defaults import *
-from django.views.generic.list_detail import object_list, object_detail
-from diplomacy.models import Game
-
-game_info = {
-    "queryset": Game.objects.all(),
-    "template_object_name": "game",
-    }
 
 urlpatterns = patterns('',
     # DEVELOPMENT ONLY
     (r'^media/(?P<path>.*)$', 'django.views.static.serve',
      {'document_root': '/home/jrb/dev/apps/diplomacy/media/'}),
     # END DEVELOPMENT ONLY
-    (r'^$', object_list, game_info),
-    (r'^games/$', object_list, game_info),
-    (r'^(?P<state>\w+)/$', 'diplomacy.views.state_lists'),
-    (r'^games/(?P<slug>[-\w]+)/$', object_detail, game_info),
-    (r'^games/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/$', 'diplomacy.views.orders'),
-    (r'^games/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/filter/$', 'diplomacy.views.select_filter'),
+    (r'^$', 'diplomacy.views.games_list'),
+    (r'^games/$', 'diplomacy.views.games_list'),
+    (r'^games/page/(?P<page>\w+)/$', 'diplomacy.views.games_list'),
+    (r'^games/status/(?P<state>\w+)/$', 'diplomacy.views.games_list'),
+    (r'^games/status/(?P<state>\w+)/page/(?P<page>\w+)/$',
+     'diplomacy.views.games_list'),
+    (r'^games/name/(?P<slug>[-\w]+)/$',
+     'diplomacy.views.games_detail'),
+    (r'^games/name/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/$',
+     'diplomacy.views.orders'),
+    (r'^games/name/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/filter/$',
+     'diplomacy.views.select_filter'),
 )

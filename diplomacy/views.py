@@ -1,4 +1,4 @@
-from django.views.generic.list_detail import object_list
+from django.views.generic.list_detail import object_list, object_detail
 from django.shortcuts import render_to_response
 from django.forms.models import modelformset_factory, ModelChoiceField
 from django.contrib.auth.decorators import login_required
@@ -9,10 +9,22 @@ from django.db.models import ForeignKey
 from diplomacy.models import Game, Order, Subregion
 from diplomacy.forms import OrderForm, OrderFormSet, validtree
 
-def state_lists(request, state):
-    game_list = Game.objects.filter(state__iexact=state)
-    return object_list(request, queryset=game_list,
+def games_list(request, page=1, paginate_by=30, state=None):
+    game_list = Game.objects.all()
+    if state:
+        game_list = game_list.filter(state__iexact=state)
+    return object_list(request,
+                       queryset=game_list,
+                       paginate_by=paginate_by,
+                       page=page,
                        template_object_name="game")
+
+def games_detail(request, slug):
+    game_list = Game.objects.all()
+    return object_detail(request,
+                         queryset=game_list,
+                         slug=slug,
+                         template_object_name="game")
 
 @login_required
 def orders(request, slug, power):
