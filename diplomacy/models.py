@@ -66,8 +66,10 @@ class Game(models.Model):
         self.old_state = self.state
     save.alters_data = True
 
+    @models.permalink
     def get_absolute_url(self):
-        return "/diplomacy/games/name/%s/" % self.slug
+        return ('diplomacy.views.games_detail', (), {
+            'slug': self.slug})
 
     def current_turn(self):
         if self.turn_set.count() > 0:
