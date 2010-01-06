@@ -1,5 +1,8 @@
-<html>
-  <head>
+{% extends "diplomacy/base.html" %}
+
+{% block title %}{{ formset.government.power }} | {{ formset.game.name }} | Games | Diplomacy{% endblock %}
+
+{% block extra_head %}
     <link rel="stylesheet" href="/diplomacy/media/css/orders.css"
       type="text/css">
     <script type="text/javascript"
@@ -81,8 +84,21 @@
 	});
       });
     </script>
-  </head>
-  <body>
+{% endblock %}
+
+{% block page_title %}Orders - {{ formset.government.power }}{% endblock %}
+
+{% block breadcrumbs %}
+<a href="/diplomacy/">Diplomacy</a>
+&rsaquo;
+<a href="/diplomacy/games/">Games</a>
+&rsaquo;
+<a href="../../">{{ formset.game.name }}</a>
+&rsaquo;
+{{ formset.government.power }}
+{% endblock %}
+    
+{% block content %}
     <form method="POST" action="">
       {{ formset.management_form }}
       {{ formset.non_form_errors.as_ul }}
@@ -116,5 +132,4 @@
       </table>
       <input type="submit" value="Submit" />
     </form>
-  </body>
-</html>
+{% endblock %}

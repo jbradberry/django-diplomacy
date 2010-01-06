@@ -1,10 +1,23 @@
-<html>
-  <head>
+{% extends "diplomacy/base.html" %}
+
+{% block title %}{{ game.name }} | Games | Diplomacy{% endblock %}
+  
+{% block extra_head %}
     <link rel="stylesheet" href="/diplomacy/media/css/game.css"
       type="text/css">
-  </head>
-  <body>
-    <h1>{{ game.name }}</h1>
+{% endblock %}
+
+{% block page_title %}{{ game.name }}{% endblock %}
+
+{% block breadcrumbs %}
+<a href="/diplomacy/">Diplomacy</a>
+&rsaquo;
+<a href="/diplomacy/games/">Games</a>
+&rsaquo;
+{{ game.name }}
+{% endblock %}
+    
+{% block content %}
     <h2>{{ game.current_turn }}</h2>
 
     <table>
@@ -23,5 +36,4 @@
       </tr>
       {% endfor %}
     </table>
-  </body>
-</html>
+{% endblock %}
