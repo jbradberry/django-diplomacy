@@ -9,6 +9,11 @@ Games
 {% endblock %}
   
 {% block content %}
+
+  {% if is_paginated %}
+  {% include "diplomacy/list_paging.html" %}
+  {% endif %}
+  
   <table>
     <thead>
       <tr>
@@ -25,4 +30,9 @@ Games
     </tr>
     {% endfor %}
   </table>
+
+  {% if is_paginated %}
+  {% include "diplomacy/list_paging.html" %}
+  {% endif %}
+
 {% endblock %}

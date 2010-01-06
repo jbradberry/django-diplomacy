@@ -17,7 +17,8 @@ def games_list(request, page=1, paginate_by=30, state=None):
                        queryset=game_list,
                        paginate_by=paginate_by,
                        page=page,
-                       template_object_name="game")
+                       template_object_name="game",
+                       extra_context={"state": state})
 
 def games_detail(request, slug):
     game_list = Game.objects.all()
