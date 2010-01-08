@@ -9,7 +9,7 @@ def validtree(game, gvt):
     tree = {}
 
     sr = Subregion.objects.all()
-    if season == 'FB' and gvt.builds_available() > 0:
+    if season == 'FA' and gvt.builds_available() > 0:
         tree[''] = {'': {'B': ([u''], [u''])}}
         actor = sr.filter(territory__power__government=gvt,
                           territory__government=gvt,
@@ -30,7 +30,7 @@ def validtree(game, gvt):
                 continue
             if season in ('SR', 'FR') and j not in ('M', 'D'):
                 continue
-            if season == 'FB':
+            if season == 'FA':
                 if j not in ('B', 'D'):
                     continue
                 if j == 'B' and gvt.builds_available() <= 0:
@@ -114,7 +114,7 @@ class OrderForm(ModelForm):
         dest = cleaned_data.get("destination")
         dest = dest.id if dest else ""
 
-        if self.season != 'FB':
+        if self.season != 'FA':
             u, a = self.initial['u_type'], self.initial['actor']
             if u_type != u or actor != a:
                 raise ValidationError("You may not change the acting unit.")
@@ -161,7 +161,7 @@ class OrderFormSet(BaseModelFormSet):
                     "You may not give a territory multiple orders.")
             actors.append(actor)
 
-        if self.game.current_turn().season == 'FB':
+        if self.game.current_turn().season == 'FA':
             builds = self.government.builds_available()
             if builds >= 0:
                 if len(actors) > builds:

@@ -14,7 +14,7 @@ SEASON_CHOICES = (
     ('SR', 'Spring Retreat'),
     ('F', 'Fall'),
     ('FR', 'Fall Retreat'),
-    ('FB', 'Fall Build')
+    ('FA', 'Fall Adjustment')
     )
 
 UNIT_CHOICES = (
@@ -59,11 +59,11 @@ class Game(models.Model):
 
     def generate(self, start=False):
         if start:
-            self.turn_set.create(year=1900, season='FB')
+            self.turn_set.create(year=1900, season='FA')
             return
         else:
             turn = self.current_turn()
-            Y = turn.year if turn.season != 'FB' else turn.year + 1
+            Y = turn.year if turn.season != 'FA' else turn.year + 1
             S = get_next(turn.season, SEASON_CHOICES)
             turn = self.turn_set.create(year=Y, season=S)
             
@@ -74,7 +74,7 @@ class Game(models.Model):
             if S in ('SR', 'FR'):
                 uset = uset.filter(displaced_from__isnull=False)
                 action = 'M'
-            if S == 'FB':
+            if S == 'FA':
                 builds = g.builds_available()
                 if builds > 0:
                     for i in range(g.builds_available()):

@@ -59,7 +59,7 @@ def orders(request, slug, power):
 
 def select_filter(request, slug, power):
     g = Game.objects.get(slug=slug)
-    uf = (g.current_turn().season != 'FB')
+    uf = (g.current_turn().season != 'FA')
     try:
         gvt = g.government_set.get(power__name__iexact=power)
     except ObjectDoesNotExist:
