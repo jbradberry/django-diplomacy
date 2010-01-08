@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.signals import post_save
 from django.contrib.auth.models import User
 import datetime
 
@@ -45,25 +46,10 @@ class Game(models.Model):
     def __unicode__(self):
         return self.name
 
-    def __init__(self, *args, **kwargs):
-        super(Game, self).__init__(*args, **kwargs)
-        self.old_state = self.state
-
     def save(self, force_insert=False, force_update=False):
-        if self.old_state == 'S' and self.state == 'A':
-            convert = {'L': 'A', 'S': 'F'}
+        if not self.started and self.state == 'A':
             self.started = datetime.datetime.now()
-            for pwr in Power.objects.all():
-                t_set = Territory.objects.filter(power=pwr)
-                gvt = self.government_set.create(name=pwr.name, power=pwr)
-                gvt.owns.add(*list(t_set))
-                for sr in Subregion.objects.filter(init_unit=True,
-                                                   territory__power=pwr):
-                    gvt.unit_set.create(u_type=convert[sr.sr_type],
-                                        subregion=sr)
-            self.generate(start=True)
         super(Game, self).save(force_insert, force_update)
-        self.old_state = self.state
     save.alters_data = True
 
     @models.permalink
@@ -116,6 +102,21 @@ class Game(models.Model):
                                       actor=u.subregion,
                                       action=action)
     generate.alters_data = True
+
+def new_game(sender, **kwargs):
+    created, instance = kwargs['created'], kwargs['instance']
+    if created:
+        convert = {'L': 'A', 'S': 'F'}
+        for pwr in Power.objects.all():
+            t_set = Territory.objects.filter(power=pwr)
+            gvt = instance.government_set.create(name=pwr.name, power=pwr)
+            gvt.owns.add(*list(t_set))
+            for sr in Subregion.objects.filter(init_unit=True,
+                                               territory__power=pwr):
+                gvt.unit_set.create(u_type=convert[sr.sr_type],
+                                    subregion=sr)
+        instance.generate(start=True)
+post_save.connect(new_game, sender=Game)
 
 class Turn(models.Model):
     game = models.ForeignKey(Game)
