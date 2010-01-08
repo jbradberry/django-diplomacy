@@ -25,8 +25,8 @@ Games
     {% for game in game_list %}
     <tr>
       <td><a href="{{ game.get_absolute_url }}">{{ game.name }}</a></td>
-      <td>{{ game.current_turn }}</td>
-      <td>{{ game.current_turn.generated|default:game.created|date:"D, j M Y g:ia T" }}</td>
+      <td>{% ifequal game.state "S" %}Setup{% else %}{{ game.current_turn }}{% endifequal %}</td>
+      <td>{{ game.current_turn.generated|date:"D, j M Y g:ia T" }}</td>
     </tr>
     {% endfor %}
   </table>

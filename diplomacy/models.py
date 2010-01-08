@@ -38,7 +38,6 @@ class Game(models.Model):
     slug = models.SlugField(unique=True)
     owner = models.ForeignKey(User)
     created = models.DateTimeField(auto_now_add=True)
-    started = models.DateTimeField(null=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
     requests = models.ManyToManyField(User, related_name='requests')
     accepts = models.ManyToManyField(User, related_name='accepts')
@@ -46,22 +45,13 @@ class Game(models.Model):
     def __unicode__(self):
         return self.name
 
-    def save(self, force_insert=False, force_update=False):
-        if not self.started and self.state == 'A':
-            self.started = datetime.datetime.now()
-        super(Game, self).save(force_insert, force_update)
-    save.alters_data = True
-
     @models.permalink
     def get_absolute_url(self):
         return ('diplomacy.views.games_detail', (), {
             'slug': self.slug})
 
     def current_turn(self):
-        if self.turn_set.count() > 0:
-            return self.turn_set.order_by('-generated')[0]
-        else:
-            return "Setup"
+        return self.turn_set.latest()
 
     def governments(self):
         return self.government_set.all().annotate(
@@ -69,12 +59,14 @@ class Game(models.Model):
 
     def generate(self, start=False):
         if start:
-            Y, S = 1901, 'S'
+            self.turn_set.create(year=1900, season='FB')
+            return
         else:
             turn = self.current_turn()
             Y = turn.year if turn.season != 'FB' else turn.year + 1
             S = get_next(turn.season, SEASON_CHOICES)
-        turn = self.turn_set.create(year=Y, season=S)
+            turn = self.turn_set.create(year=Y, season=S)
+            
         for g in self.government_set.all():
             uset = Unit.objects.filter(government=g)
             if S in ('S', 'F'):
@@ -103,7 +95,7 @@ class Game(models.Model):
                                       action=action)
     generate.alters_data = True
 
-def new_game(sender, **kwargs):
+def game_changed(sender, **kwargs):
     created, instance = kwargs['created'], kwargs['instance']
     if created:
         convert = {'L': 'A', 'S': 'F'}
@@ -116,9 +108,16 @@ def new_game(sender, **kwargs):
                 gvt.unit_set.create(u_type=convert[sr.sr_type],
                                     subregion=sr)
         instance.generate(start=True)
-post_save.connect(new_game, sender=Game)
+    else:
+        if instance.state == 'A' and instance.turn_set.count() == 1:
+            instance.generate()
+post_save.connect(game_changed, sender=Game)
 
 class Turn(models.Model):
+    class Meta:
+        get_latest_by = 'generated'
+        ordering = ['-generated']
+        
     game = models.ForeignKey(Game)
     year = models.PositiveIntegerField()
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)

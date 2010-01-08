@@ -5,12 +5,12 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden, Http404
 from django.utils import simplejson
-from django.db.models import ForeignKey
+from django.db.models import ForeignKey, Max
 from diplomacy.models import Game, Order, Subregion
 from diplomacy.forms import OrderForm, OrderFormSet, validtree
 
 def games_list(request, page=1, paginate_by=30, state=None):
-    game_list = Game.objects.all()
+    game_list = Game.objects.annotate(t=Max('turn__generated')).order_by('-t')
     if state:
         game_list = game_list.filter(state__iexact=state)
     return object_list(request,
