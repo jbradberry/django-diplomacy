@@ -20,6 +20,11 @@
 {% block content %}
     <h2>{{ game.current_turn }}</h2>
 
+    {% block map %}
+    <embed src="/diplomacy/media/img/map.svg" height=400>
+    </embed>
+    {% endblock %}
+
     <table>
       <thead>
 	<tr>
