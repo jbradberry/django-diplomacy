@@ -21,8 +21,10 @@
     <h2>{{ game.current_turn }}</h2>
 
     {% block map %}
-    <embed src="/diplomacy/media/img/map.svg" height=400>
-    </embed>
+    <object type="image/svg+xml" data="/diplomacy/media/img/map.svg"
+      height=400>
+      Browser does not support SVG!
+    </object>
     {% endblock %}
 
     <table>
