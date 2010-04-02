@@ -165,7 +165,7 @@ class Government(models.Model):
     user = models.ForeignKey(User, null=True, blank=True)
     game = models.ForeignKey(Game)
     power = models.ForeignKey(Power)
-    owns = models.ManyToManyField(Territory)
+    owns = models.ManyToManyField(Territory, through='Ownership')
 
     def __unicode__(self):
         return self.name
@@ -179,7 +179,19 @@ class Government(models.Model):
     def builds_available(self):
         return self.supplycenters() - self.units()
 
+class Ownership(models.Model):
+    class Meta:
+        unique_together = ("turn", "territory")
+
+    turn = models.ForeignKey(Turn)
+    government = models.ForeignKey(Government)
+    territory = models.ForeignKey(Territory)
+
 class Unit(models.Model):
+    class Meta:
+        unique_together = ("turn", "subregion")
+        
+    turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
@@ -192,6 +204,11 @@ class Unit(models.Model):
         return u'%s %s' % (self.u_type, self.subregion.territory)
 
 class Order(models.Model):
+    class Meta:
+        # WARNING: the SQL standard says that nulls are not equal for
+        #   uniqueness checks, however, some servers may not agree.
+        unique_together = ("turn", "actor")
+        
     ACTION_CHOICES = (
         ('H', 'Hold'),
         ('M', 'Move'),
