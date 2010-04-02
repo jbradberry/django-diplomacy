@@ -8,6 +8,7 @@ from django.utils import simplejson
 from django.db.models import ForeignKey, Max
 from diplomacy.models import Game, Order, Subregion
 from diplomacy.forms import OrderForm, OrderFormSet, validtree
+import re
 
 def games_list(request, page=1, paginate_by=30, state=None):
     game_list = Game.objects.annotate(t=Max('turn__generated')).order_by('-t')
@@ -67,3 +68,22 @@ def select_filter(request, slug, power):
     return HttpResponse(simplejson.dumps({'unit_fixed': uf,
                                           'tree': validtree(g, gvt)}),
                         mimetype='application/json')
+
+def game_state(request, slug):
+    colors = {'Austria-Hungary': '#a41a10',
+              'England': '#1010a3',
+              'France': '#126dc0',
+              'Germany': '#5d5d5d',
+              'Italy': '#30a310',
+              'Russia': '#7110a2',
+              'Turkey': '#e6e617'}
+    g = Game.objects.get(slug=slug)
+    owns = [(re.sub('[ .]', '', T.name.lower()), colors[G.power.name])
+            for G in g.government_set.all()
+            for T in G.owns.all()]
+    return HttpResponse(simplejson.dumps(owns),
+                        mimetype='application/json')
+
+def map_view(request, slug):
+    game = Game.objects.get(slug=slug)
+    return render_to_response('diplomacy/map.html', {'game': game})
