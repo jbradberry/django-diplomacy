@@ -1,7 +1,12 @@
 from django.db import models
+from django.db.models import aggregates, sql
 from django.db.models.signals import post_save
 from django.contrib.auth.models import User
 import datetime
+
+class CountNullIf(sql.aggregates.Count):
+    sql_template = '%(function)s(NULLIF(%(field)s,FALSE))'
+sql.aggregates.CountNullIf = CountNullIf
 
 def get_next(current, choiceset):
     choices = (i[0] for i in choiceset+choiceset[0])
@@ -54,8 +59,10 @@ class Game(models.Model):
         return self.turn_set.latest()
 
     def governments(self):
-        return self.government_set.all().annotate(
-            sc=models.Count('owns__is_supply')).order_by('-sc', 'power__name')
+        sup = aggregates.Count('owns__is_supply')
+        sup.name = 'CountNullIf'
+        return self.government_set.all().annotate(sc=sup).order_by(
+            '-sc', 'power__name')
 
     def generate(self, start=False):
         if start:
