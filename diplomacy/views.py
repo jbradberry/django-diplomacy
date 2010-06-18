@@ -21,7 +21,7 @@ def games_list(request, page=1, paginate_by=30, state=None):
                        template_object_name="game",
                        extra_context={"state": state})
 
-def games_detail(request, slug):
+def games_detail(request, slug, turn=None): # FIXME
     game_list = Game.objects.all()
     return object_detail(request,
                          queryset=game_list,
@@ -69,7 +69,7 @@ def select_filter(request, slug, power):
                                           'tree': validtree(g, gvt)}),
                         mimetype='application/json')
 
-def game_state(request, slug):
+def game_state(request, slug, turn=None): # FIXME
     colors = {'Austria-Hungary': '#a41a10',
               'England': '#1010a3',
               'France': '#126dc0',
@@ -84,6 +84,6 @@ def game_state(request, slug):
     return HttpResponse(simplejson.dumps(owns),
                         mimetype='application/json')
 
-def map_view(request, slug):
+def map_view(request, slug, turn=None): # FIXME
     game = Game.objects.get(slug=slug)
     return render_to_response('diplomacy/map.html', {'game': game})

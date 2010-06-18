@@ -4,7 +4,8 @@ from django.forms import ValidationError
 from diplomacy.models import Order, Subregion, Unit
 
 def validtree(game, gvt):
-    season = game.current_turn().season
+    turn = game.current_turn()
+    season = turn.season
     convert = {'L': 'A', 'S': 'F'}
     tree = {}
 
@@ -12,34 +13,38 @@ def validtree(game, gvt):
     if season == 'FA' and gvt.builds_available() > 0:
         tree[''] = {'': {'B': ([u''], [u''])}}
         actor = sr.filter(territory__power__government=gvt,
-                          territory__government=gvt,
+                          territory__ownership__turn=turn,
+                          territory__ownership__government=gvt,
                           territory__is_supply=True).exclude(
-            territory__subregion__unit__government__game=game)
+            territory__subregion__unit__turn=turn)
     else:
         if season in ('SR', 'FR'):
-            actor = sr.filter(unit__government=gvt,
+            actor = sr.filter(unit__turn=turn,
+                              unit__government=gvt,
                               unit__displaced_from__isnull=False)
         else:
-            actor = sr.filter(unit__government=gvt)
+            actor = sr.filter(unit__turn=turn,
+                              unit__government=gvt)
 
     for i in actor:
         lvl1 = tree.setdefault(convert[i.sr_type], {})
         lvl2 = lvl1.setdefault(i.id, {})
-        for j in ('H', 'M', 'S', 'C', 'B', 'D'):
-            if season in ('S', 'F') and j in ('B', 'D'):
-                continue
-            if season in ('SR', 'FR') and j not in ('M', 'D'):
-                continue
-            if season == 'FA':
-                if j not in ('B', 'D'):
-                    continue
-                if j == 'B' and gvt.builds_available() <= 0:
-                    continue
-                if j == 'D' and gvt.builds_available() >= 0:
-                    continue
+
+        if season in ('S', 'F'):
+            actions = ('H', 'M', 'S', 'C')
+        elif season in ('SR', 'FR'):
+            actions = ('M', 'D')
+        elif season == 'FA':
+            if gvt.builds_available() == 0:
+                actions = ()
             else:
-                unit = Unit.objects.get(government=gvt, subregion=i)
-            
+                actions = ('B',) if gvt.builds_available() > 0 else ('D',)
+
+        if season != 'FA':
+            unit = Unit.objects.get(turn=turn,
+                                    government=gvt, subregion=i)
+        
+        for j in actions:
             if j in ('H', 'B', 'D'):
                 target, dest = [u''], [u'']
             if j in ('M', 'S'):
@@ -49,9 +54,9 @@ def validtree(game, gvt):
                 target = sr.filter(borders=i)
                 if season in ('SR', 'FR'):
                     target = target.exclude(
-                        unit__government__game=game).exclude(
+                        unit__turn=turn).exclude(
                         territory=unit.displaced_from).exclude(
-                        territory__standoff__government__game=game)
+                        territory__standoff__unit__turn=turn)
                 target = target.values_list('id', flat=True)
                 if not target:
                     continue
@@ -64,9 +69,8 @@ def validtree(game, gvt):
                         target.remove(i.id)
                         target.sort()
             if j == 'S':
-                target = sr.filter(
-                    unit__government__game=game
-                    ).exclude(id=i.id).values_list('id', flat=True)
+                target = sr.filter(unit__turn=turn).exclude(
+                    id=i.id).values_list('id', flat=True)
                 dest += list(sr.filter(borders=i
                                        ).values_list('id', flat=True))
             if j == 'C':
@@ -75,7 +79,7 @@ def validtree(game, gvt):
                 coastal = sr.filter(sr_type='L',
                                     territory__subregion__sr_type='S'
                                     ).distinct()
-                target = coastal.filter(unit__government__game=game
+                target = coastal.filter(unit__turn=turn
                                         ).values_list('id', flat=True)
                 dest = coastal.values_list('id', flat=True)
 
