@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Count
 from django.db.models.signals import post_save
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -57,14 +58,6 @@ class Game(models.Model):
         else:
             return None
 
-    def governments(self, turn=None):
-        if not turn:
-            turn = self.current_turn()
-        G = [(i.supplycenters(turn), i)
-             for i in self.government_set.all()]
-        G.sort(reverse=True)
-        return [g for sc, g in G]
-
     def generate(self):
         turn = self.current_turn()
         prev = turn
@@ -85,6 +78,11 @@ class Game(models.Model):
                                         u_type=convert[sr.sr_type],
                                         subregion=sr)
 
+        # proxy code in place of actually moving the units
+        for u in Unit.objects.filter(turn=prev):
+            Unit.objects.create(turn=turn, government=u.government,
+                                u_type=u.u_type, subregion=u.subregion)
+
         # do after units are moved
         for t in Territory.objects.all():
             u = Unit.objects.filter(turn=turn, subregion__territory=t)
@@ -92,7 +90,7 @@ class Game(models.Model):
             try:
                 if prev is None:
                     gvt = self.government_set.get(power=t.power)
-                elif turn.season != 'F' and u.count() == 1:
+                elif turn.season == 'F' and u.count() == 1:
                     gvt = u[0].government
                 else:
                     gvt = self.government_set.get(
@@ -100,33 +98,7 @@ class Game(models.Model):
             except ObjectDoesNotExist:
                 continue
             Ownership(turn=turn, government=gvt, territory=t).save()
-            
-        for g in self.government_set.all():
-            u_set = Unit.objects.filter(turn=turn, government=g)
-            if S in ('S', 'F'):
-                action = 'H'
-            if S in ('SR', 'FR'):
-                u_set = u_set.filter(displaced_from__isnull=False)
-                action = 'M'
-            if S == 'FA':
-                builds = g.builds_available()
-                if builds > 0:
-                    for i in xrange(builds):
-                        turn.order_set.create(government=g,
-                                              u_type=None,
-                                              actor=None,
-                                              action='B')
-                    continue
-                elif builds == 0:
-                    continue
-                elif builds < 0:
-                    action = 'D'
 
-            for u in u_set:
-                turn.order_set.create(government=g,
-                                      u_type=u.u_type,
-                                      actor=u.subregion,
-                                      action=action)
     generate.alters_data = True
 
 def game_changed(sender, **kwargs):
@@ -139,7 +111,7 @@ class Turn(models.Model):
     class Meta:
         get_latest_by = 'generated'
         ordering = ['-generated']
-        
+
     game = models.ForeignKey(Game)
     year = models.PositiveIntegerField()
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
@@ -147,6 +119,11 @@ class Turn(models.Model):
 
     def __unicode__(self):
         return "%s %s" % (self.get_season_display(), self.year)
+
+    def governments(self):
+        return Government.objects.filter(
+            ownership__turn=self, ownership__territory__is_supply=True
+            ).annotate(sc=Count('ownership')).order_by('-sc')
 
 class Power(models.Model):
     name = models.CharField(max_length=20)
@@ -173,7 +150,7 @@ class Subregion(models.Model):
         if self.subname:
             return u'%s (%s)' % (self.territory.name, self.subname)
         else:
-            return u'%s [%s]' % (self.territory.name, self.sr_type)
+            return self.territory.name
 
 class Government(models.Model):
     name = models.CharField(max_length=100)
@@ -225,10 +202,8 @@ class Unit(models.Model):
 
 class Order(models.Model):
     class Meta:
-        # WARNING: the SQL standard says that nulls are not equal for
-        #   uniqueness checks; however, some servers may not agree.
-        unique_together = ("turn", "actor")
-        
+        get_latest_by = "timestamp"
+
     ACTION_CHOICES = (
         ('H', 'Hold'),
         ('M', 'Move'),
@@ -239,11 +214,12 @@ class Order(models.Model):
         )
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
-    u_type = models.CharField(max_length=1, choices=UNIT_CHOICES, blank=True) 
+    timestamp = models.DateTimeField(auto_now_add=True)
+    slot = models.PositiveSmallIntegerField()
     actor = models.ForeignKey(Subregion, null=True, blank=True,
                               related_name='actors')
     action = models.CharField(max_length=1, choices=ACTION_CHOICES)
+    assist = models.ForeignKey(Subregion, null=True, blank=True,
+                               related_name='assists')
     target = models.ForeignKey(Subregion, null=True, blank=True,
                                related_name='targets')
-    destination = models.ForeignKey(Subregion, null=True, blank=True,
-                                    related_name='destinations')

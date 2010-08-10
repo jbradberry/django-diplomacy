@@ -1,57 +1,48 @@
-from django.forms.models import ModelForm, BaseModelFormSet
-from django.forms.fields import ChoiceField
+from django.forms.models import ModelForm, BaseModelFormSet, ModelChoiceField
 from django.forms import ValidationError
 from diplomacy.models import Order, Subregion, Unit
 
-def validtree(game, gvt):
+convert = {'L': 'A', 'S': 'F'}
+
+def validorders(game, gvt):
     turn = game.current_turn()
     season = turn.season
-    convert = {'L': 'A', 'S': 'F'}
-    tree = {}
+    builds = gvt.builds_available()
 
     sr = Subregion.objects.all()
-    if season == 'FA' and gvt.builds_available() > 0:
-        tree[''] = {'': {'B': ([u''], [u''])}}
+    coastal = sr.filter(sr_type='L',
+                        territory__subregion__sr_type='S'
+                        ).distinct() # required due to multiple coasts
+    
+    if season == 'FA' and builds > 0:
         actor = sr.filter(territory__power__government=gvt,
                           territory__ownership__turn=turn,
                           territory__ownership__government=gvt,
                           territory__is_supply=True).exclude(
             territory__subregion__unit__turn=turn)
     else:
+        actor = sr.filter(unit__turn=turn,
+                          unit__government=gvt)
         if season in ('SR', 'FR'):
-            actor = sr.filter(unit__turn=turn,
-                              unit__government=gvt,
-                              unit__displaced_from__isnull=False)
-        else:
-            actor = sr.filter(unit__turn=turn,
-                              unit__government=gvt)
+            actor = actor.filter(unit__displaced_from__isnull=False)
 
-    for i in actor:
-        lvl1 = tree.setdefault(convert[i.sr_type], {})
-        lvl2 = lvl1.setdefault(i.id, {})
+    act = {'S': ('H', 'M', 'S', 'C'),
+           'F': ('H', 'M', 'S', 'C'),
+           'SR': ('M', 'D'),
+           'FR': ('M', 'D'),
+           'FA': ()}
+    if season == 'FA' and builds != 0:
+        act['FA'] = ('B',) if builds > 0 else ('D',)
 
-        if season in ('S', 'F'):
-            actions = ('H', 'M', 'S', 'C')
-        elif season in ('SR', 'FR'):
-            actions = ('M', 'D')
-        elif season == 'FA':
-            if gvt.builds_available() == 0:
-                actions = ()
-            else:
-                actions = ('B',) if gvt.builds_available() > 0 else ('D',)
-
-        if season != 'FA':
-            unit = Unit.objects.get(turn=turn,
-                                    government=gvt, subregion=i)
-        
-        for j in actions:
-            if j in ('H', 'B', 'D'):
-                target, dest = [u''], [u'']
-            if j in ('M', 'S'):
-                dest = [u'']
-
-            if j == 'M':
-                target = sr.filter(borders=i)
+    lvl0 = {}
+    for a in actor:
+        actions = act[season]
+        lvl1 = {}
+        for i in actions:
+            if i in ('H', 'B', 'D'):
+                assist, target = [u''], [u'']
+            if i == 'M':
+                assist, target = [u''], sr.filter(borders=a)
                 if season in ('SR', 'FR'):
                     target = target.exclude(
                         unit__turn=turn).exclude(
@@ -60,90 +51,112 @@ def validtree(game, gvt):
                 target = target.values_list('id', flat=True)
                 if not target:
                     continue
-                if season in ('S', 'F') and unit.u_type == 'A':
-                    coastal = sr.filter(sr_type='L',
-                                        territory__subregion__sr_type='S'
-                                        ).values_list('id', flat=True)
-                    if i.id in coastal:
-                        target = list(set(list(target) + list(coastal)))
-                        target.remove(i.id)
-                        target.sort()
-            if j == 'S':
-                target = sr.filter(unit__turn=turn).exclude(
-                    id=i.id).values_list('id', flat=True)
-                dest += list(sr.filter(borders=i
-                                       ).values_list('id', flat=True))
-            if j == 'C':
-                if unit.u_type != 'F':
+                if season in ('S', 'F') and a in coastal:
+                    target = list(set(target) |
+                                  set(t.id for t in coastal))
+                    target.remove(a.id)
+            if i == 'S':
+                assist = sr.filter(unit__turn=turn).exclude(
+                    id=a.id).values_list('id', flat=True)
+                target = [u''] + [t.id for t in sr.filter(borders=a)]
+            if i == 'C':
+                if a.sr_type == 'L' or sr.filter(territory=a.territory,
+                                                 sr_type='L'):
                     continue
-                coastal = sr.filter(sr_type='L',
-                                    territory__subregion__sr_type='S'
-                                    ).distinct()
-                target = coastal.filter(unit__turn=turn
+                assist = coastal.filter(unit__turn=turn
                                         ).values_list('id', flat=True)
-                dest = coastal.values_list('id', flat=True)
+                target = coastal.values_list('id', flat=True)
 
-            lvl2.update({j: (list(target), list(dest))})
+            lvl1.update({i: (list(assist), list(target))})
+
+        lvl0.update({a.id: lvl1})
+
+    if season == 'FA':
+        tree = [lvl0 for i in xrange(abs(builds))]
+    else:
+        tree = [{a.id: lvl0[a.id]} for a in actor]
 
     return tree
 
+
+class UnitProxyChoiceField(ModelChoiceField):
+    def label_from_instance(self, obj):
+        return "%s %s" % (convert[obj.sr_type], obj.territory.name)
+
+
 class OrderForm(ModelForm):
+    qs = Subregion.objects.select_related('territory__name').all()
+    
+    actor = UnitProxyChoiceField(queryset=qs)
+    assist = UnitProxyChoiceField(queryset=qs)
+    target = ModelChoiceField(queryset=qs)
+
     class Meta:
         model = Order
-        exclude = ('turn', 'government')
+        exclude = ('turn', 'government', 'timestamp', 'slot')
         
-    def __init__(self, game, government, *args, **kwargs):
+    def __init__(self, game, government, valid, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
         self.game = game
         self.government = government
         self.season = game.current_turn().season
+        self.valid = valid
 
-        my_css = {'u_type': 'u_type',
-                  'actor': 'subregion',
+        my_css = {'actor': 'subregion',
                   'action': 'action',
-                  'target': 'subregion',
-                  'destination': 'subregion'}
+                  'assist': 'subregion',
+                  'target': 'subregion',}
         for w, c in my_css.items():
             self.fields[w].widget.attrs['class'] = c
 
     def clean(self):
         cleaned_data = self.cleaned_data
-        tree = validtree(self.game, self.government)
-        u_type = cleaned_data.get("u_type")
+
+        action = cleaned_data.get("action")
         actor = cleaned_data.get("actor")
         actor = actor.id if actor else ""
-        action = cleaned_data.get("action")
+        assist = cleaned_data.get("assist")
+        assist = assist.id if assist else ""
         target = cleaned_data.get("target")
         target = target.id if target else ""
-        dest = cleaned_data.get("destination")
-        dest = dest.id if dest else ""
 
-        if self.season != 'FA':
-            u, a = self.initial['u_type'], self.initial['actor']
-            if u_type != u or actor != a:
-                raise ValidationError("You may not change the acting unit.")
+        if self.season != 'FA' and actor != self.initial['actor']:
+            raise ValidationError("You may not change the acting unit.")
 
         try:
-            T, D = tree[u_type][actor][action]
-            if target not in T or dest not in D:
+            A, T = self.valid[actor][action]
+            if assist not in A or target not in T:
                 raise ValidationError("Invalid order.")
         except KeyError:
             raise ValidationError("Invalid order.")
 
         return cleaned_data
 
+
 class OrderFormSet(BaseModelFormSet):
-    def __init__(self, game, government, data=None, queryset=None, **kwargs):
+    def __init__(self, game, government, data=None, **kwargs):
         self.game = game
         self.government = government
-        super(OrderFormSet, self).__init__(data=data,
-                                           queryset=queryset, **kwargs)
+        self.turn = game.current_turn()
+        self.season = self.turn.season
+        super(OrderFormSet, self).__init__(data=data, **kwargs)
 
     def _construct_forms(self):
         self.forms = []
-        for i in xrange(self.total_form_count()):
+        for i, v in enumerate(validorders(self.game, self.government)):
+            o = Order.objects.filter(turn=self.turn,
+                                     government=self.government,
+                                     slot=i).values('actor', 'action',
+                                                    'assist', 'target')
+            o = o.latest() if o else None
+            initial = {}
+            if self.season != 'FA':
+                initial = {'slot': i, 'actor': v.keys[0]}
+            if o:
+                initial.update(o)
             self.forms.append(self._construct_form(i, game=self.game,
-                                                   government=self.government))
+                                                   government=self.government,
+                                                   valid=v, initial=initial))
 
     def clean(self):
         if any(self.errors):
@@ -155,7 +168,7 @@ class OrderFormSet(BaseModelFormSet):
             raise ValidationError("You may not delete orders.")
 
         actors = []
-        for i in range(self.total_form_count()):
+        for i in xrange(self.total_form_count()):
             form = self.forms[i]
             actor = form.cleaned_data["actor"].territory
             if not actor:
@@ -165,13 +178,11 @@ class OrderFormSet(BaseModelFormSet):
                     "You may not give a territory multiple orders.")
             actors.append(actor)
 
-        if self.game.current_turn().season == 'FA':
+        if self.season == 'FA':
             builds = self.government.builds_available()
-            if builds >= 0:
-                if len(actors) > builds:
-                    raise ValidationError("You may not build more units than you have supply centers.")
-            if builds < 0:
-                if len(actors) != abs(builds):
-                    u = "unit" if builds == -1 else "units"
-                    msg = "You must disband exactly %d %s." % (abs(builds), u)
-                    raise ValidationError(msg)
+            if builds >= 0 and len(actors) > builds:
+                raise ValidationError("You may not build more units than you have supply centers.")
+            if builds < 0 and len(actors) != abs(builds):
+                u = "unit" if builds == -1 else "units"
+                msg = "You must disband exactly %d %s." % (abs(builds), u)
+                raise ValidationError(msg)

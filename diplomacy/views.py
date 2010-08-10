@@ -1,13 +1,13 @@
 from django.views.generic.list_detail import object_list, object_detail
-from django.shortcuts import render_to_response
+from django.shortcuts import render_to_response, get_object_or_404
 from django.forms.models import modelformset_factory, ModelChoiceField
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden, Http404
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
 from django.utils import simplejson
 from django.db.models import ForeignKey, Max
 from diplomacy.models import Game, Order, Subregion
-from diplomacy.forms import OrderForm, OrderFormSet, validtree
+from diplomacy.forms import OrderForm, OrderFormSet, validorders
 import re
 
 def games_list(request, page=1, paginate_by=30, state=None):
@@ -26,7 +26,8 @@ def games_detail(request, slug, turn=None): # FIXME
     return object_detail(request,
                          queryset=game_list,
                          slug=slug,
-                         template_object_name="game")
+                         template_object_name="game",
+                         extra_context={"turn": turn})
 
 @login_required
 def orders(request, slug, power):
@@ -36,37 +37,25 @@ def orders(request, slug, power):
                                    user=request.user)
     except ObjectDoesNotExist:
         return HttpResponseForbidden("<h1>Permission denied</h1>")
-    qs = Order.objects.filter(government=gvt, turn=g.current_turn())
-    sr = Subregion.objects.select_related('territory__name').all()
-    def caching_qs(f):
-        if isinstance(f, ForeignKey):
-            return ModelChoiceField(queryset=sr, required=False)
-        else:
-            return f.formfield()
-        
+
     OFormSet = modelformset_factory(Order, form=OrderForm,
-                                    formfield_callback=caching_qs,
                                     formset=OrderFormSet, extra=0,
-                                    exclude=('turn', 'government'))
-    if request.method == 'POST':
-        formset = OFormSet(g, gvt, request.POST, queryset=qs)
-        if formset.is_valid():
-            formset.save()
-            return HttpResponseRedirect('../../')
-    else:
-        formset = OFormSet(g, gvt, queryset=qs)
+                                    exclude=('turn', 'government', 'timestamp'))
+
+    formset = OFormSet(g, gvt, request.POST or None)
+    if formset.is_valid():
+        formset.save()
+        return HttpResponseRedirect('../../')
+
     return render_to_response('diplomacy/manage_orders.html',
                               {'formset': formset})
 
 def select_filter(request, slug, power):
     g = Game.objects.get(slug=slug)
     uf = (g.current_turn().season != 'FA')
-    try:
-        gvt = g.government_set.get(power__name__iexact=power)
-    except ObjectDoesNotExist:
-        raise Http404
+    gvt = get_object_or_404(Government, game=g, power__name__iexact=power)
     return HttpResponse(simplejson.dumps({'unit_fixed': uf,
-                                          'tree': validtree(g, gvt)}),
+                                          'tree': validorders(g, gvt)}),
                         mimetype='application/json')
 
 def game_state(request, slug, turn=None): # FIXME
