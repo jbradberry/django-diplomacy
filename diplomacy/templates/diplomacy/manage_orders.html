@@ -1,6 +1,6 @@
-{% extends "diplomacy/base.html" %}
+{% extends "diplomacy/game_detail.html" %}
 
-{% block title %}{{ formset.government.power }} | {{ formset.game.name }} | Games | Diplomacy{% endblock %}
+{% block title %}{{ formset.government.power }} | {{ block.super }}{% endblock %}
 
 {% block extra_head %}
     <link rel="stylesheet" href="/diplomacy/media/css/orders.css"
@@ -89,11 +89,7 @@
 {% block page_title %}Orders - {{ formset.government.power }}{% endblock %}
 
 {% block breadcrumbs %}
-<a href="/diplomacy/">Diplomacy</a>
-&rsaquo;
-<a href="/diplomacy/games/">Games</a>
-&rsaquo;
-<a href="../../">{{ formset.game.name }}</a>
+{{ block.super }}
 &rsaquo;
 {{ formset.government.power }}
 {% endblock %}

@@ -1,6 +1,6 @@
-{% extends "diplomacy/base.html" %}
+{% extends "diplomacy/game_list.html" %}
 
-{% block title %}{{ game.name }} | Games | Diplomacy{% endblock %}
+{% block title %}{{ game.name }} | {{ block.super }}{% endblock %}
   
 {% block extra_head %}
     <link rel="stylesheet" href="/diplomacy/media/css/game.css"
@@ -27,15 +27,13 @@
 {% block page_title %}{{ game.name }}{% endblock %}
 
 {% block breadcrumbs %}
-<a href="/diplomacy/">Diplomacy</a>
+{{ block.super }}
 &rsaquo;
-<a href="/diplomacy/games/">Games</a>
-&rsaquo;
-{{ game.name }}
+<a href="{{ game.get_absolute_url }}">{{ game.name }}</a>
 {% endblock %}
     
 {% block content %}
-    <h2>{{ game.current_turn }}</h2>
+    <h2>{{ turn }}</h2>
 
     {% block map %}
     <object type="image/svg+xml" data="/diplomacy/media/img/map.svg"
@@ -52,12 +50,14 @@
 	  <th>SC</th>
 	</tr>
       </thead>
-      {% for government in game.governments %}
+      {% with game.current_turn as cturn %}
+      {% for government in turn.governments %}
       <tr class="{{ government.power }}">
 	<td>{{ government }}</td>
-	<td><a href="orders/{{ government.power|lower }}/">{{ government.power }}</a></td>
-	<td>{{ government.supplycenters }}</td>
+	<td>{% if turn.id == cturn.id %}<a href="{% url diplomacy.views.orders game.slug government.power.name %}">{% endif %}{{ government.power }}{% if turn.id == cturn.id %}</a>{% endif %}</td>
+	<td>{{ government.sc }}</td>
       </tr>
       {% endfor %}
+      {% endwith %}
     </table>
 {% endblock %}

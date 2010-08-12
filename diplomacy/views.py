@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
 from django.utils import simplejson
 from django.db.models import ForeignKey, Max
-from diplomacy.models import Game, Order, Subregion
+from diplomacy.models import Game, Turn, Order, Territory, Subregion
 from diplomacy.forms import OrderForm, OrderFormSet, validorders
 import re
 
@@ -21,13 +21,17 @@ def games_list(request, page=1, paginate_by=30, state=None):
                        template_object_name="game",
                        extra_context={"state": state})
 
-def games_detail(request, slug, turn=None): # FIXME
-    game_list = Game.objects.all()
-    return object_detail(request,
-                         queryset=game_list,
-                         slug=slug,
-                         template_object_name="game",
-                         extra_context={"turn": turn})
+def games_detail(request, slug):
+    game = get_object_or_404(Game, slug=slug)
+    t = game.current_turn()
+    return render_to_response('diplomacy/game_detail.html',
+                              {'game': game, 'turn': t})
+
+def turns_detail(request, slug, season, year):
+    game = get_object_or_404(Game, slug=slug)
+    t = get_object_or_404(Turn, game=game, season=season, year=year)
+    return render_to_response('diplomacy/turn_detail.html',
+                              {'game': game, 'turn': t})
 
 @login_required
 def orders(request, slug, power):
@@ -58,7 +62,7 @@ def select_filter(request, slug, power):
                                           'tree': validorders(g, gvt)}),
                         mimetype='application/json')
 
-def game_state(request, slug, turn=None): # FIXME
+def game_state(request, slug, season=None, year=None):
     colors = {'Austria-Hungary': '#a41a10',
               'England': '#1010a3',
               'France': '#126dc0',
@@ -67,12 +71,20 @@ def game_state(request, slug, turn=None): # FIXME
               'Russia': '#7110a2',
               'Turkey': '#e6e617'}
     g = Game.objects.get(slug=slug)
+    t = g.turn_set.get(
+        season=season, year=year) if year else g.current_turn()
     owns = [(re.sub('[ .]', '', T.name.lower()), colors[G.power.name])
             for G in g.government_set.all()
-            for T in G.owns.all()]
+            for T in Territory.objects.filter(ownership__turn=t,
+                                              ownership__government=G)]
     return HttpResponse(simplejson.dumps(owns),
                         mimetype='application/json')
 
-def map_view(request, slug, turn=None): # FIXME
-    game = Game.objects.get(slug=slug)
-    return render_to_response('diplomacy/map.html', {'game': game})
+def map_view(request, slug, season=None, year=None):
+    game = get_object_or_404(Game, slug=slug)
+    if year:
+        t = get_object_or_404(Turn, game=g, season=season, year=year)
+    else:
+        t = game.current_turn()
+    return render_to_response('diplomacy/map.html', {'game': game,
+                                                     'turn': t})

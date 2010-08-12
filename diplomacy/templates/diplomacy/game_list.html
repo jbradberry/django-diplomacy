@@ -1,11 +1,11 @@
 {% extends "diplomacy/base.html" %}
 
-{% block title %}Games | Diplomacy{% endblock %}
+{% block title %}Games | {{ block.super }}{% endblock %}
 
 {% block breadcrumbs %}
-<a href="/diplomacy/">Diplomacy</a>
+{{ block.super }}
 &rsaquo;
-Games
+<a href="{% url diplomacy.views.games_list %}">Games</a>
 {% endblock %}
   
 {% block content %}

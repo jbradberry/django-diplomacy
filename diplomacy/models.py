@@ -1,15 +1,9 @@
 from django.db import models
 from django.db.models import Count
-from django.db.models.signals import post_save
+from django.db.models.signals import pre_save, post_save
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 import datetime
-
-def get_next(current, choiceset):
-    choices = (i[0] for i in choiceset+choiceset[0])
-    for i in choices:
-        if i == current:
-            return choices.next()
 
 SEASON_CHOICES = (
     ('S', 'Spring'),
@@ -17,17 +11,17 @@ SEASON_CHOICES = (
     ('F', 'Fall'),
     ('FR', 'Fall Retreat'),
     ('FA', 'Fall Adjustment')
-    )
+)
 
 UNIT_CHOICES = (
     ('A', 'Army'),
     ('F', 'Fleet')
-    )
+)
 
 SUBREGION_CHOICES = (
     ('L', 'Land'),
     ('S', 'Sea')
-    )
+)
 
 class Game(models.Model):
     STATE_CHOICES = (
@@ -35,7 +29,7 @@ class Game(models.Model):
         ('A', 'Active'),
         ('P', 'Paused'),
         ('F', 'Finished')
-        )
+    )
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
     owner = models.ForeignKey(User)
@@ -61,22 +55,7 @@ class Game(models.Model):
     def generate(self):
         turn = self.current_turn()
         prev = turn
-        if turn:
-            Y = turn.year if turn.season != 'FA' else turn.year + 1
-            S = get_next(turn.season, SEASON_CHOICES)
-            turn = self.turn_set.create(year=Y, season=S)
-        else:
-            Y, S = 1901, 'S'
-            turn = self.turn_set.create(year=Y, season=S)
-            convert = {'L': 'A', 'S': 'F'}
-            for pwr in Power.objects.all():
-                sr_set = Subregion.objects.filter(init_unit=True,
-                                                  territory__power=pwr)
-                gvt = self.government_set.create(name=pwr.name, power=pwr)
-                for sr in sr_set:
-                    gvt.unit_set.create(turn=turn,
-                                        u_type=convert[sr.sr_type],
-                                        subregion=sr)
+        turn = self.turn_set.create(number=prev.number+1)
 
         # proxy code in place of actually moving the units
         for u in Unit.objects.filter(turn=prev):
@@ -103,8 +82,19 @@ class Game(models.Model):
 
 def game_changed(sender, **kwargs):
     instance = kwargs['instance']
-    if instance.state == 'A' and instance.turn_set.count() == 0:
-        instance.generate()
+    if instance.state == 'A' and not instance.turn_set.all():
+        turn = instance.turn_set.create(number=0)
+        convert = {'L': 'A', 'S': 'F'}
+        for pwr in Power.objects.all():
+            gvt = instance.government_set.create(name=pwr.name, power=pwr)
+            for t in Territory.objects.filter(power=pwr):
+                Ownership(turn=turn, government=gvt, territory=t).save()
+            sr_set = Subregion.objects.filter(territory__power=pwr,
+                                              init_unit=True)
+            for sr in sr_set:
+                gvt.unit_set.create(turn=turn,
+                                    u_type=convert[sr.sr_type],
+                                    subregion=sr)
 post_save.connect(game_changed, sender=Game)
 
 class Turn(models.Model):
@@ -113,17 +103,32 @@ class Turn(models.Model):
         ordering = ['-generated']
 
     game = models.ForeignKey(Game)
-    year = models.PositiveIntegerField()
+    number = models.IntegerField()
+    year = models.IntegerField()
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
     generated = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
         return "%s %s" % (self.get_season_display(), self.year)
 
+    @models.permalink
+    def get_absolute_url(self):
+        return ('diplomacy.views.turns_detail', (), {
+            'game': self.game.slug,
+            'turn': '%s%s' % (self.season, self.year)})
+
     def governments(self):
         return Government.objects.filter(
             ownership__turn=self, ownership__territory__is_supply=True
-            ).annotate(sc=Count('ownership')).order_by('-sc')
+            ).annotate(sc=Count('ownership')).order_by('-sc', 'power__name')
+
+
+def turn_create(sender, **kwargs):
+    instance = kwargs['instance']
+    if instance.id: return
+    instance.year = 1900 + instance.number // len(SEASON_CHOICES)
+    instance.season = SEASON_CHOICES[instance.number % len(SEASON_CHOICES)][0]
+pre_save.connect(turn_create, sender=Turn)
 
 class Power(models.Model):
     name = models.CharField(max_length=20)
@@ -211,7 +216,7 @@ class Order(models.Model):
         ('C', 'Convoy'),
         ('B', 'Build'),
         ('D', 'Disband')
-        )
+    )
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     timestamp = models.DateTimeField(auto_now_add=True)

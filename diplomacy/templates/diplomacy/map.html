@@ -1,6 +1,6 @@
-{% extends "diplomacy/base.html" %}
+{% extends "diplomacy/game_detail.html" %}
 
-{% block title %}Map | {{ game.name }} | Games | Diplomacy{% endblock %}
+{% block title %}Map | {% if turn %}{{ turn }} | {% endif %}{{ block.super }}{% endblock %}
 {% block extra_head %}
     <script type="text/javascript"
     src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js">
