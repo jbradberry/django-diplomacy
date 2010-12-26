@@ -142,21 +142,19 @@ class OrderFormSet(BaseModelFormSet):
         super(OrderFormSet, self).__init__(data=data, **kwargs)
 
     def _construct_forms(self):
-        self.forms = []
-        for i, v in enumerate(validorders(self.game, self.government)):
-            o = Order.objects.filter(turn=self.turn,
-                                     government=self.government,
-                                     slot=i).values('actor', 'action',
-                                                    'assist', 'target')
-            o = o.latest() if o else None
-            initial = {}
-            if self.season != 'FA':
-                initial = {'slot': i, 'actor': v.keys[0]}
-            if o:
-                initial.update(o)
-            self.forms.append(self._construct_form(i, game=self.game,
-                                                   government=self.government,
-                                                   valid=v, initial=initial))
+        orders = Order.objects.filter(turn=self.turn,
+                                      government=self.government
+                                      ).order_by('timestamp')
+        # de-dup by slot, favoring the most recent
+        canonical_orders = dict((o.slot,
+                                 {'actor': o.actor, 'action': o.action,
+                                  'assist': o.assist, 'target': o.target})
+                                for o in orders)
+        self.forms = [self._construct_form(i, game=self.game,
+                                           government=self.government, valid=v,
+                                           initial=canonical_orders.get(i, {}))
+                      for i, v in enumerate(validorders(self.game,
+                                                        self.government))]
 
     def clean(self):
         if any(self.errors):
