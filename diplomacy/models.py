@@ -118,10 +118,10 @@ class Turn(models.Model):
             'turn': '%s%s' % (self.season, self.year)})
 
     def governments(self):
-        return Government.objects.filter(
-            ownership__turn=self, ownership__territory__is_supply=True
-            ).annotate(sc=Count('ownership')).order_by('-sc', 'power__name')
-
+        gvts = Government.objects.filter(game=self.game)
+        owns = Ownership.objects.filter(turn=self, territory__is_supply=True)
+        return sorted([(g, sum(1 for t in owns if t.government.id == g.id))
+                       for g in gvts], key=lambda x: (-x[1], x[0].power.name))
 
 def turn_create(sender, **kwargs):
     instance = kwargs['instance']

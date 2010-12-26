@@ -51,11 +51,11 @@
 	</tr>
       </thead>
       {% with game.current_turn as cturn %}
-      {% for government in turn.governments %}
+      {% for government, sc in turn.governments %}
       <tr class="{{ government.power }}">
 	<td>{{ government }}</td>
 	<td>{% if turn.id == cturn.id %}<a href="{% url diplomacy.views.orders game.slug government.power.name %}">{% endif %}{{ government.power }}{% if turn.id == cturn.id %}</a>{% endif %}</td>
-	<td>{{ government.sc }}</td>
+	<td>{{ sc }}</td>
       </tr>
       {% endfor %}
       {% endwith %}
