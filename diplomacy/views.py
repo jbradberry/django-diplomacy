@@ -52,7 +52,7 @@ def orders(request, slug, power):
         return HttpResponseRedirect('../../')
 
     return render_to_response('diplomacy/manage_orders.html',
-                              {'formset': formset})
+                              {'formset': formset, 'game': g})
 
 def select_filter(request, slug, power):
     g = Game.objects.get(slug=slug)
