@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
 from django.utils import simplejson
 from django.db.models import ForeignKey, Max
-from diplomacy.models import Game, Turn, Order, Territory, Subregion
+from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion
 from diplomacy.forms import OrderForm, OrderFormSet, validorders
 import re
 
