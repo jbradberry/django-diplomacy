@@ -1,4 +1,4 @@
-from django.forms.models import ModelForm, BaseModelFormSet, ModelChoiceField
+from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
 from django.forms import ValidationError
 from diplomacy.models import Order, Subregion, Unit
 
@@ -87,20 +87,17 @@ class UnitProxyChoiceField(ModelChoiceField):
 class OrderForm(ModelForm):
     qs = Subregion.objects.select_related('territory__name').all()
     
-    actor = UnitProxyChoiceField(queryset=qs)
-    assist = UnitProxyChoiceField(queryset=qs)
-    target = ModelChoiceField(queryset=qs)
+    actor = UnitProxyChoiceField(queryset=qs, required=False)
+    assist = UnitProxyChoiceField(queryset=qs, required=False)
+    target = ModelChoiceField(queryset=qs, required=False)
 
     class Meta:
         model = Order
         exclude = ('turn', 'government', 'timestamp', 'slot')
         
-    def __init__(self, game, government, valid, *args, **kwargs):
+    def __init__(self, slot, valid, season, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
-        self.game = game
-        self.government = government
-        self.season = game.current_turn().season
-        self.valid = valid
+        self.slot, self.valid, self.season = slot, valid, season
 
         my_css = {'actor': 'subregion',
                   'action': 'action',
@@ -133,28 +130,27 @@ class OrderForm(ModelForm):
         return cleaned_data
 
 
-class OrderFormSet(BaseModelFormSet):
-    def __init__(self, game, government, data=None, **kwargs):
-        self.game = game
-        self.government = government
+class OrderFormSet(BaseFormSet):
+    def __init__(self, game, government, first_submit, data=None, **kwargs):
+        self.game, self.government = game, government
         self.turn = game.current_turn()
         self.season = self.turn.season
+        self.first_submit = first_submit
         super(OrderFormSet, self).__init__(data=data, **kwargs)
 
     def _construct_forms(self):
-        orders = Order.objects.filter(turn=self.turn,
-                                      government=self.government
-                                      ).order_by('timestamp')
-        # de-dup by slot, favoring the most recent
-        canonical_orders = dict((o.slot,
-                                 {'actor': o.actor, 'action': o.action,
-                                  'assist': o.assist, 'target': o.target})
-                                for o in orders)
-        self.forms = [self._construct_form(i, game=self.game,
-                                           government=self.government, valid=v,
-                                           initial=canonical_orders.get(i, {}))
+        self.forms = [self._construct_form(i, slot=i, valid=v,
+                                           season=self.season,
+                                           instance=
+                                           Order(slot=i, turn=self.turn,
+                                                 government=self.government))
                       for i, v in enumerate(validorders(self.game,
                                                         self.government))]
+
+    def save(self):
+        for form in self.forms:
+            if self.first_submit or form.has_changed():
+                form.save()
 
     def clean(self):
         if any(self.errors):

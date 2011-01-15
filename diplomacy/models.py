@@ -52,22 +52,25 @@ class Game(models.Model):
         else:
             return None
 
-    def generate(self):
-        turn = self.current_turn()
-        prev = turn
-        turn = self.turn_set.create(number=prev.number+1)
+    def generate(self, init=False):
+        prev = self.current_turn()
 
-        # proxy code in place of actually moving the units
-        for u in Unit.objects.filter(turn=prev):
-            Unit.objects.create(turn=turn, government=u.government,
-                                u_type=u.u_type, subregion=u.subregion)
+        if init:
+            turn = prev
+        else:
+            turn = self.turn_set.create(number=prev.number+1)
+
+            # proxy code in place of actually moving the units
+            for u in Unit.objects.filter(turn=prev):
+                Unit.objects.create(turn=turn, government=u.government,
+                                    u_type=u.u_type, subregion=u.subregion)
 
         # do after units are moved
         for t in Territory.objects.all():
             u = Unit.objects.filter(turn=turn, subregion__territory=t)
             assert u.count() < 2
             try:
-                if prev is None:
+                if turn.number == 0:
                     gvt = self.government_set.get(power=t.power)
                 elif turn.season == 'F' and u.count() == 1:
                     gvt = u[0].government
@@ -87,14 +90,13 @@ def game_changed(sender, **kwargs):
         convert = {'L': 'A', 'S': 'F'}
         for pwr in Power.objects.all():
             gvt = instance.government_set.create(name=pwr.name, power=pwr)
-            for t in Territory.objects.filter(power=pwr):
-                Ownership(turn=turn, government=gvt, territory=t).save()
             sr_set = Subregion.objects.filter(territory__power=pwr,
                                               init_unit=True)
             for sr in sr_set:
                 gvt.unit_set.create(turn=turn,
                                     u_type=convert[sr.sr_type],
                                     subregion=sr)
+        instance.generate(init=True)
 post_save.connect(game_changed, sender=Game)
 
 class Turn(models.Model):

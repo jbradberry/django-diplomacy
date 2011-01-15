@@ -1,6 +1,7 @@
 from django.views.generic.list_detail import object_list, object_detail
 from django.shortcuts import render_to_response, get_object_or_404
-from django.forms.models import modelformset_factory, ModelChoiceField
+from django.forms.models import model_to_dict, ModelChoiceField
+from django.forms.formsets import formset_factory
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
@@ -42,11 +43,18 @@ def orders(request, slug, power):
     except ObjectDoesNotExist:
         return HttpResponseForbidden("<h1>Permission denied</h1>")
 
-    OFormSet = modelformset_factory(Order, form=OrderForm,
-                                    formset=OrderFormSet, extra=0,
-                                    exclude=('turn', 'government', 'timestamp'))
+    OFormSet = formset_factory(form=OrderForm, formset=OrderFormSet, extra=0)
 
-    formset = OFormSet(g, gvt, request.POST or None)
+    orders = Order.objects.filter(turn=g.current_turn(), government=gvt)
+    canonical = dict((o.slot, model_to_dict(o, fields=OrderForm._meta.fields,
+                                            exclude=OrderForm._meta.exclude))
+                     for o in orders)
+    formset = OFormSet(g, gvt, not bool(orders), request.POST or None,
+                       initial=[canonical.get(i, {'actor': v.keys()[0],
+                                                  'action': 'H'}
+                                              if len(v) == 1 else {})
+                                for i, v in enumerate(validorders(g, gvt))])
+
     if formset.is_valid():
         formset.save()
         return HttpResponseRedirect('../../')

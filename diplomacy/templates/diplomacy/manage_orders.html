@@ -50,34 +50,26 @@
 	  var unit_fixed = data.unit_fixed;
 	  var tree = data.tree;
 
-	  $("tr.form").each(function() {
+	  $("tr.form").each(function(index, Element) {
 	    var form = $(this);
-	    var u_type, actor, action;
+	    var actor, action;
 	
 	    if ( unit_fixed ) {
-	      u_type = form.find("select[name$=u_type]");
-	      u_type.each(readonly);
-	      u_type = u_type.val();
 	      actor = form.find("select[name$=actor]");
 	      actor.each(readonly);
 	      actor = actor.val();
-	    } else {
-	      form.find("select[name$=u_type]").change(function() {
-	        u_type = $(this).val();
-	        filter(form.find("select[name$=actor]"), tree[u_type]);
-	      }).trigger("change");
 	    }
 
 	    form.find("select[name$=actor]").change(function() {
 	      actor = $(this).val();
-	      filter(form.find("select[name$=action]"), tree[u_type][actor]);
+	      filter(form.find("select[name$=action]"), tree[index][actor]);
 	    }).trigger("change");
 
 	    form.find("select[name$=action]").change(function() {
 	      action = $(this).val();
-	      var current = tree[u_type][actor][action];
-	      filter(form.find("select[name$=target]"), current[0]);
-	      filter(form.find("select[name$=destination]"), current[1]);
+	      var current = tree[index][actor][action];
+	      filter(form.find("select[name$=assist]"), current[0]);
+	      filter(form.find("select[name$=target]"), current[1]);
 	    }).trigger("change");
 
 	  });
