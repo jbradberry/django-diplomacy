@@ -36,7 +36,6 @@ class Game(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
     requests = models.ManyToManyField(User, related_name='requests')
-    accepts = models.ManyToManyField(User, related_name='accepts')
 
     def __unicode__(self):
         return self.name
@@ -52,20 +51,102 @@ class Game(models.Model):
         else:
             return None
 
-    def generate(self, init=False):
-        prev = self.current_turn()
+    def consistency_check(self):
+        pass
 
-        if init:
-            turn = prev
-        else:
-            turn = self.turn_set.create(number=prev.number+1)
+    def is_legal(self, order, units):
+        pass
 
-            # proxy code in place of actually moving the units
-            for u in Unit.objects.filter(turn=prev):
-                Unit.objects.create(turn=turn, government=u.government,
-                                    u_type=u.u_type, subregion=u.subregion)
+    def canonical_orders(self, turn):
+        units = Unit.objects.filter(turn=turn)
 
-        # do after units are moved
+        # the default action for each unit, if no order is defined
+        orders = dict((u.id, {'government': u.government,
+                              'actor': u.subregion, 'action': 'H'})
+                      for u in units)
+
+        # replace with the most recent legal order
+        for o in Order.objects.filter(turn=turn):
+            if self.is_legal(o, units):
+                u = units.get(subregion__territory=o.actor.territory)
+                assist = units.get(subregion__territory=o.assist.territory)
+                orders[u] = {'id': o.id, 'government': o.government,
+                             'actor': u.subregion, 'action': o.action,
+                             'assist': assist.subregion, 'target': o.target}
+        return orders
+
+    def detect_civil_disorder(self, orders):
+        return [gvt for gvt in self.government_set.all()
+                if not any('id' in o for u, o in orders.iteritems()
+                           if o['government'] == gvt)]
+
+    def construct_dependencies(self, orders):
+        dep = {}
+        for (u1, o1), (u2, o2) in permutations(orders.iteritems(), 2):
+            depend = False
+            if o1['action'] == 'C' and o2['action'] == 'M':
+                depend = (o2['target'].territory == u1.subregion.territory)
+            if o1['action'] == 'S' and o2['action'] == 'C':
+                depend = (u1.subregion.territory == o2['target'].territory)
+            if o1['action'] == 'H' and o2['action'] == 'S':
+                depend = ((u1.subregion.territory == o2['assist'].territory
+                            and o2['target'] is None) or
+                           (u1.subregion.territory == o2['target'].territory
+                            and o2['assist'] is not None))
+            if o1['action'] == 'M':
+                if o2['action'] == 'S':
+                    depend = (u1.subregion.territory ==
+                              o2['assist'].territory)
+
+            if depend:
+                dep.setdefault(u1, []).append(u2)
+
+    def _resolve(self, order):
+        pass
+
+    def consistent(self, state):
+        pass
+
+    def resolve(self, state, orders, dep):
+        _state = set(o for o, d in state)
+
+        # Any orders that have no more unresolved dependencies should
+        # be brought into our new hypothetical order resolution.
+        new_state = tuple((order, self._resolve(order)) for order in orders
+                          if order not in _state and
+                          all(o in _state for o in dep[order]))
+        state = state + new_state
+        _state |= set(o for o, d in new_state)
+
+        # Only bother calculating whether the hypothetical solution is
+        # consistent if all orders within it have no remaining
+        # unresolved dependencies.
+        if all(all(o in _state for o in dep[order]) for order in state):
+            if not self.consistent(state):
+                return ()
+
+        # For those orders not already in 'state', sort from least to
+        # most remaining dependencies.
+        remaining_deps = sorted((sum(1 for o in dep[order]
+                                     if o not in _state), order)
+                                for order in orders if not in _state)
+        if not remaining_deps:
+            return state
+        # Go with the order with the fewest remaining deps.
+        q, order = remaining_deps[0]
+
+        # The order has unresolved deps which might be circular, so it
+        # isn't obvious how to resolve it.  Try both ways.
+        results = []
+        for S in (True, False):
+            results.append(self.resolve(state+((order, S),), orders, dep))
+
+        return results[0] if results[0] else results[1]
+
+    def update_units(self, decisions):
+        pass
+
+    def update_ownership(self):
         for t in Territory.objects.all():
             u = Unit.objects.filter(turn=turn, subregion__territory=t)
             assert u.count() < 2
@@ -79,6 +160,22 @@ class Game(models.Model):
                 continue
             Ownership(turn=turn, government=gvt, territory=t).save()
 
+    def generate(self):
+        turn = self.current_turn()
+
+        self.consistency_check()
+
+        orders = self.canonical_orders(turn)
+        disorder = self.detect_civil_disorder(orders)
+        dependencies = self.construct_dependencies(orders)
+        decisions = self.resolve((), orders, dependencies)
+
+        turn = self.turn_set.create(number=turn.number+1)
+        self.update_units(decisions)
+        self.update_ownership()
+
+        self.consistency_check()
+
     generate.alters_data = True
 
 def game_changed(sender, **kwargs):
@@ -86,15 +183,18 @@ def game_changed(sender, **kwargs):
     if instance.state == 'A' and not instance.turn_set.exists():
         turn = instance.turn_set.create(number=0)
         convert = {'L': 'A', 'S': 'F'}
-        for pwr in Power.objects.all():
-            gvt = instance.government_set.create(name=pwr.name, power=pwr)
+        governments = list(instance.government_set.all())
+        shuffle(governments)
+        for pwr, gvt in zip(Power.objects.all(), governments):
+            for t in Territory.objects.filter(power=pwr):
+                Ownership(turn=turn, government=gvt, territory=t).save()
+
             sr_set = Subregion.objects.filter(territory__power=pwr,
                                               init_unit=True)
             for sr in sr_set:
                 gvt.unit_set.create(turn=turn,
                                     u_type=convert[sr.sr_type],
                                     subregion=sr)
-        instance.generate(init=True)
 post_save.connect(game_changed, sender=Game)
 
 class Turn(models.Model):
@@ -161,7 +261,7 @@ class Government(models.Model):
     name = models.CharField(max_length=100)
     user = models.ForeignKey(User, null=True, blank=True)
     game = models.ForeignKey(Game)
-    power = models.ForeignKey(Power)
+    power = models.ForeignKey(Power, null=True)
     owns = models.ManyToManyField(Territory, through='Ownership')
 
     def __unicode__(self):
