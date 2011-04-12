@@ -51,30 +51,6 @@ class Game(models.Model):
         else:
             return None
 
-    def consistency_check(self):
-        pass
-
-    def is_legal(self, order, units):
-        pass
-
-    def canonical_orders(self, turn):
-        units = Unit.objects.filter(turn=turn)
-
-        # the default action for each unit, if no order is defined
-        orders = dict((u.id, {'government': u.government,
-                              'actor': u.subregion, 'action': 'H'})
-                      for u in units)
-
-        # replace with the most recent legal order
-        for o in Order.objects.filter(turn=turn):
-            if self.is_legal(o, units):
-                u = units.get(subregion__territory=o.actor.territory)
-                assist = units.get(subregion__territory=o.assist.territory)
-                orders[u] = {'id': o.id, 'government': o.government,
-                             'actor': u.subregion, 'action': o.action,
-                             'assist': assist.subregion, 'target': o.target}
-        return orders
-
     def detect_civil_disorder(self, orders):
         return [gvt for gvt in self.government_set.all()
                 if not any('id' in o for u, o in orders.iteritems()
@@ -129,7 +105,7 @@ class Game(models.Model):
         # most remaining dependencies.
         remaining_deps = sorted((sum(1 for o in dep[order]
                                      if o not in _state), order)
-                                for order in orders if not in _state)
+                                for order in orders if order not in _state)
         if not remaining_deps:
             return state
         # Go with the order with the fewest remaining deps.
@@ -143,40 +119,24 @@ class Game(models.Model):
 
         return results[0] if results[0] else results[1]
 
-    def update_units(self, decisions):
-        pass
-
-    def update_ownership(self):
-        for t in Territory.objects.all():
-            u = Unit.objects.filter(turn=turn, subregion__territory=t)
-            assert u.count() < 2
-            try:
-                if turn.season == 'F' and u.exists():
-                    gvt = u[0].government
-                else:
-                    gvt = self.government_set.get(
-                        ownership__turn=prev, ownership__territory=t)
-            except ObjectDoesNotExist:
-                continue
-            Ownership(turn=turn, government=gvt, territory=t).save()
-
     def generate(self):
         turn = self.current_turn()
 
-        self.consistency_check()
+        turn.consistency_check()
 
-        orders = self.canonical_orders(turn)
+        orders = turn.canonical_orders()
         disorder = self.detect_civil_disorder(orders)
         dependencies = self.construct_dependencies(orders)
         decisions = self.resolve((), orders, dependencies)
 
         turn = self.turn_set.create(number=turn.number+1)
-        self.update_units(decisions)
-        self.update_ownership()
+        turn.update_units(decisions)
+        turn.update_ownership()
 
-        self.consistency_check()
+        turn.consistency_check()
 
     generate.alters_data = True
+
 
 def game_changed(sender, **kwargs):
     instance = kwargs['instance']
@@ -196,6 +156,7 @@ def game_changed(sender, **kwargs):
                                     u_type=convert[sr.sr_type],
                                     subregion=sr)
 post_save.connect(game_changed, sender=Game)
+
 
 class Turn(models.Model):
     class Meta:
@@ -223,6 +184,50 @@ class Turn(models.Model):
         return sorted([(g, sum(1 for t in owns if t.government.id == g.id))
                        for g in gvts], key=lambda x: (-x[1], x[0].power.name))
 
+    def consistency_check(self):
+        pass
+
+    def is_legal(self, order):
+        pass
+
+    def canonical_orders(self):
+        units = self.unit_set.all()
+
+        # the default action for each unit, if no order is defined
+        orders = dict((u.id, {'government': u.government,
+                              'actor': u.subregion, 'action': 'H'})
+                      for u in units)
+
+        # replace with the most recent legal order
+        for o in self.order_set.all():
+            if self.is_legal(o):
+                u = units.get(subregion__territory=o.actor.territory)
+                assist = units.get(subregion__territory=o.assist.territory)
+                orders[u] = {'id': o.id, 'government': o.government,
+                             'actor': u.subregion, 'action': o.action,
+                             'assist': assist.subregion, 'target': o.target}
+        return orders
+
+    def update_units(self, decisions):
+        pass
+
+    def update_ownership(self):
+        prev = Turn.objects.get(number=self.number-1)
+        for t in Territory.objects.all():
+            u = self.unit_set.filter(subregion__territory=t)
+            assert u.count() < 2
+
+            try:
+                if self.season == 'F' and u.exists():
+                    gvt = u[0].government
+                else:
+                    gvt = prev.ownership_set.get(territory=t).government
+            except ObjectDoesNotExist:
+                continue
+
+            self.ownership_set.create(government=gvt, territory=t)
+
+
 def turn_create(sender, **kwargs):
     instance = kwargs['instance']
     if instance.id: return
@@ -230,11 +235,13 @@ def turn_create(sender, **kwargs):
     instance.season = SEASON_CHOICES[instance.number % len(SEASON_CHOICES)][0]
 pre_save.connect(turn_create, sender=Turn)
 
+
 class Power(models.Model):
     name = models.CharField(max_length=20)
 
     def __unicode__(self):
         return self.name
+
 
 class Territory(models.Model):
     name = models.CharField(max_length=30)
@@ -243,7 +250,8 @@ class Territory(models.Model):
 
     def __unicode__(self):
         return self.name
-    
+
+
 class Subregion(models.Model):
     territory = models.ForeignKey(Territory)
     subname = models.CharField(max_length=10, blank=True)
@@ -256,6 +264,7 @@ class Subregion(models.Model):
             return u'%s (%s)' % (self.territory.name, self.subname)
         else:
             return self.territory.name
+
 
 class Government(models.Model):
     name = models.CharField(max_length=100)
@@ -281,6 +290,7 @@ class Government(models.Model):
     def builds_available(self):
         return self.supplycenters() - self.units()
 
+
 class Ownership(models.Model):
     class Meta:
         unique_together = ("turn", "territory")
@@ -288,6 +298,7 @@ class Ownership(models.Model):
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     territory = models.ForeignKey(Territory)
+
 
 class Unit(models.Model):
     class Meta:
@@ -304,6 +315,7 @@ class Unit(models.Model):
 
     def __unicode__(self):
         return u'%s %s' % (self.u_type, self.subregion.territory)
+
 
 class Order(models.Model):
     class Meta:
