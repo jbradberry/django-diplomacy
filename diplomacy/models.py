@@ -47,7 +47,7 @@ class Game(models.Model):
             'slug': self.slug})
 
     def current_turn(self):
-        if self.turn_set.count() > 0:
+        if self.turn_set.exists():
             return self.turn_set.latest()
         else:
             return None
@@ -70,9 +70,7 @@ class Game(models.Model):
             u = Unit.objects.filter(turn=turn, subregion__territory=t)
             assert u.count() < 2
             try:
-                if turn.number == 0:
-                    gvt = self.government_set.get(power=t.power)
-                elif turn.season == 'F' and u.count() == 1:
+                if turn.season == 'F' and u.exists():
                     gvt = u[0].government
                 else:
                     gvt = self.government_set.get(
@@ -85,7 +83,7 @@ class Game(models.Model):
 
 def game_changed(sender, **kwargs):
     instance = kwargs['instance']
-    if instance.state == 'A' and not instance.turn_set.all():
+    if instance.state == 'A' and not instance.turn_set.exists():
         turn = instance.turn_set.create(number=0)
         convert = {'L': 'A', 'S': 'F'}
         for pwr in Power.objects.all():
@@ -194,7 +192,7 @@ class Ownership(models.Model):
 class Unit(models.Model):
     class Meta:
         unique_together = ("turn", "subregion")
-        
+
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
