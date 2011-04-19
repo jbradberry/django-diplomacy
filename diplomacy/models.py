@@ -146,6 +146,8 @@ def game_changed(sender, **kwargs):
         governments = list(instance.government_set.all())
         shuffle(governments)
         for pwr, gvt in zip(Power.objects.all(), governments):
+            gvt.power = pwr
+            gvt.save()
             for t in Territory.objects.filter(power=pwr):
                 Ownership(turn=turn, government=gvt, territory=t).save()
 
@@ -183,6 +185,150 @@ class Turn(models.Model):
         owns = Ownership.objects.filter(turn=self, territory__is_supply=True)
         return sorted([(g, sum(1 for t in owns if t.government.id == g.id))
                        for g in gvts], key=lambda x: (-x[1], x[0].power.name))
+
+    def find_convoys(self):
+        """
+        Generates pairs consisting of a cluster of adjacent non-coastal
+        fleets, and the coastal territories that are reachable via convoy
+        from that cluster.  This is necessary to determine legal orders.
+
+        """
+        if hasattr(self, '_convoyable'):
+            return self._convoyable
+
+        fleets = Subregion.objects.filter(
+            sr_type='S', unit__turn=self).exclude(
+            territory__subregion__sr_type='L').distinct()
+        C = dict((f.id, set([f.id])) for f in fleets)
+        for f in fleets:
+            for f2 in fleets.filter(borders=f):
+                if C[f.id] is not C[f2.id]:
+                    C[f.id] |= C[f2.id]
+                    C.update((x, C[f.id]) for x in C[f2.id])
+        groups = set(frozenset(C[f]) for f in C)
+        self._convoyable = []
+        for g in groups:
+            coasts = Subregion.objects.filter(
+                sr_type='L', territory__subregion__borders__id__in=g
+                ).distinct()
+            if coasts.filter(unit__turn=self).exists():
+                self._convoyable.append((g, set(sr.id for sr in coasts)))
+        return self._convoyable
+
+    def valid_hold(self, actor):
+        if self.season in ('S', 'F'):
+            if self.unit_set.filter(subregion=actor).count() == 1:
+                return {None: [None]}
+        return {}
+
+    def valid_move(self, actor):
+        if self.season == 'FA':
+            return {}
+
+        unit = self.unit_set.filter(subregion=actor)
+        target = Subregion.objects.filter(borders=actor)
+
+        if self.season in ('SR', 'FR'):
+            # only displaced units retreat
+            unit = unit.filter(displaced_from__isnull=False)
+            target = target.exclude(
+                # only go to empty territories ...
+                territory__subregion__unit__turn=self).exclude(
+                # that we weren't displaced from ...
+                territory=unit.displaced_from).exclude(
+                # and that isn't empty because of a standoff.
+                territory__standoff__turn=self).distinct()
+
+        if unit.count() != 1:
+            return {}
+        target = [t.id for t in target]
+
+        if self.season in ('S', 'F') and unit.u_type == 'A':
+            target = set(target)
+            for fset, lset in self.find_convoys():
+                if actor.id in lset:
+                    target.update(lset)
+            target.discard(actor.id)
+            target = list(target)
+
+        if not target:
+            return {}
+        return {None: target}
+
+    def valid_support(self, actor):
+        if self.season not in ('S', 'F'):
+            return {}
+        if self.unit_set.filter(subregion=actor).count() != 1:
+            return {}
+
+        sr = Subregion.objects.all()
+        adj = sr.filter(territory__subregion__borders=actor).distinct()
+
+        # support to hold
+        results = dict((a.id, [None]) for a in adj.filter(unit__turn=self))
+
+        adj = set(a.id for a in adj)
+
+        # support to attack
+        attackers = sr.filter(territory__subregion__borders__borders=actor,
+                              unit__turn=self
+                              ).exclude(id=actor.id).distinct()
+        for a in attackers:
+            reachable = adj & set(t.id for t in a.borders.all())
+            results.setdefault(a.id, []).extend(reachable)
+
+        # support to convoyed attack
+        attackers = sr.filter(unit__turn=self, sr_type='L'
+                              ).exclude(id=actor.id).distinct()
+        for fset, lset in self.find_convoys():
+            for a in attackers:
+                if a.id not in lset:
+                    continue
+                results.setdefault(a.id, []).extend(adj & lset - set([a.id]))
+
+        return results
+
+    def valid_convoy(self, actor):
+        if self.season not in ('S', 'F'):
+            return {}
+        if self.unit_set.filter(subregion=actor).count() != 1:
+            return {}
+        if actor.sr_type != 'S':
+            return {}
+
+        sr = Subregion.objects.all()
+        for fset, lset in self.find_convoys():
+            if actor in fset:
+                attackers = sr.filter(unit__turn=self, sr_type='L',
+                                      id__in=lset).distinct()
+                return dict((a.id, list(lset - set([a.id]))) for a in attackers)
+        return {}
+
+    def valid_build(self, actor):
+        if not self.season == 'FA':
+            return {}
+        T = actor.territory
+        G = T.ownership_set.get(turn=self)
+        if not (T.is_supply and G.builds_available() > 0):
+            return {}
+        if T.subregion_set.filter(unit__turn=self).exists():
+            return {}
+        if T.ownership_set.filter(turn=self,
+                                  government__power=T.power).exists():
+            return {None: [None]}
+        return {}
+
+    def valid_disband(self, actor):
+        if self.season in ('S', 'F'):
+            return {}
+
+        unit = actor.unit_set.get(turn=self)
+        if self.season in ('SR', 'FR'):
+            if unit.displaced_from is None:
+                return {}
+        elif unit.government.builds_available() >= 0:
+            return {}
+        return {None: [None]}
 
     def consistency_check(self):
         pass

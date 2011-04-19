@@ -4,31 +4,6 @@ from diplomacy.models import Order, Subregion, Unit
 
 convert = {'L': 'A', 'S': 'F'}
 
-def legal_convoys(turn):
-    """
-    This function generates pairs consisting of a cluster of adjacent
-    non-coastal fleets, and the coastal territories that are reachable
-    via convoy from that cluster.  This is necessary to determine
-    legal orders.
-
-    """
-    fleets = Subregion.objects.filter(sr_type='S', unit__turn=turn).exclude(
-        territory__subregion__sr_type='L').distinct()
-    C = dict((f.id, set([f.id])) for f in fleets)
-    for f in fleets:
-        for f2 in fleets.filter(borders=f):
-            if C[f.id] is not C[f2.id]:
-                C[f.id] |= C[f2.id]
-                C.update((x, C[f.id]) for x in C[f2.id])
-    groups = set(frozenset(C[f]) for f in C)
-    pairs = []
-    for g in groups:
-        coasts = Subregion.objects.filter(
-            sr_type='L', territory__subregion__borders__id__in=g).distinct()
-        if coasts.filter(unit__turn=turn).exists():
-            pairs.append((list(g), [sr.id for sr in coasts]))
-    return pairs
-
 def validorders(game, gvt):
     turn = game.current_turn()
     season = turn.season

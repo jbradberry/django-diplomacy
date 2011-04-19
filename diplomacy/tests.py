@@ -2,17 +2,17 @@ import unittest
 import models, forms
 from django.contrib.auth.models import User
 
-def create_units(units, T):
-    for fname, fsub in units['F']:
+def create_units(units, turn, gvt):
+    for fname, fsub in units.get('F', []):
         sr = models.Subregion.objects.get(
             sr_type='S', territory__name=fname, subname=fsub)
         models.Unit.objects.create(
-            u_type='F', subregion=sr, turn=T.turn, government=T.gvt)
-    for aname in units['A']:
+            u_type='F', subregion=sr, turn=turn, government=gvt)
+    for aname in units.get('A', []):
         sr = models.Subregion.objects.get(
             sr_type='L', territory__name=aname)
         models.Unit.objects.create(
-            u_type='A', subregion=sr, turn=T.turn, government=T.gvt)
+            u_type='A', subregion=sr, turn=turn, government=gvt)
 
 
 class CorrectnessHelperTest(unittest.TestCase):
@@ -26,18 +26,24 @@ class CorrectnessHelperTest(unittest.TestCase):
         self.game.state = 'A'
         self.game.save()
 
-    def test_legal_convoys(self):
+    def tearDown(self):
+        self.owner.delete()
+        self.game.delete()
+        self.gvt.delete()
+        self.turn.delete()
+
+    def test_find_convoys(self):
         units = {'F': (('Mid-Atlantic Ocean', ''),
                        ('English Channel', ''),
                        ('Western Mediterranean', ''),
-                       ('Spain', 'NC'),
+                       ('Spain', 'NC'),      # coastal, can't participate
                        ('Ionian Sea', ''),   # fake group
                        ('Adriatic Sea', ''), # fake group
                        ('Baltic Sea', ''),
                        ('Gulf of Bothnia', '')),
                  'A': ('Gascony', 'Sweden')}
-        create_units(units, self)
-        legal = forms.legal_convoys(self.turn)
+        create_units(units, self.turn, self.gvt)
+        legal = self.turn.find_convoys()
 
         self.assertEqual(len(legal), 2)
         for seas, lands in legal:
