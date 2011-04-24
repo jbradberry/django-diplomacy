@@ -23,6 +23,7 @@ SUBREGION_CHOICES = (
     ('S', 'Sea')
 )
 
+
 class Game(models.Model):
     STATE_CHOICES = (
         ('S', 'Setup'),
@@ -399,6 +400,9 @@ class Territory(models.Model):
 
 
 class Subregion(models.Model):
+    class Meta:
+        ordering = ['id']
+
     territory = models.ForeignKey(Territory)
     subname = models.CharField(max_length=10, blank=True)
     sr_type = models.CharField(max_length=1, choices=SUBREGION_CHOICES)
@@ -435,6 +439,29 @@ class Government(models.Model):
 
     def builds_available(self):
         return self.supplycenters() - self.units()
+
+    def actors(self, turn=None):
+        if not turn:
+            turn = self.game.current_turn()
+
+        if turn.season == 'FA':
+            actors = Subregion.objects.filter(
+                territory__is_supply=True,
+                territory__power__government=self, # home supply center
+                territory__ownership__turn=turn,      # and it must still be
+                territory__ownership__government=self # owned by you this turn
+                ).exclude(
+                territory__subregion__unit__turn=turn # and must be unoccupied
+                ).distinct()
+        else:
+            displaced = {}
+            if turn.season in ('SR', 'FR'): # only dislodged units move
+                displaced['unit__displaced_from__isnull'] = False
+            actors = Subregion.objects.filter(unit__turn=turn,
+                                              unit__government=self,
+                                              **displaced)
+
+        return actors
 
 
 class Ownership(models.Model):
