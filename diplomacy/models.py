@@ -223,13 +223,13 @@ class Turn(models.Model):
                 self._convoyable.append((g, set(sr.id for sr in coasts)))
         return self._convoyable
 
-    def valid_hold(self, actor):
+    def valid_hold(self, actor, empty=None):
         if self.season in ('S', 'F'):
             if self.unit_set.filter(subregion=actor).count() == 1:
-                return {None: [None]}
+                return {empty: [empty]}
         return {}
 
-    def valid_move(self, actor):
+    def valid_move(self, actor, empty=None):
         if self.season == 'FA':
             return {}
 
@@ -251,7 +251,7 @@ class Turn(models.Model):
             return {}
         target = [t.id for t in target]
 
-        if self.season in ('S', 'F') and unit.u_type == 'A':
+        if self.season in ('S', 'F') and unit.get().u_type == 'A':
             target = set(target)
             for fset, lset in self.find_convoys():
                 if actor.id in lset:
@@ -261,9 +261,9 @@ class Turn(models.Model):
 
         if not target:
             return {}
-        return {None: target}
+        return {empty: target}
 
-    def valid_support(self, actor):
+    def valid_support(self, actor, empty=None):
         if self.season not in ('S', 'F'):
             return {}
         if self.unit_set.filter(subregion=actor).count() != 1:
@@ -273,7 +273,7 @@ class Turn(models.Model):
         adj = sr.filter(territory__subregion__borders=actor).distinct()
 
         # support to hold
-        results = dict((a.id, [None]) for a in adj.filter(unit__turn=self))
+        results = dict((a.id, [empty]) for a in adj.filter(unit__turn=self))
 
         adj = set(a.id for a in adj)
 
@@ -296,7 +296,7 @@ class Turn(models.Model):
 
         return results
 
-    def valid_convoy(self, actor):
+    def valid_convoy(self, actor, empty=None):
         if self.season not in ('S', 'F'):
             return {}
         if self.unit_set.filter(subregion=actor).count() != 1:
@@ -312,7 +312,7 @@ class Turn(models.Model):
                 return dict((a.id, list(lset - set([a.id]))) for a in attackers)
         return {}
 
-    def valid_build(self, actor):
+    def valid_build(self, actor, empty=None):
         if not self.season == 'FA':
             return {}
         T = actor.territory
@@ -323,20 +323,20 @@ class Turn(models.Model):
             return {}
         if T.ownership_set.filter(turn=self,
                                   government__power=T.power).exists():
-            return {None: [None]}
+            return {empty: [empty]}
         return {}
 
-    def valid_disband(self, actor):
+    def valid_disband(self, actor, empty=None):
         if self.season in ('S', 'F'):
             return {}
 
-        unit = actor.unit_set.get(turn=self)
+        unit = actor.unit_set.filter(turn=self)
         if self.season in ('SR', 'FR'):
-            if unit.displaced_from is None:
+            if not unit.filter(displaced_from__is_null=False).exists():
                 return {}
-        elif unit.government.builds_available() >= 0:
+        elif unit.get().government.builds_available() >= 0:
             return {}
-        return {None: [None]}
+        return {empty: [empty]}
 
     # FIXME
     def consistency_check(self):
@@ -479,6 +479,36 @@ class Government(models.Model):
                                               **displaced)
 
         return actors
+
+    def filter_orders(self):
+        turn = self.game.current_turn()
+        season = turn.season
+        builds = self.builds_available()
+
+        actions = {'S': ('H', 'M', 'S', 'C'),
+                   'F': ('H', 'M', 'S', 'C'),
+                   'SR': ('M', 'D'),
+                   'FR': ('M', 'D'),
+                   'FA': ('B',) if builds > 0 else ('D',)}
+        helper = {'H': turn.valid_hold,
+                  'M': turn.valid_move,
+                  'S': turn.valid_support,
+                  'C': turn.valid_convoy,
+                  'B': turn.valid_build,
+                  'D': turn.valid_disband}
+
+        tree = {}
+        for a in self.actors(turn):
+            for x in actions[turn.season]:
+                result = helper[x](a, u'')
+                if not result:
+                    continue
+                tree.setdefault(a.id, {})[x] = result
+
+        if season == 'FA' and builds > 0:
+            tree[u''] = {u'': {u'': [u'']}}
+
+        return tree
 
 
 class Ownership(models.Model):

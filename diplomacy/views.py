@@ -8,7 +8,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidde
 from django.utils import simplejson
 from django.db.models import ForeignKey, Max
 from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion
-from diplomacy.forms import OrderForm, OrderFormSet, validorders
+from diplomacy.forms import OrderForm, OrderFormSet
 import re
 
 def games_list(request, page=1, paginate_by=30, state=None):
@@ -57,14 +57,16 @@ def orders(request, slug, power):
     return render_to_response('diplomacy/manage_orders.html',
                               {'formset': formset, 'game': g})
 
+# WISHLIST: dump directly to template instead?
 def select_filter(request, slug, power):
     g = Game.objects.get(slug=slug)
     uf = (g.current_turn().season != 'FA')
     gvt = get_object_or_404(Government, game=g, power__name__iexact=power)
     return HttpResponse(simplejson.dumps({'unit_fixed': uf,
-                                          'tree': validorders(g, gvt)}),
+                                          'tree': gvt.filter_orders()}),
                         mimetype='application/json')
 
+# WISHLIST: dump directly to template instead?
 def game_state(request, slug, season=None, year=None):
     colors = {'Austria-Hungary': '#a41a10',
               'England': '#1010a3',

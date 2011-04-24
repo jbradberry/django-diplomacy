@@ -17,25 +17,30 @@
 
       function in_obj(item, obj) {
 	if ( obj instanceof Array ) {
-	  return ( $.inArray(parseInt(item), obj) >= 0 );
+          if ( item != "" ) { item = parseInt(item); }
+	  return ( $.inArray(item, obj) >= 0 );
 	}
-	return ( typeof obj[item] != 'undefined' );
+	return ( obj.hasOwnProperty(item) );
       }
 	
       function filter(widget, data) {
-	if ( objlen(data) == 1 && data[0] == "" ) {
+	if ( objlen(data) == 1 && in_obj("", data) ) {
 	  widget.val("");
 	  widget.fadeOut("def");
 	}
 	else {
 	  if ( widget.is(":hidden") ) { widget.fadeIn(); }
-	  if ( !in_obj(widget.val(), data) ) { widget.val(data[0]); }
 
 	  widget.find("option").each(function() {
 	    if ( in_obj($(this).val(), data) ) { $(this).show(); }
 	    else { $(this).hide(); }
 	  });
+
+          if ( widget.find("option:selected").is(":hidden") ) {
+            widget.find("option:visible:first").attr("selected", "selected");
+          }
 	}
+        widget.trigger("change");
       }
 
       function readonly() {
@@ -50,9 +55,9 @@
 	  var unit_fixed = data.unit_fixed;
 	  var tree = data.tree;
 
-	  $("tr.form").each(function(index, Element) {
+	  $("tr.form").each(function() {
 	    var form = $(this);
-	    var actor, action;
+	    var actor, action, assist;
 	
 	    if ( unit_fixed ) {
 	      actor = form.find("select[name$=actor]");
@@ -62,14 +67,21 @@
 
 	    form.find("select[name$=actor]").change(function() {
 	      actor = $(this).val();
-	      filter(form.find("select[name$=action]"), tree[index][actor]);
+	      filter(form.find("select[name$=action]"), tree[actor]);
 	    }).trigger("change");
 
 	    form.find("select[name$=action]").change(function() {
 	      action = $(this).val();
-	      var current = tree[index][actor][action];
-	      filter(form.find("select[name$=assist]"), current[0]);
-	      filter(form.find("select[name$=target]"), current[1]);
+	      var current = tree[actor][action];
+	      filter(form.find("select[name$=assist]"), current);
+	    }).trigger("change");
+
+	    form.find("select[name$=assist]").change(function() {
+	      assist = $(this).val();
+	      var current = tree[actor][action][assist];
+              console.log(objlen(current));
+              console.log(in_obj("", current));
+	      filter(form.find("select[name$=target]"), current);
 	    }).trigger("change");
 
 	  });
