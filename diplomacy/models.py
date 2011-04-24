@@ -3,6 +3,7 @@ from django.db.models import Count
 from django.db.models.signals import pre_save, post_save
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
+from random import shuffle
 import datetime
 
 SEASON_CHOICES = (
@@ -362,7 +363,6 @@ class Turn(models.Model):
         prev = Turn.objects.get(number=self.number-1)
         for t in Territory.objects.all():
             u = self.unit_set.filter(subregion__territory=t)
-            assert u.count() < 2
 
             try:
                 if self.season == 'F' and u.exists():
@@ -474,9 +474,6 @@ class Ownership(models.Model):
 
 
 class Unit(models.Model):
-    class Meta:
-        unique_together = ("turn", "subregion")
-
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
@@ -507,9 +504,9 @@ class Order(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     slot = models.PositiveSmallIntegerField()
     actor = models.ForeignKey(Subregion, null=True, blank=True,
-                              related_name='actors')
+                              related_name='acts')
     action = models.CharField(max_length=1, choices=ACTION_CHOICES)
     assist = models.ForeignKey(Subregion, null=True, blank=True,
-                               related_name='assists')
+                               related_name='assisted')
     target = models.ForeignKey(Subregion, null=True, blank=True,
-                               related_name='targets')
+                               related_name='targeted')
