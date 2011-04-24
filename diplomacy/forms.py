@@ -86,7 +86,7 @@ class UnitProxyChoiceField(ModelChoiceField):
 
 class OrderForm(ModelForm):
     qs = Subregion.objects.select_related('territory__name').all()
-    
+
     actor = UnitProxyChoiceField(queryset=qs, required=False)
     assist = UnitProxyChoiceField(queryset=qs, required=False)
     target = ModelChoiceField(queryset=qs, required=False)
@@ -94,58 +94,46 @@ class OrderForm(ModelForm):
     class Meta:
         model = Order
         exclude = ('turn', 'government', 'timestamp', 'slot')
-        
-    def __init__(self, slot, valid, season, *args, **kwargs):
+
+    def __init__(self, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
-        self.slot, self.valid, self.season = slot, valid, season
 
         my_css = {'actor': 'subregion',
                   'action': 'action',
                   'assist': 'subregion',
                   'target': 'subregion',}
-        for w, c in my_css.items():
+        for w, c in my_css.iteritems():
             self.fields[w].widget.attrs['class'] = c
 
     def clean(self):
-        cleaned_data = self.cleaned_data
-
-        action = cleaned_data.get("action")
-        actor = cleaned_data.get("actor")
-        actor = actor.id if actor else ""
-        assist = cleaned_data.get("assist")
-        assist = assist.id if assist else ""
-        target = cleaned_data.get("target")
-        target = target.id if target else ""
-
-        if self.season != 'FA' and actor != self.initial['actor']:
+        turn = self.initial['government'].game.current_turn()
+        actor = self.cleaned_data.get("actor")
+        if turn.season != 'FA' and actor != self.initial['actor']:
             raise ValidationError("You may not change the acting unit.")
 
-        try:
-            A, T = self.valid[actor][action]
-            if assist not in A or target not in T:
-                raise ValidationError("Invalid order.")
-        except KeyError:
-            raise ValidationError("Invalid order.")
+        order = self.initial.copy()
+        order.update(self.cleaned_data)
+        if not turn.is_legal(order):
+            raise ValidationError("Illegal order.")
 
-        return cleaned_data
+        return self.cleaned_data
 
 
 class OrderFormSet(BaseFormSet):
-    def __init__(self, game, government, first_submit, data=None, **kwargs):
-        self.game, self.government = game, government
-        self.turn = game.current_turn()
+    def __init__(self, government, first_submit, data=None, **kwargs):
+        self.government = government
+        self.turn = government.game.current_turn()
         self.season = self.turn.season
         self.first_submit = first_submit
+
         super(OrderFormSet, self).__init__(data=data, **kwargs)
 
     def _construct_forms(self):
-        self.forms = [self._construct_form(i, slot=i, valid=v,
-                                           season=self.season,
-                                           instance=
-                                           Order(slot=i, turn=self.turn,
-                                                 government=self.government))
-                      for i, v in enumerate(validorders(self.game,
-                                                        self.government))]
+        self.forms = [self._construct_form(i, instance=
+                                           Order(slot=x['slot'],
+                                                 turn=x['turn'],
+                                                 government=x['government']))
+                      for i, x in enumerate(self.initial)]
 
     def save(self):
         for form in self.forms:
@@ -161,7 +149,7 @@ class OrderFormSet(BaseFormSet):
         if self.total_form_count() < self.initial_form_count():
             raise ValidationError("You may not delete orders.")
 
-        actors = []
+        actors = set()
         for i in xrange(self.total_form_count()):
             form = self.forms[i]
             actor = form.cleaned_data["actor"].territory
@@ -170,12 +158,13 @@ class OrderFormSet(BaseFormSet):
             if actor in actors:
                 raise ValidationError(
                     "You may not give a territory multiple orders.")
-            actors.append(actor)
+            actors.add(actor)
 
         if self.season == 'FA':
             builds = self.government.builds_available()
             if builds >= 0 and len(actors) > builds:
-                raise ValidationError("You may not build more units than you have supply centers.")
+                raise ValidationError("You may not build more units than"
+                                      " you have supply centers.")
             if builds < 0 and len(actors) != abs(builds):
                 u = "unit" if builds == -1 else "units"
                 msg = "You must disband exactly %d %s." % (abs(builds), u)

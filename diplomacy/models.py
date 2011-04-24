@@ -58,30 +58,32 @@ class Game(models.Model):
                 if not any('id' in o for u, o in orders.iteritems()
                            if o['government'] == gvt)]
 
+    # FIXME: prettify conditionals, finish conditions
     def construct_dependencies(self, orders):
         dep = {}
-        for (u1, o1), (u2, o2) in permutations(orders.iteritems(), 2):
+        for (a1, o1), (a2, o2) in permutations(orders.iteritems(), 2):
             depend = False
             if o1['action'] == 'C' and o2['action'] == 'M':
-                depend = (o2['target'].territory == u1.subregion.territory)
+                depend = (o2['target'].territory == a1.territory)
             if o1['action'] == 'S' and o2['action'] == 'C':
-                depend = (u1.subregion.territory == o2['target'].territory)
+                depend = (a1.territory == o2['target'].territory)
             if o1['action'] == 'H' and o2['action'] == 'S':
-                depend = ((u1.subregion.territory == o2['assist'].territory
+                depend = ((a1.territory == o2['assist'].territory
                             and o2['target'] is None) or
-                           (u1.subregion.territory == o2['target'].territory
+                           (a1.territory == o2['target'].territory
                             and o2['assist'] is not None))
             if o1['action'] == 'M':
                 if o2['action'] == 'S':
-                    depend = (u1.subregion.territory ==
-                              o2['assist'].territory)
+                    depend = (a1.territory == o2['assist'].territory)
 
             if depend:
-                dep.setdefault(u1, []).append(u2)
+                dep.setdefault(a1, []).append(a2)
 
-    def _resolve(self, order):
+    # FIXME
+    def _resolve(self, order, orders, dep):
         pass
 
+    # FIXME
     def consistent(self, state):
         pass
 
@@ -90,7 +92,8 @@ class Game(models.Model):
 
         # Any orders that have no more unresolved dependencies should
         # be brought into our new hypothetical order resolution.
-        new_state = tuple((order, self._resolve(order)) for order in orders
+        new_state = tuple((order, self._resolve(order, orders, dep))
+                          for order in orders
                           if order not in _state and
                           all(o in _state for o in dep[order]))
         state = state + new_state
@@ -119,6 +122,7 @@ class Game(models.Model):
         for S in (True, False):
             results.append(self.resolve(state+((order, S),), orders, dep))
 
+        # FIXME: detect and handle convoy paradoxes
         return results[0] if results[0] else results[1]
 
     def generate(self):
@@ -126,10 +130,12 @@ class Game(models.Model):
 
         turn.consistency_check()
 
-        orders = turn.canonical_orders()
-        disorder = self.detect_civil_disorder(orders)
-        dependencies = self.construct_dependencies(orders)
-        decisions = self.resolve((), orders, dependencies)
+        orders = dict((o['actor'].id, o) for o in turn.canonical_orders())
+        if turn.season in ('S', 'F'):
+            # FIXME: do something with civil disorder
+            disorder = self.detect_civil_disorder(orders)
+            dependencies = self.construct_dependencies(orders)
+            decisions = self.resolve((), orders, dependencies)
 
         turn = self.turn_set.create(number=turn.number+1)
         turn.update_units(decisions)
@@ -332,30 +338,41 @@ class Turn(models.Model):
             return {}
         return {None: [None]}
 
+    # FIXME
     def consistency_check(self):
         pass
 
+    # FIXME
     def is_legal(self, order):
-        pass
+        return True
 
-    def canonical_orders(self):
-        units = self.unit_set.all()
+    def canonical_orders(self, gvt=None):
+        gvts = (gvt,) if gvt else self.game.government_set.all()
 
-        # the default action for each unit, if no order is defined
-        orders = dict((u.id, {'government': u.government,
-                              'actor': u.subregion, 'action': 'H'})
-                      for u in units)
+        # fallback orders
+        if self.season == 'FA':
+            orders = dict(((g, s), {'government': g, 'slot': s, 'turn': self})
+                          for g in gvts for s in abs(g.builds_available()))
+        else:
+            action = 'H' if self.season in ('S', 'F') else None
+            orders = dict(((g, s),
+                           {'government': g, 'slot': s, 'turn': self,
+                            'actor': a, 'action': action})
+                          for g in gvts for s, a in enumerate(g.actors(self)))
 
-        # replace with the most recent legal order
-        for o in self.order_set.all():
+        # use the most recent legal order
+        orderset = self.order_set.all()
+        if gvt:
+            orderset = orderset.filter(government=gvt)
+        for o in orderset:
             if self.is_legal(o):
-                u = units.get(subregion__territory=o.actor.territory)
-                assist = units.get(subregion__territory=o.assist.territory)
-                orders[u] = {'id': o.id, 'government': o.government,
-                             'actor': u.subregion, 'action': o.action,
-                             'assist': assist.subregion, 'target': o.target}
-        return orders
+                orders[(o.government, o.slot)] = {
+                    'id': o.id, 'government': o.government, 'slot': o.slot,
+                    'turn': o.turn, 'actor': o.actor, 'action': o.action,
+                    'assist': o.assist, 'target': o.target}
+        return [v for k, v in sorted(orders.iteritems())]
 
+    # FIXME
     def update_units(self, decisions):
         pass
 
