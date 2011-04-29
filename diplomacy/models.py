@@ -106,7 +106,7 @@ class Game(models.Model):
         for a, o in orders.iteritems():
             if o['action'] not in ('S', 'C'):
                 continue
-            assist = orders[o['assist']]
+            assist = orders[o['assist'].id]
             if o['target'] is not None:
                 if assist['action'] == 'M' and assist['target'] == o['target']:
                     continue
