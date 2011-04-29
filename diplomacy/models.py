@@ -99,6 +99,12 @@ class Game(models.Model):
             if depend:
                 dep.setdefault(a1, []).append(a2)
 
+        return dep
+
+    # FIXME
+    def immediate_fails(self, orders):
+        pass
+
     # FIXME
     def _resolve(self, order, orders, dep):
         pass
@@ -155,7 +161,8 @@ class Game(models.Model):
             # FIXME: do something with civil disorder
             disorder = self.detect_civil_disorder(orders)
             dependencies = self.construct_dependencies(orders)
-            decisions = self.resolve((), orders, dependencies)
+            state = self.immediate_fails(orders)
+            decisions = self.resolve(state, orders, dependencies)
 
         turn = self.turn_set.create(number=turn.number+1)
         turn.update_units(decisions)
