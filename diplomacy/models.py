@@ -4,6 +4,7 @@ from django.db.models.signals import pre_save, post_save
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from random import shuffle
+from itertools import permutations
 import datetime
 
 SEASON_CHOICES = (
@@ -23,6 +24,34 @@ SUBREGION_CHOICES = (
     ('L', 'Land'),
     ('S', 'Sea')
 )
+
+
+def assist(a1, o1, a2, o2):
+    return o2['assist'] == a1
+
+def attack_us(a1, o1, a2, o2):
+    return o2['target'] == a1
+
+def head_to_head(a1, o1, a2, o2):
+    return o2['target'] == a1 and o1['target'] == a2
+
+def hostile_assist_hold(a1, o1, a2, o2):
+    return o2['assist'] == o1['target'] and o2['target'] is None
+
+def hostile_assist_compete(a1, o1, a2, o2):
+    return o2['target'] == o1['target']
+
+def move_away(a1, o1, a2, o2):
+    return o1['target'] == a2 # and o2['target'] != a1 ?
+
+
+DEPENDENCIES = {('C', 'M'): (attack_us,),
+                ('S', 'C'): (attack_us,),
+                ('H', 'S'): (assist, attack_us),
+                ('M', 'S'): (assist, hostile_assist_compete,
+                             head_to_head, hostile_assist_hold),
+                ('M', 'C'): (assist,),
+                ('M', 'M'): (move_away,),}
 
 
 class Game(models.Model):
@@ -58,23 +87,14 @@ class Game(models.Model):
                 if not any('id' in o for u, o in orders.iteritems()
                            if o['government'] == gvt)]
 
-    # FIXME: prettify conditionals, finish conditions
     def construct_dependencies(self, orders):
         dep = {}
         for (a1, o1), (a2, o2) in permutations(orders.iteritems(), 2):
             depend = False
-            if o1['action'] == 'C' and o2['action'] == 'M':
-                depend = (o2['target'].territory == a1.territory)
-            if o1['action'] == 'S' and o2['action'] == 'C':
-                depend = (a1.territory == o2['target'].territory)
-            if o1['action'] == 'H' and o2['action'] == 'S':
-                depend = ((a1.territory == o2['assist'].territory
-                            and o2['target'] is None) or
-                           (a1.territory == o2['target'].territory
-                            and o2['assist'] is not None))
-            if o1['action'] == 'M':
-                if o2['action'] == 'S':
-                    depend = (a1.territory == o2['assist'].territory)
+            act1, act2 = o1['action'], o2['action']
+            if (act1, act2) in DEPENDENCIES:
+                depend = any(f(a1, o1, a2, o2) for f in
+                             DEPENDENCIES[(act1, act2)])
 
             if depend:
                 dep.setdefault(a1, []).append(a2)
