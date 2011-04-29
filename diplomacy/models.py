@@ -101,9 +101,21 @@ class Game(models.Model):
 
         return dep
 
-    # FIXME
     def immediate_fails(self, orders):
-        pass
+        results = ()
+        for a, o in orders.iteritems():
+            if o['action'] not in ('S', 'C'):
+                continue
+            assist = orders[o['assist']]
+            if o['target'] is not None:
+                if assist['action'] == 'M' and assist['target'] == o['target']:
+                    continue
+            else:
+                if assist['action'] in ('H', 'C', 'S'):
+                    continue
+            results = results + ((a, False),)
+
+        return results
 
     # FIXME
     def _resolve(self, order, orders, dep):
