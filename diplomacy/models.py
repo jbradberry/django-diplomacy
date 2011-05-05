@@ -5,7 +5,9 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from random import shuffle
 from itertools import permutations
+from collections import defaultdict
 import datetime
+
 
 SEASON_CHOICES = (
     ('S', 'Spring'),
@@ -25,6 +27,7 @@ SUBREGION_CHOICES = (
     ('S', 'Sea')
 )
 
+convert = {'L': 'A', 'S': 'F'}
 
 def assist(a1, o1, a2, o2):
     return o2['assist'] == a1
@@ -177,7 +180,7 @@ class Game(models.Model):
             decisions = self.resolve(state, orders, dependencies)
 
         turn = self.turn_set.create(number=turn.number+1)
-        turn.update_units(decisions)
+        turn.update_units(orders, decisions)
         turn.update_ownership()
 
         turn.consistency_check()
@@ -189,7 +192,6 @@ def game_changed(sender, **kwargs):
     instance = kwargs['instance']
     if instance.state == 'A' and not instance.turn_set.exists():
         turn = instance.turn_set.create(number=0)
-        convert = {'L': 'A', 'S': 'F'}
         governments = list(instance.government_set.all())
         shuffle(governments)
         for pwr, gvt in zip(Power.objects.all(), governments):
@@ -411,9 +413,98 @@ class Turn(models.Model):
                     'assist': o.assist, 'target': o.target}
         return [v for k, v in sorted(orders.iteritems())]
 
-    # FIXME
-    def update_units(self, decisions):
-        pass
+    def update_units(self, orders, decisions):
+        prev = Turn.objects.get(number=self.number-1)
+        retreat = prev.season in ('SR', 'FR')
+
+        orders = dict(orders)
+        units = dict(((u.subregion.id, x), {'turn': self,
+                                            'government': u.government,
+                                            'u_type': u.u_type,
+                                            'subregion': u.subregion})
+                     for x in (True, False) # displaced or not
+                     for u in prev.unit_set.filter(displaced_from__is_null=x))
+
+        disbands = defaultdict(set)
+        displaced, failed = {}, defaultdict(list)
+
+        for a, d in decisions:
+            # units that are displaced must retreat or be disbanded
+            if retreat and orders[a]['action'] == None:
+                del units[(a, retreat)]
+                continue
+
+            if orders[a]['action'] == 'M':
+                t = orders[a]['target']
+                if d: # move succeeded
+                    units[(a, retreat)]['subregion'] = t
+                    if not retreat:
+                        displaced[t.id] = orders[a]['actor']
+                elif retreat: # move is a failed retreat
+                    del units[(a, retreat)]
+                    continue
+                else: # move failed
+                    failed[t.id].append(orders[a]['actor'])
+
+            # successful build
+            if d and orders[a]['action'] == 'B':
+                units[(a, False)] = {'turn': self,
+                                     'government': orders[a]['government'],
+                                     'u_type': convert[orders[a]['actor']],
+                                     'subregion': orders[a]['actor']}
+
+            if orders[a]['action'] == 'D':
+                del units[(a, retreat)]
+                disbands[orders[a]['government'].id].add(a)
+                continue
+
+        if prev.season in ('S', 'F'):
+            for a, d in decisions:
+                key = (a, False)
+                # if our location is marked as the target of a
+                # successful move, we are displaced.
+                if a in displaced:
+                    units[key]['displaced_from'] = displaced[a].territory
+                t = orders[a]['target']
+                # if multiple moves to our target failed, we have a standoff.
+                if len(failed.get(t.id, [])) > 1:
+                    units[key]['standoff_from'] = t.territory
+        if prev.season == 'FA':
+            for g in self.game.government_set.all():
+                builds = g.builds_available(prev) + len(disbands[g.id])
+                if builds >= 0:
+                    continue
+
+                # If we've reached this point, we have more units than
+                # allowed.  Disband inward from the outermost unit.
+                # For ties, disband fleets first then armies, and do
+                # in alphabetical order from there, if necessary.
+                sr = Subregion.objects.all()
+                g_names = dict((u.id, (u.sr_type, unicode(u))) for u in
+                               sr.filter(unit__government=g, unit__turn=prev))
+                g_units = set(g_names.iterkeys())
+                examined = set(sc.id for sc in
+                               sr.filter(territory__power=g.power,
+                                         territory__is_supply=True))
+                u_distance = [list(examined)]
+                while any(u not in examined for u in g_units):
+                    adj = set(s.id for s in
+                              sr.filter(borders__in=examined
+                                        ).exclude(id__in=examined).distinct())
+                    u_distance.append(list(adj))
+                    examined |= adj
+
+                while builds < 0:
+                    current = sorted(u_distance.pop(),
+                                     key=lambda x: g_names[x])
+                    for x in current:
+                        del units[(a, False)]
+                        builds += 1
+                        if builds == 0:
+                            break
+
+        for k, u in units.iteritems():
+            Unit.objects.create(**u)
 
     def update_ownership(self):
         prev = Turn.objects.get(number=self.number-1)
@@ -493,8 +584,8 @@ class Government(models.Model):
             turn = self.game.current_turn()
         return Unit.objects.filter(turn=turn, government=self).count()
 
-    def builds_available(self):
-        return self.supplycenters() - self.units()
+    def builds_available(self, turn=None):
+        return self.supplycenters(turn) - self.units(turn)
 
     def actors(self, turn=None):
         if not turn:
