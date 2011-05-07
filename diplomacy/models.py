@@ -42,7 +42,7 @@ def hostile_assist_hold(a1, o1, a2, o2):
     return o2['assist'] == o1['target'] and o2['target'] is None
 
 def hostile_assist_compete(a1, o1, a2, o2):
-    return o2['target'] == o1['target']
+    return o2['assist'] != a1 and o2['target'] == o1['target']
 
 def move_away(a1, o1, a2, o2):
     return o1['target'] == a2 # and o2['target'] != a1 ?
