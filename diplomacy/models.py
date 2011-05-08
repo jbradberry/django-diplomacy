@@ -94,13 +94,14 @@ class Game(models.Model):
         dep = {}
         for (a1, o1), (a2, o2) in permutations(orders.iteritems(), 2):
             depend = False
+            dep.setdefault(a1, [])
             act1, act2 = o1['action'], o2['action']
             if (act1, act2) in DEPENDENCIES:
                 depend = any(f(a1, o1, a2, o2) for f in
                              DEPENDENCIES[(act1, act2)])
 
             if depend:
-                dep.setdefault(a1, []).append(a2)
+                dep[a1].append(a2)
 
         return dep
 
@@ -143,7 +144,7 @@ class Game(models.Model):
         # Only bother calculating whether the hypothetical solution is
         # consistent if all orders within it have no remaining
         # unresolved dependencies.
-        if all(all(o in _state for o in dep[order]) for order in state):
+        if all(all(o in _state for o in dep[order]) for order, d in state):
             if not self.consistent(state):
                 return ()
 
@@ -373,7 +374,7 @@ class Turn(models.Model):
 
         unit = actor.unit_set.filter(turn=self)
         if self.season in ('SR', 'FR'):
-            if not unit.filter(displaced_from__is_null=False).exists():
+            if not unit.filter(displaced_from__isnull=False).exists():
                 return {}
         elif unit.get().government.builds_available() >= 0:
             return {}
@@ -505,7 +506,7 @@ class Turn(models.Model):
                                             'subregion': u.subregion})
                      for x in (True, False) # displaced or not
                      for u in
-                     self.prev.unit_set.filter(displaced_from__is_null=x))
+                     self.prev.unit_set.filter(displaced_from__isnull=x))
 
         self._update_units_changes(orders, decisions, units)
 
