@@ -699,3 +699,12 @@ class Order(models.Model):
                                related_name='assisted')
     target = models.ForeignKey(Subregion, null=True, blank=True,
                                related_name='targeted')
+
+    def __unicode__(self):
+        result = "%s %s %s" % (convert[self.actor.sr_type], self.actor,
+                               self.action)
+        if self.assist:
+            result += " %s %s" % (convert[self.assist.sr_type], self.assist)
+        if self.target:
+            result += " %s" % self.target
+        return result
