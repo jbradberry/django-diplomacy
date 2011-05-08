@@ -78,6 +78,14 @@ class CorrectnessHelperTest(TestCase):
 
 
 class BasicChecks(TestCase):
+    """
+    Based on section 6.A from the Diplomacy Adjudicator Test Cases
+    website.
+
+    http://web.inter.nl.net/users/L.B.Kruijswijk/#6.A
+
+    """
+
     fixtures = ['basic_game.json']
 
     def test_non_adjacent_move(self):
@@ -135,3 +143,98 @@ class BasicChecks(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name='Yorkshire',
                               displaced_from__name='London').exists())
+
+    def test_ordering_unit_of_another_country(self):
+        # DATC 6.A.6
+        call_command('loaddata', '6A6.json', **options)
+
+        T = models.Turn.objects.get()
+        order = models.Order.objects.values().get()
+
+        self.assertTrue(not T.is_legal(order))
+
+    def test_only_armies_can_be_convoyed(self):
+        # DATC 6.A.7
+        call_command('loaddata', '6A7.json', **options)
+
+        T = models.Turn.objects.get()
+        orders = models.Order.objects.values()
+
+        self.assertTrue(not T.is_legal(orders.get(slot=0)))
+        self.assertTrue(not T.is_legal(orders.get(slot=1)))
+
+    def test_support_to_hold_yourself(self):
+        # DATC 6.A.8
+        call_command('loaddata', '6A8.json', **options)
+
+        T = models.Turn.objects.get()
+        order = models.Order.objects.values().get(
+            government__power__name="Austria-Hungary")
+
+        self.assertTrue(not T.is_legal(order))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name='Trieste',
+                              displaced_from__name='Venice').exists())
+
+    def test_fleets_must_follow_coast(self):
+        # DATC 6.A.9
+        call_command('loaddata', '6A9.json', **options)
+
+        T = models.Turn.objects.get()
+        order = models.Order.objects.values().get()
+
+        self.assertTrue(not T.is_legal(order))
+
+    def test_support_on_unreachable_destination(self):
+        # DATC 6.A.10
+        call_command('loaddata', '6A10.json', **options)
+
+        T = models.Turn.objects.get()
+        order = models.Order.objects.values().get(
+            actor__territory__name="Rome")
+
+        self.assertTrue(not T.is_legal(order))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            not T.unit_set.filter(displaced_from__isnull=False).exists())
+
+    def test_simple_bounce(self):
+        # DATC 6.A.11
+        call_command('loaddata', '6A11.json', **options)
+
+        G = models.Game.objects.get()
+        G.generate()
+        T = G.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Vienna").exists())
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Venice").exists())
+        self.assertEqual(
+            T.unit_set.filter(standoff_from__name="Tyrolia").count(), 2)
+
+    def test_bounce_of_three_units(self):
+        # DATC 6.A.12
+        call_command('loaddata', '6A12.json', **options)
+
+        G = models.Game.objects.get()
+        G.generate()
+        T = G.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Vienna").exists())
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Munich").exists())
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Venice").exists())
+
+        self.assertEqual(T.unit_set.count(), 3)
+        self.assertEqual(
+            T.unit_set.filter(standoff_from__name="Tyrolia").count(), 3)
