@@ -1,0 +1,233 @@
+[
+  {
+    "pk": 1, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "player1", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": false, 
+      "is_staff": false, 
+      "last_login": "2011-05-07 16:22:41", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "player1@example.com", 
+      "date_joined": "2011-05-07 16:22:41"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "player2", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": false, 
+      "is_staff": false, 
+      "last_login": "2011-05-07 16:22:41", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "player2@example.com", 
+      "date_joined": "2011-05-07 16:22:41"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "player3", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": false, 
+      "is_staff": false, 
+      "last_login": "2011-05-07 16:22:41", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "player3@example.com", 
+      "date_joined": "2011-05-07 16:22:41"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "player4", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": false, 
+      "is_staff": false, 
+      "last_login": "2011-05-07 16:22:41", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "player4@example.com", 
+      "date_joined": "2011-05-07 16:22:41"
+    }
+  }, 
+  {
+    "pk": 5, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "player5", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": false, 
+      "is_staff": false, 
+      "last_login": "2011-05-07 16:22:41", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "player5@example.com", 
+      "date_joined": "2011-05-07 16:22:41"
+    }
+  }, 
+  {
+    "pk": 6, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "player6", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": false, 
+      "is_staff": false, 
+      "last_login": "2011-05-07 16:22:41", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "player6@example.com", 
+      "date_joined": "2011-05-07 16:22:41"
+    }
+  }, 
+  {
+    "pk": 7, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "player7", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": false, 
+      "is_staff": false, 
+      "last_login": "2011-05-07 16:22:41", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "player7@example.com", 
+      "date_joined": "2011-05-07 16:22:41"
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.game", 
+    "fields": {
+      "name": "Test", 
+      "created": "2011-05-07 16:24:45", 
+      "state": "S", 
+      "owner": 1, 
+      "requests": [], 
+      "slug": "test"
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.turn", 
+    "fields": {
+      "generated": "2011-05-07 16:29:30", 
+      "season": "S", 
+      "game": 1, 
+      "number": 0, 
+      "year": 1900
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.game", 
+    "fields": {
+      "name": "Test", 
+      "created": "2011-05-07 16:24:45", 
+      "state": "A", 
+      "owner": 1, 
+      "requests": [], 
+      "slug": "test"
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.government", 
+    "fields": {
+      "game": 1, 
+      "name": "player1", 
+      "power": 1, 
+      "user": 1
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.government", 
+    "fields": {
+      "game": 1, 
+      "name": "player2", 
+      "power": 2, 
+      "user": 2
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.government", 
+    "fields": {
+      "game": 1, 
+      "name": "player3", 
+      "power": 3, 
+      "user": 3
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "diplomacy.government", 
+    "fields": {
+      "game": 1, 
+      "name": "player4", 
+      "power": 4, 
+      "user": 4
+    }
+  }, 
+  {
+    "pk": 5, 
+    "model": "diplomacy.government", 
+    "fields": {
+      "game": 1, 
+      "name": "player5", 
+      "power": 5, 
+      "user": 5
+    }
+  }, 
+  {
+    "pk": 6, 
+    "model": "diplomacy.government", 
+    "fields": {
+      "game": 1, 
+      "name": "player6", 
+      "power": 6, 
+      "user": 6
+    }
+  }, 
+  {
+    "pk": 7, 
+    "model": "diplomacy.government", 
+    "fields": {
+      "game": 1, 
+      "name": "player7", 
+      "power": 7, 
+      "user": 7
+    }
+  }
+]

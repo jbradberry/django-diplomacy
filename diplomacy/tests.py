@@ -1,6 +1,9 @@
-import unittest
 import models, forms
+from django.test import TestCase
+from django.core.management import call_command
 from django.contrib.auth.models import User
+
+options = {'commit': False, 'verbosity': 0}
 
 def create_units(units, turn, gvt):
     for fname, fsub in units.get('F', []):
@@ -15,7 +18,7 @@ def create_units(units, turn, gvt):
             u_type='A', subregion=sr, turn=turn, government=gvt)
 
 
-class CorrectnessHelperTest(unittest.TestCase):
+class CorrectnessHelperTest(TestCase):
     def setUp(self):
         self.owner = User.objects.create(username="tester")
         self.game = models.Game.objects.create(
@@ -72,3 +75,63 @@ class CorrectnessHelperTest(unittest.TestCase):
                          'Finland', 'St. Petersburg', 'Livonia']))
             else:
                 raise Exception("Didn't have the right number of seas.")
+
+
+class BasicChecks(TestCase):
+    fixtures = ['basic_game.json']
+
+    def test_non_adjacent_move(self):
+        # DATC 6.A.1
+        call_command('loaddata', '6A1.json', **options)
+
+        T = models.Turn.objects.get()
+        order = models.Order.objects.values().get()
+
+        self.assertTrue(not T.is_legal(order))
+
+    def test_move_army_to_sea(self):
+        # DATC 6.A.2
+        call_command('loaddata', '6A2.json', **options)
+
+        T = models.Turn.objects.get()
+        order = models.Order.objects.values().get()
+
+        self.assertTrue(not T.is_legal(order))
+
+    def test_move_fleet_to_land(self):
+        # DATC 6.A.3
+        call_command('loaddata', '6A3.json', **options)
+
+        T = models.Turn.objects.get()
+        order = models.Order.objects.values().get()
+
+        self.assertTrue(not T.is_legal(order))
+
+    def test_move_to_own_sector(self):
+        # DATC 6.A.4
+        call_command('loaddata', '6A4.json', **options)
+
+        T = models.Turn.objects.get()
+        order = models.Order.objects.values().get()
+
+        self.assertTrue(not T.is_legal(order))
+
+    def test_move_to_own_sector_with_convoy(self):
+        # DATC 6.A.5
+        call_command('loaddata', '6A5.json', **options)
+
+        T = models.Turn.objects.get()
+        orders = models.Order.objects.values()
+
+        for o in orders.filter(government__power__name='England'):
+            self.assertTrue(not T.is_legal(o))
+
+        for o in orders.filter(government__power__name='Germany'):
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name='Yorkshire',
+                              displaced_from__name='London').exists())
