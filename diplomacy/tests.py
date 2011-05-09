@@ -93,7 +93,7 @@ class BasicChecks(TestCase):
         call_command('loaddata', '6A1.json', **options)
 
         T = models.Turn.objects.get()
-        order = models.Order.objects.values().get()
+        order = models.Order.objects.get()
 
         self.assertTrue(not T.is_legal(order))
 
@@ -102,7 +102,7 @@ class BasicChecks(TestCase):
         call_command('loaddata', '6A2.json', **options)
 
         T = models.Turn.objects.get()
-        order = models.Order.objects.values().get()
+        order = models.Order.objects.get()
 
         self.assertTrue(not T.is_legal(order))
 
@@ -111,7 +111,7 @@ class BasicChecks(TestCase):
         call_command('loaddata', '6A3.json', **options)
 
         T = models.Turn.objects.get()
-        order = models.Order.objects.values().get()
+        order = models.Order.objects.get()
 
         self.assertTrue(not T.is_legal(order))
 
@@ -120,7 +120,7 @@ class BasicChecks(TestCase):
         call_command('loaddata', '6A4.json', **options)
 
         T = models.Turn.objects.get()
-        order = models.Order.objects.values().get()
+        order = models.Order.objects.get()
 
         self.assertTrue(not T.is_legal(order))
 
@@ -129,7 +129,7 @@ class BasicChecks(TestCase):
         call_command('loaddata', '6A5.json', **options)
 
         T = models.Turn.objects.get()
-        orders = models.Order.objects.values()
+        orders = models.Order.objects.all()
 
         for o in orders.filter(government__power__name='England'):
             self.assertTrue(not T.is_legal(o))
@@ -149,7 +149,7 @@ class BasicChecks(TestCase):
         call_command('loaddata', '6A6.json', **options)
 
         T = models.Turn.objects.get()
-        order = models.Order.objects.values().get()
+        order = models.Order.objects.get()
 
         self.assertTrue(not T.is_legal(order))
 
@@ -158,7 +158,7 @@ class BasicChecks(TestCase):
         call_command('loaddata', '6A7.json', **options)
 
         T = models.Turn.objects.get()
-        orders = models.Order.objects.values()
+        orders = models.Order.objects.all()
 
         self.assertTrue(not T.is_legal(orders.get(slot=0)))
         self.assertTrue(not T.is_legal(orders.get(slot=1)))
@@ -168,7 +168,7 @@ class BasicChecks(TestCase):
         call_command('loaddata', '6A8.json', **options)
 
         T = models.Turn.objects.get()
-        order = models.Order.objects.values().get(
+        order = models.Order.objects.get(
             government__power__name="Austria-Hungary")
 
         self.assertTrue(not T.is_legal(order))
@@ -185,7 +185,7 @@ class BasicChecks(TestCase):
         call_command('loaddata', '6A9.json', **options)
 
         T = models.Turn.objects.get()
-        order = models.Order.objects.values().get()
+        order = models.Order.objects.get()
 
         self.assertTrue(not T.is_legal(order))
 
@@ -194,7 +194,7 @@ class BasicChecks(TestCase):
         call_command('loaddata', '6A10.json', **options)
 
         T = models.Turn.objects.get()
-        order = models.Order.objects.values().get(
+        order = models.Order.objects.get(
             actor__territory__name="Rome")
 
         self.assertTrue(not T.is_legal(order))

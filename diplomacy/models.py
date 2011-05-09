@@ -384,8 +384,40 @@ class Turn(models.Model):
     def consistency_check(self):
         pass
 
-    # FIXME
     def is_legal(self, order):
+        if isinstance(order, Order):
+            order = {'government': order.government, 'turn': order.turn,
+                     'actor': order.actor, 'action': order.action,
+                     'assist': order.assist, 'target': order.target}
+        units = order['actor'].unit_set.filter(turn=self)
+
+        if self.season in ('S', 'F'):
+            if units.get().government != order['government']:
+                return False
+        elif self.season in ('SR', 'FR'):
+            units = units.filter(displaced_from__isnull=False)
+            if units.get().government != order['government']:
+                return False
+        elif order['action'] == 'D':
+            if units.get().government != order['government']:
+                return False
+        elif order['action'] == 'B':
+            if not order['government'].owns.filter(
+                turn=self, territory__subregion=order['actor']).exists():
+                return False
+
+        actions = {'H': self.valid_hold,
+                   'M': self.valid_move,
+                   'S': self.valid_support,
+                   'C': self.valid_convoy,
+                   'B': self.valid_build,
+                   'D': self.valid_disband}
+        tree = actions[order['action']](order['actor'])
+        if not tree or getattr(order['assist'], 'id', None) not in tree:
+            return False
+        tree = tree[getattr(order['assist'], 'id', None)]
+        if getattr(order['target'], 'id', None) not in tree:
+            return False
         return True
 
     def canonical_orders(self, gvt=None):
