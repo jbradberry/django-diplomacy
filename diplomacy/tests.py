@@ -90,7 +90,7 @@ class BasicChecks(TestCase):
 
     def test_non_adjacent_move(self):
         # DATC 6.A.1
-        call_command('loaddata', '6A1.json', **options)
+        call_command('loaddata', '6A01.json', **options)
 
         T = models.Turn.objects.get()
         order = models.Order.objects.get()
@@ -99,7 +99,7 @@ class BasicChecks(TestCase):
 
     def test_move_army_to_sea(self):
         # DATC 6.A.2
-        call_command('loaddata', '6A2.json', **options)
+        call_command('loaddata', '6A02.json', **options)
 
         T = models.Turn.objects.get()
         order = models.Order.objects.get()
@@ -108,7 +108,7 @@ class BasicChecks(TestCase):
 
     def test_move_fleet_to_land(self):
         # DATC 6.A.3
-        call_command('loaddata', '6A3.json', **options)
+        call_command('loaddata', '6A03.json', **options)
 
         T = models.Turn.objects.get()
         order = models.Order.objects.get()
@@ -117,7 +117,7 @@ class BasicChecks(TestCase):
 
     def test_move_to_own_sector(self):
         # DATC 6.A.4
-        call_command('loaddata', '6A4.json', **options)
+        call_command('loaddata', '6A04.json', **options)
 
         T = models.Turn.objects.get()
         order = models.Order.objects.get()
@@ -126,7 +126,7 @@ class BasicChecks(TestCase):
 
     def test_move_to_own_sector_with_convoy(self):
         # DATC 6.A.5
-        call_command('loaddata', '6A5.json', **options)
+        call_command('loaddata', '6A05.json', **options)
 
         T = models.Turn.objects.get()
         orders = models.Order.objects.all()
@@ -146,7 +146,7 @@ class BasicChecks(TestCase):
 
     def test_ordering_unit_of_another_country(self):
         # DATC 6.A.6
-        call_command('loaddata', '6A6.json', **options)
+        call_command('loaddata', '6A06.json', **options)
 
         T = models.Turn.objects.get()
         order = models.Order.objects.get()
@@ -155,7 +155,7 @@ class BasicChecks(TestCase):
 
     def test_only_armies_can_be_convoyed(self):
         # DATC 6.A.7
-        call_command('loaddata', '6A7.json', **options)
+        call_command('loaddata', '6A07.json', **options)
 
         T = models.Turn.objects.get()
         orders = models.Order.objects.all()
@@ -165,7 +165,7 @@ class BasicChecks(TestCase):
 
     def test_support_to_hold_yourself(self):
         # DATC 6.A.8
-        call_command('loaddata', '6A8.json', **options)
+        call_command('loaddata', '6A08.json', **options)
 
         T = models.Turn.objects.get()
         order = models.Order.objects.get(
@@ -182,7 +182,7 @@ class BasicChecks(TestCase):
 
     def test_fleets_must_follow_coast(self):
         # DATC 6.A.9
-        call_command('loaddata', '6A9.json', **options)
+        call_command('loaddata', '6A09.json', **options)
 
         T = models.Turn.objects.get()
         order = models.Order.objects.get()
@@ -238,3 +238,88 @@ class BasicChecks(TestCase):
         self.assertEqual(T.unit_set.count(), 3)
         self.assertEqual(
             T.unit_set.filter(standoff_from__name="Tyrolia").count(), 3)
+
+
+class CoastalIssues(TestCase):
+    """
+    Based on section 6.B from the Diplomacy Adjudicator Test Cases
+    website.
+
+    http://web.inter.nl.net/users/L.B.Kruijswijk/#6.B
+
+    """
+
+    fixtures = ['basic_game.json']
+
+    def test_move_to_unspecified_coast_when_necessary(self):
+        # DATC 6.B.1
+
+        # Note: this test is somewhat against the original intent,
+        # since this implementation of Diplomacy uses entity selection
+        # instead of string parsing for orders.
+        call_command('loaddata', '6B01.json', **options)
+
+        T = models.Turn.objects.get()
+        order = models.Order.objects.get()
+
+        self.assertTrue(not T.is_legal(order))
+
+    #def test_move_to_unspecified_coast_when_unnecessary(self):
+        # DATC 6.B.2
+
+        # Note: this test would be entirely pointless as-is.  However,
+        # if a text-parsing interface is ever implemented, it will be
+        # necessary to test that.
+
+    def test_moving_to_wrong_but_unnecessary_coast(self):
+        # DATC 6.B.3
+
+        # Note: this is another test which is checking something that
+        # isn't a real problem.
+        call_command('loaddata', '6B03.json', **options)
+
+        T = models.Turn.objects.get()
+        order = models.Order.objects.get()
+
+        self.assertTrue(not T.is_legal(order))
+
+    def test_support_to_unreachable_coast_allowed(self):
+        # DATC 6.B.4
+        call_command('loaddata', '6B04.json', **options)
+
+        T = models.Turn.objects.get()
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        west_med = T.unit_set.get(subregion__territory__name=
+                                  "Western Mediterranean")
+        spain = T.unit_set.get(subregion__territory__name="Spain")
+
+        self.assertEqual(west_med.government.name, "Italy")
+        self.assertEqual(spain.government.name, "France")
+
+    def test_support_from_unreachable_coast_not_allowed(self):
+        # DATC 6.B.5
+        call_command('loaddata', '6B05.json', **options)
+
+        T = models.Turn.objects.get()
+
+        self.assertEqual(models.Order.objects.exclude(action='S').count(), 2)
+        for o in models.Order.objects.exclude(action='S'):
+            self.assertTrue(T.is_legal(o))
+
+        o = models.Order.objects.get(action='S')
+        self.assertTrue(not T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        gulf_of_lyon = models.Subregion.objects.get(
+            territory__name="Gulf of Lyon")
+        fleet = T.unit_set.get(government__name="Italy")
+
+        self.assertEqual(fleet.subregion, gulf_of_lyon)
