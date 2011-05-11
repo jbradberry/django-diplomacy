@@ -320,7 +320,7 @@ class Turn(models.Model):
         adj = set(a.id for a in adj)
 
         # support to attack
-        attackers = sr.filter(territory__subregion__borders__borders=actor,
+        attackers = sr.filter(borders__territory__subregion__borders=actor,
                               unit__turn=self
                               ).exclude(id=actor.id).distinct()
         for a in attackers:
