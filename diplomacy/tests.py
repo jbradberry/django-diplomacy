@@ -323,3 +323,37 @@ class CoastalIssues(TestCase):
         fleet = T.unit_set.get(government__name="Italy")
 
         self.assertEqual(fleet.subregion, gulf_of_lyon)
+
+    def test_support_can_be_cut_from_other_coast(self):
+        # DATC 6.B.6
+        call_command('loaddata', '6B06.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Mid-Atlantic Ocean",
+                              displaced_from__name="North Atlantic Ocean"
+                              ).exists())
+
+    def test_coastal_crawl_not_allowed(self):
+        # DATC 6.B.13
+        call_command('loaddata', '6B13.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Bulgaria",
+                              subregion__subname='SC').exists())
+        self.assertTrue(
+            not T.unit_set.filter(subregion__territory__name="Bulgaria",
+                                  subregion__subname='EC').exists())
