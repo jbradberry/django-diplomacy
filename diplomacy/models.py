@@ -122,30 +122,17 @@ class Game(models.Model):
         return results
 
     # FIXME
-    def _resolve(self, order, orders, dep):
-        pass
-
-    # FIXME
-    def consistent(self, state):
+    def consistent(self, state, orders):
         pass
 
     def resolve(self, state, orders, dep):
         _state = set(o for o, d in state)
 
-        # Any orders that have no more unresolved dependencies should
-        # be brought into our new hypothetical order resolution.
-        new_state = tuple((order, self._resolve(order, orders, dep))
-                          for order in orders
-                          if order not in _state and
-                          all(o in _state for o in dep[order]))
-        state = state + new_state
-        _state |= set(o for o, d in new_state)
-
         # Only bother calculating whether the hypothetical solution is
         # consistent if all orders within it have no remaining
         # unresolved dependencies.
         if all(all(o in _state for o in dep[order]) for order, d in state):
-            if not self.consistent(state):
+            if not self.consistent(state, orders):
                 return ()
 
         # For those orders not already in 'state', sort from least to
@@ -158,14 +145,17 @@ class Game(models.Model):
         # Go with the order with the fewest remaining deps.
         q, order = remaining_deps[0]
 
-        # The order has unresolved deps which might be circular, so it
-        # isn't obvious how to resolve it.  Try both ways.
-        results = []
+        # Unresolved dependencies might be circular, so it isn't
+        # obvious how to resolve them.  Try both ways, with preference
+        # for 'success'.
         for S in (True, False):
-            results.append(self.resolve(state+((order, S),), orders, dep))
+            result = self.resolve(state+((order, S),), orders, dep)
+            if result:
+                return result
 
         # FIXME: detect and handle convoy paradoxes
-        return results[0] if results[0] else results[1]
+        raise Exception("Unable to find a consistent solution,"
+                        " probably due to a convoy paradox.")
 
     def generate(self):
         turn = self.current_turn()
