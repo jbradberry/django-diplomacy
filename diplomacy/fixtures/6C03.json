@@ -1,0 +1,106 @@
+[
+  {
+    "pk": 1, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 7, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 64, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 7, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 67, 
+      "displaced_from": null, 
+      "u_type": "A"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 7, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 69, 
+      "displaced_from": null, 
+      "u_type": "A"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 7, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 77, 
+      "displaced_from": null, 
+      "u_type": "A"
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 68, 
+      "government": 7, 
+      "timestamp": "2011-06-02 21:11:04", 
+      "assist": null, 
+      "actor": 64, 
+      "turn": 1, 
+      "action": "M"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 1, 
+      "target": 69, 
+      "government": 7, 
+      "timestamp": "2011-06-02 21:11:23", 
+      "assist": null, 
+      "actor": 67, 
+      "turn": 1, 
+      "action": "M"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 2, 
+      "target": 63, 
+      "government": 7, 
+      "timestamp": "2011-06-02 21:11:44", 
+      "assist": null, 
+      "actor": 69, 
+      "turn": 1, 
+      "action": "M"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 3, 
+      "target": 67, 
+      "government": 7, 
+      "timestamp": "2011-06-02 21:17:05", 
+      "assist": null, 
+      "actor": 77, 
+      "turn": 1, 
+      "action": "M"
+    }
+  }
+]

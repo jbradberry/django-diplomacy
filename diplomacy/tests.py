@@ -357,3 +357,91 @@ class CoastalIssues(TestCase):
         self.assertTrue(
             not T.unit_set.filter(subregion__territory__name="Bulgaria",
                                   subregion__subname='EC').exists())
+
+    #def test_build_with_unspecified_coast(self):
+        # DATC 6.B.14
+
+
+class CircularMovement(TestCase):
+    """
+    Based on section 6.C from the Diplomacy Adjudicator Test Cases
+    website.
+
+    http://web.inter.nl.net/users/L.B.Kruijswijk/#6.C
+
+    """
+
+    fixtures = ['basic_game.json']
+
+    def test_three_unit_circular_move(self):
+        # DATC 6.C.1
+        call_command('loaddata', '6C01.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Constantinople",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Smyrna",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ankara",
+                              u_type='A').exists())
+
+    def test_three_unit_circular_move_with_support(self):
+        # DATC 6.C.2
+        call_command('loaddata', '6C02.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Constantinople",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Smyrna",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ankara",
+                              u_type='A').exists())
+
+    def test_disrupted_three_unit_circular_move(self):
+        # DATC 6.C.3
+        call_command('loaddata', '6C03.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ankara",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Constantinople",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Smyrna",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Bulgaria",
+                              u_type='A').exists())
