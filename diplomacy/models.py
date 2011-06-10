@@ -105,22 +105,6 @@ class Game(models.Model):
 
         return dep
 
-    def immediate_fails(self, orders):
-        results = ()
-        for a, o in orders.iteritems():
-            if o['action'] not in ('S', 'C'):
-                continue
-            assist = orders[o['assist'].id]
-            if o['target'] is not None:
-                if assist['action'] == 'M' and assist['target'] == o['target']:
-                    continue
-            else:
-                if assist['action'] in ('H', 'C', 'S'):
-                    continue
-            results = results + ((a, False),)
-
-        return results
-
     # FIXME
     def consistent(self, state, orders):
         pass
@@ -167,7 +151,7 @@ class Game(models.Model):
             # FIXME: do something with civil disorder
             disorder = self.detect_civil_disorder(orders)
             dependencies = self.construct_dependencies(orders)
-            state = self.immediate_fails(orders)
+            state = turn.immediate_fails(orders)
             decisions = self.resolve(state, orders, dependencies)
 
         turn = self.turn_set.create(number=turn.number+1)
@@ -434,6 +418,36 @@ class Turn(models.Model):
                     'turn': o.turn, 'actor': o.actor, 'action': o.action,
                     'assist': o.assist, 'target': o.target}
         return [v for k, v in sorted(orders.iteritems())]
+
+    def immediate_fails(self, orders):
+        results = ()
+        for a, o in orders.iteritems():
+            if o['action'] == 'M':
+                if o['target'] not in o['actor'].borders.all():
+                    matching = [a2 for a2, o2 in orders
+                                if o2['action'] == 'C' and
+                                o2['assist'] == o['actor'] and
+                                o2['target'] == o['target']]
+                    matching = Subregion.objects.filter(id__in=matching)
+                    if any(a in L and o['target'].id in L
+                           for F, L in self.find_convoys(matching)):
+                        continue
+                else:
+                    continue
+            elif o['action'] not in ('S', 'C'):
+                continue
+            else:
+                assist = orders[o['assist'].id]
+                if o['target'] is not None:
+                    if (assist['action'] == 'M' and
+                        assist['target'] == o['target']):
+                        continue
+                else:
+                    if assist['action'] in ('H', 'C', 'S'):
+                        continue
+            results = results + ((a, False),)
+
+        return results
 
     def _update_units_changes(self, orders, decisions, units):
         self.disbands = defaultdict(set)
