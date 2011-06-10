@@ -226,19 +226,18 @@ class Turn(models.Model):
         return sorted([(g, sum(1 for t in owns if t.government.id == g.id))
                        for g in gvts], key=lambda x: (-x[1], x[0].power.name))
 
-    def find_convoys(self):
+    def find_convoys(self, fleets=None):
         """
         Generates pairs consisting of a cluster of adjacent non-coastal
         fleets, and the coastal territories that are reachable via convoy
         from that cluster.  This is necessary to determine legal orders.
 
         """
-        if hasattr(self, '_convoyable'):
-            return self._convoyable
+        if fleets is None:
+            fleets = Subregion.objects.filter(
+                sr_type='S', unit__turn=self).exclude(
+                territory__subregion__sr_type='L').distinct()
 
-        fleets = Subregion.objects.filter(
-            sr_type='S', unit__turn=self).exclude(
-            territory__subregion__sr_type='L').distinct()
         C = dict((f.id, set([f.id])) for f in fleets)
         for f in fleets:
             for f2 in fleets.filter(borders=f):
@@ -246,14 +245,14 @@ class Turn(models.Model):
                     C[f.id] |= C[f2.id]
                     C.update((x, C[f.id]) for x in C[f2.id])
         groups = set(frozenset(C[f]) for f in C)
-        self._convoyable = []
+        convoyable = []
         for g in groups:
             coasts = Subregion.objects.filter(
                 sr_type='L', territory__subregion__borders__id__in=g
                 ).distinct()
             if coasts.filter(unit__turn=self).exists():
-                self._convoyable.append((g, set(sr.id for sr in coasts)))
-        return self._convoyable
+                convoyable.append((g, set(sr.id for sr in coasts)))
+        return convoyable
 
     def valid_hold(self, actor, empty=None):
         if self.season in ('S', 'F'):
