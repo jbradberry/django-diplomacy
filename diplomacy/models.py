@@ -33,19 +33,19 @@ def assist(a1, o1, a2, o2):
     return o2['assist'] == a1
 
 def attack_us(a1, o1, a2, o2):
-    return o2['target'] == a1
+    return o2['target'].same_territory(a1)
 
 def head_to_head(a1, o1, a2, o2):
-    return o2['target'] == a1 and o1['target'] == a2
+    return o2['target'].same_territory(a1) and o1['target'].same_territory(a2)
 
 def hostile_assist_hold(a1, o1, a2, o2):
     return o2['assist'] == o1['target'] and o2['target'] is None
 
 def hostile_assist_compete(a1, o1, a2, o2):
-    return o2['assist'] != a1 and o2['target'] == o1['target']
+    return o2['assist'] != a1 and o2['target'].same_territory(o1['target'].id)
 
 def move_away(a1, o1, a2, o2):
-    return o1['target'] == a2 # and o2['target'] != a1 ?
+    return o1['target'].same_territory(a2) # and o2['target'] != a1 ?
 
 
 DEPENDENCIES = {('C', 'M'): (attack_us,),
@@ -609,6 +609,9 @@ class Subregion(models.Model):
             return u'%s (%s)' % (self.territory.name, self.subname)
         else:
             return self.territory.name
+
+    def same_territory(self, sr):
+        return self.territory.subregion_set.filter(id=sr).exists()
 
 
 class Government(models.Model):
