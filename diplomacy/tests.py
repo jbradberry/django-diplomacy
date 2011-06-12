@@ -4,6 +4,7 @@ from django.core.management import call_command
 from django.contrib.auth.models import User
 
 options = {'commit': False, 'verbosity': 0}
+        
 
 def create_units(units, turn, gvt):
     for fname, fsub in units.get('F', []):
@@ -444,4 +445,113 @@ class CircularMovement(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Bulgaria",
+                              u_type='A').exists())
+
+    def test_circular_move_with_attacked_convoy(self):
+        # DATC 6.C.4
+        call_command('loaddata', '6C04.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ionian Sea",
+                              government__name="Turkey",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Trieste",
+                              government__name="Turkey",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Serbia",
+                              government__name="Austria-Hungary",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Bulgaria",
+                              government__name="Austria-Hungary",
+                              u_type='A').exists())
+
+    def test_circular_move_with_disrupted_convoy(self):
+        # DATC 6.C.5
+        call_command('loaddata', '6C05.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ionian Sea",
+                              u_type='F', government__name="Turkey",
+                              displaced_from__isnull=False).exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Trieste",
+                              government__name="Austria-Hungary",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Serbia",
+                              government__name="Austria-Hungary",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Bulgaria",
+                              government__name="Turkey",
+                              u_type='A').exists())
+
+    def test_two_armies_with_two_convoys(self):
+        # DATC 6.C.6
+        call_command('loaddata', '6C06.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__name="France",
+                              u_type='A').exists())
+
+    def test_bounced_unit_swap(self):
+        # DATC 6.C.7
+        call_command('loaddata', '6C07.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Burgundy",
+                              government__name="France",
                               u_type='A').exists())
