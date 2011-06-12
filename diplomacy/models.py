@@ -424,7 +424,7 @@ class Turn(models.Model):
         for a, o in orders.iteritems():
             if o['action'] == 'M':
                 if o['target'] not in o['actor'].borders.all():
-                    matching = [a2 for a2, o2 in orders
+                    matching = [a2 for a2, o2 in orders.iteritems()
                                 if o2['action'] == 'C' and
                                 o2['assist'] == o['actor'] and
                                 o2['target'] == o['target']]
