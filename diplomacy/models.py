@@ -321,7 +321,7 @@ class Turn(models.Model):
 
         sr = Subregion.objects.all()
         for fset, lset in self.find_convoys():
-            if actor in fset:
+            if actor.id in fset:
                 attackers = sr.filter(unit__turn=self, sr_type='L',
                                       id__in=lset).distinct()
                 return dict((a.id, list(lset - set([a.id]))) for a in attackers)
