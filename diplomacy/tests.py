@@ -555,3 +555,157 @@ class CircularMovement(TestCase):
             T.unit_set.filter(subregion__territory__name="Burgundy",
                               government__name="France",
                               u_type='A').exists())
+
+
+class SupportsAndDislodges(TestCase):
+    """
+    Based on section 6.D from the Diplomacy Adjudicator Test Cases
+    website.
+
+    http://web.inter.nl.net/users/L.B.Kruijswijk/#6.D
+
+    """
+
+    fixtures = ['basic_game.json']
+
+    def test_supported_hold_prevents_dislodgement(self):
+        # DATC 6.D.1
+        call_command('loaddata', '6D01.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Venice",
+                              government__name="Italy",
+                              displaced_from__isnull=True).exists())
+
+    def test_move_cuts_support_on_hold(self):
+        # DATC 6.D.2
+        call_command('loaddata', '6D02.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Venice",
+                              government__name="Italy",
+                              displaced_from__isnull=False).exists())
+
+    def test_move_cuts_support_on_move(self):
+        # DATC 6.D.3
+        call_command('loaddata', '6D03.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Venice",
+                              government__name="Italy",
+                              displaced_from__isnull=True).exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Trieste",
+                              government__name="Austria-Hungary",
+                              u_type='A').exists())
+
+    def test_support_to_hold_on_unit_supporting_a_hold(self):
+        # DATC 6.D.4
+        call_command('loaddata', '6D04.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              government__name="Germany",
+                              displaced_from__isnull=True).exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Prussia",
+                              government__name="Russia",
+                              u_type='A').exists())
+
+    def test_support_to_hold_on_unit_supporting_a_move(self):
+        # DATC 6.D.5
+        call_command('loaddata', '6D05.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              government__name="Germany",
+                              displaced_from__isnull=True).exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Prussia",
+                              government__name="Russia",
+                              u_type='A').exists())
+
+    def test_support_to_hold_on_convoying_unit(self):
+        # DATC 6.D.6
+        call_command('loaddata', '6D06.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Sweden",
+                              government__name="Germany",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Baltic Sea",
+                              government__name="Germany",
+                              displaced_from__isnull=True).exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Livonia",
+                              government__name="Russia",
+                              u_type='F').exists())
+
+    def test_support_to_hold_on_moving_unit(self):
+        # DATC 6.D.7
+        call_command('loaddata', '6D07.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Baltic Sea",
+                              government__name="Germany",
+                              displaced_from__isnull=False).exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Baltic Sea",
+                              government__name="Russia",
+                              u_type='F').exists())
