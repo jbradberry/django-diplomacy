@@ -1,0 +1,106 @@
+[
+  {
+    "pk": 1, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 2, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 15, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 2, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 116, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 2, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 18, 
+      "displaced_from": null, 
+      "u_type": "A"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 3, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 108, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 108, 
+      "government": 2, 
+      "timestamp": "2011-06-18 13:31:05", 
+      "assist": 116, 
+      "actor": 15, 
+      "turn": 1, 
+      "action": "S"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 1, 
+      "target": 108, 
+      "government": 2, 
+      "timestamp": "2011-06-18 13:31:05", 
+      "assist": null, 
+      "actor": 116, 
+      "turn": 1, 
+      "action": "M"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 2, 
+      "target": 14, 
+      "government": 2, 
+      "timestamp": "2011-06-18 13:31:05", 
+      "assist": null, 
+      "actor": 18, 
+      "turn": 1, 
+      "action": "M"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": null, 
+      "government": 3, 
+      "timestamp": "2011-06-18 13:31:05", 
+      "assist": null, 
+      "actor": 108, 
+      "turn": 1, 
+      "action": "H"
+    }
+  }
+]

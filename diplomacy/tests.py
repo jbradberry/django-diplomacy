@@ -298,7 +298,7 @@ class CoastalIssues(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Spain",
-                              subregion__subname="nc",
+                              subregion__subname="NC",
                               government__name="France").exists())
 
         self.assertTrue(
@@ -894,4 +894,174 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="London",
                               government__name="France",
+                              u_type='A').exists())
+
+    def test_dislodgement_cuts_supports(self):
+        # DATC 6.D.17
+        call_command('loaddata', '6D17.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Constantinople",
+                              government__name="Russia",
+                              displaced_from__name="Ankara",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Black Sea",
+                              government__name="Russia",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            not T.unit_set.filter(subregion__territory__name="Ankara"
+                                  ).exists())
+
+    def test_surviving_unit_will_sustain_support(self):
+        # DATC 6.D.18
+        call_command('loaddata', '6D18.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ankara",
+                              government__name="Turkey",
+                              displaced_from__name="Black Sea",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ankara",
+                              government__name="Russia",
+                              u_type='F').exists())
+
+    def test_even_when_surviving_is_in_alternative_way(self):
+        # DATC 6.D.19
+        call_command('loaddata', '6D19.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Constantinople",
+                              government__name="Russia",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ankara",
+                              government__name="Turkey",
+                              displaced_from__name="Black Sea",
+                              u_type='F').exists())
+
+    def test_unit_cannot_cut_support_of_its_own_country(self):
+        # DATC 6.D.20
+        call_command('loaddata', '6D20.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__name="France",
+                              displaced_from__name="North Sea",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__name="England",
+                              u_type='F').exists())
+
+    def test_dislodging_does_not_cancel_support_cut(self):
+        # DATC 6.D.21
+        call_command('loaddata', '6D21.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Munich",
+                              government__name="Germany",
+                              displaced_from__name="Silesia",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Trieste",
+                              government__name="Austria-Hungary",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+#     def test_impossible_fleet_move_cannot_be_supported(self):
+#         # DATC 6.D.22
+#         # parser test
+
+    def test_impossible_coast_move_cannot_be_supported(self):
+        # DATC 6.D.23
+        call_command('loaddata', '6D23.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.filter(government__name="France"):
+            self.assertTrue(not T.is_legal(o))
+        for o in models.Order.objects.filter(government__name="Italy"):
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Spain",
+                              government__name="France",
+                              displaced_from__name="Gulf of Lyon",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Spain",
+                              subregion__subname="SC",
+                              government__name="Italy",
+                              displaced_from__isnull=True).exists())
+
+#     def test_impossible_army_move_cannot_be_supported(self):
+#         # DATC 6.D.24
+#         # parser test
+
+    def test_failing_hold_support_can_be_supported(self):
+        # DATC 6.D.25
+        call_command('loaddata', '6D25.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              government__name="Germany",
+                              displaced_from__isnull=True).exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Prussia",
+                              government__name="Russia",
                               u_type='A').exists())
