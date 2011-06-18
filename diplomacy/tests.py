@@ -709,3 +709,182 @@ class SupportsAndDislodges(TestCase):
             T.unit_set.filter(subregion__territory__name="Baltic Sea",
                               government__name="Russia",
                               u_type='F').exists())
+
+    def test_failed_convoyed_army_cannot_receive_hold_support(self):
+        # DATC 6.D.8
+        call_command('loaddata', '6D08.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Greece",
+                              government__name="Turkey",
+                              displaced_from__isnull=False).exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Greece",
+                              government__name="Austria-Hungary",
+                              u_type='A').exists())
+
+    def test_support_to_move_on_holding_unit(self):
+        # DATC 6.D.9
+        call_command('loaddata', '6D09.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Trieste",
+                              government__name="Austria-Hungary",
+                              displaced_from__isnull=False).exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Trieste",
+                              government__name="Italy",
+                              u_type='A').exists())
+
+    def test_self_dislodgement_prohibited(self):
+        # DATC 6.D.10
+        call_command('loaddata', '6D10.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            not T.unit_set.filter(subregion__territory__name="Berlin",
+                                  u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              displaced_from__isnull=True,
+                              u_type='A').exists())
+
+    def test_no_self_dislodgement_of_returning_unit(self):
+        # DATC 6.D.11
+        call_command('loaddata', '6D11.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              displaced_from__isnull=True,
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Warsaw",
+                              u_type='A').exists())
+
+    def test_support_foreign_unit_to_dislodge_own_unit(self):
+        # DATC 6.D.12
+        call_command('loaddata', '6D12.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Trieste",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+    def test_support_foreign_unit_to_dislodge_returning_own_unit(self):
+        # DATC 6.D.13
+        call_command('loaddata', '6D13.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Trieste",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+    def test_supporting_foreign_unit_insufficient_to_prevent_dislodge(self):
+        # DATC 6.D.14
+        call_command('loaddata', '6D14.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Trieste",
+                              displaced_from__isnull=False,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Trieste",
+                              government__name="Italy",
+                              u_type='A').exists())
+
+    def test_defender_cannot_cut_support_for_attack_on_itself(self):
+        # DATC 6.D.15
+        call_command('loaddata', '6D15.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ankara",
+                              government__name="Turkey",
+                              displaced_from__isnull=False,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ankara",
+                              government__name="Russia",
+                              u_type='F').exists())
+
+    def test_convoying_a_unit_dislodging_a_unit_of_same_power(self):
+        # DATC 6.D.16
+        call_command('loaddata', '6D16.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__name="England",
+                              displaced_from__isnull=False,
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__name="France",
+                              u_type='A').exists())
