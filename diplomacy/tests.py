@@ -296,12 +296,15 @@ class CoastalIssues(TestCase):
         T.game.generate()
         T = T.game.current_turn()
 
-        west_med = T.unit_set.get(subregion__territory__name=
-                                  "Western Mediterranean")
-        spain = T.unit_set.get(subregion__territory__name="Spain")
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Spain",
+                              subregion__subname="nc",
+                              government__name="France").exists())
 
-        self.assertEqual(west_med.government.name, "Italy")
-        self.assertEqual(spain.government.name, "France")
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name=
+                              "Western Mediterranean",
+                              government__name="Italy").exists())
 
     def test_support_from_unreachable_coast_not_allowed(self):
         # DATC 6.B.5
@@ -319,11 +322,15 @@ class CoastalIssues(TestCase):
         T.game.generate()
         T = T.game.current_turn()
 
-        gulf_of_lyon = models.Subregion.objects.get(
-            territory__name="Gulf of Lyon")
-        fleet = T.unit_set.get(government__name="Italy")
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Gulf of Lyon",
+                              displaced_from__isnull=True,
+                              government__name="Italy").exists())
 
-        self.assertEqual(fleet.subregion, gulf_of_lyon)
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Marseilles",
+                              government__name="France",
+                              u_type='F').exists())
 
     def test_support_can_be_cut_from_other_coast(self):
         # DATC 6.B.6
