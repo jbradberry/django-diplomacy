@@ -299,12 +299,12 @@ class CoastalIssues(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Spain",
                               subregion__subname="NC",
-                              government__name="France").exists())
+                              government__power__name="France").exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name=
                               "Western Mediterranean",
-                              government__name="Italy").exists())
+                              government__power__name="Italy").exists())
 
     def test_support_from_unreachable_coast_not_allowed(self):
         # DATC 6.B.5
@@ -325,11 +325,11 @@ class CoastalIssues(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Gulf of Lyon",
                               displaced_from__isnull=True,
-                              government__name="Italy").exists())
+                              government__power__name="Italy").exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Marseilles",
-                              government__name="France",
+                              government__power__name="France",
                               u_type='F').exists())
 
     def test_support_can_be_cut_from_other_coast(self):
@@ -467,22 +467,22 @@ class CircularMovement(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ionian Sea",
-                              government__name="Turkey",
+                              government__power__name="Turkey",
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__name="Turkey",
+                              government__power__name="Turkey",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Serbia",
-                              government__name="Austria-Hungary",
+                              government__power__name="Austria-Hungary",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Bulgaria",
-                              government__name="Austria-Hungary",
+                              government__power__name="Austria-Hungary",
                               u_type='A').exists())
 
     def test_circular_move_with_disrupted_convoy(self):
@@ -498,22 +498,22 @@ class CircularMovement(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ionian Sea",
-                              u_type='F', government__name="Turkey",
+                              u_type='F', government__power__name="Turkey",
                               displaced_from__isnull=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__name="Austria-Hungary",
+                              government__power__name="Austria-Hungary",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Serbia",
-                              government__name="Austria-Hungary",
+                              government__power__name="Austria-Hungary",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Bulgaria",
-                              government__name="Turkey",
+                              government__power__name="Turkey",
                               u_type='A').exists())
 
     def test_two_armies_with_two_convoys(self):
@@ -529,12 +529,12 @@ class CircularMovement(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__name="England",
+                              government__power__name="England",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="London",
-                              government__name="France",
+                              government__power__name="France",
                               u_type='A').exists())
 
     def test_bounced_unit_swap(self):
@@ -550,17 +550,17 @@ class CircularMovement(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="London",
-                              government__name="England",
+                              government__power__name="England",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__name="France",
+                              government__power__name="France",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Burgundy",
-                              government__name="France",
+                              government__power__name="France",
                               u_type='A').exists())
 
 
@@ -588,7 +588,7 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Venice",
-                              government__name="Italy",
+                              government__power__name="Italy",
                               displaced_from__isnull=True).exists())
 
     def test_move_cuts_support_on_hold(self):
@@ -604,7 +604,7 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Venice",
-                              government__name="Italy",
+                              government__power__name="Italy",
                               displaced_from__isnull=False).exists())
 
     def test_move_cuts_support_on_move(self):
@@ -620,12 +620,12 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Venice",
-                              government__name="Italy",
+                              government__power__name="Italy",
                               displaced_from__isnull=True).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__name="Austria-Hungary",
+                              government__power__name="Austria-Hungary",
                               u_type='A').exists())
 
     def test_support_to_hold_on_unit_supporting_a_hold(self):
@@ -641,12 +641,12 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
-                              government__name="Germany",
+                              government__power__name="Germany",
                               displaced_from__isnull=True).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__name="Russia",
+                              government__power__name="Russia",
                               u_type='A').exists())
 
     def test_support_to_hold_on_unit_supporting_a_move(self):
@@ -662,12 +662,12 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
-                              government__name="Germany",
+                              government__power__name="Germany",
                               displaced_from__isnull=True).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__name="Russia",
+                              government__power__name="Russia",
                               u_type='A').exists())
 
     def test_support_to_hold_on_convoying_unit(self):
@@ -683,17 +683,17 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Sweden",
-                              government__name="Germany",
+                              government__power__name="Germany",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Baltic Sea",
-                              government__name="Germany",
+                              government__power__name="Germany",
                               displaced_from__isnull=True).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Livonia",
-                              government__name="Russia",
+                              government__power__name="Russia",
                               u_type='F').exists())
 
     def test_support_to_hold_on_moving_unit(self):
@@ -709,12 +709,12 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Baltic Sea",
-                              government__name="Germany",
+                              government__power__name="Germany",
                               displaced_from__isnull=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Baltic Sea",
-                              government__name="Russia",
+                              government__power__name="Russia",
                               u_type='F').exists())
 
     def test_failed_convoyed_army_cannot_receive_hold_support(self):
@@ -730,12 +730,12 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Greece",
-                              government__name="Turkey",
+                              government__power__name="Turkey",
                               displaced_from__isnull=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Greece",
-                              government__name="Austria-Hungary",
+                              government__power__name="Austria-Hungary",
                               u_type='A').exists())
 
     def test_support_to_move_on_holding_unit(self):
@@ -751,12 +751,12 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__name="Austria-Hungary",
+                              government__power__name="Austria-Hungary",
                               displaced_from__isnull=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__name="Italy",
+                              government__power__name="Italy",
                               u_type='A').exists())
 
     def test_self_dislodgement_prohibited(self):
@@ -849,7 +849,7 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__name="Italy",
+                              government__power__name="Italy",
                               u_type='A').exists())
 
     def test_defender_cannot_cut_support_for_attack_on_itself(self):
@@ -865,13 +865,13 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ankara",
-                              government__name="Turkey",
+                              government__power__name="Turkey",
                               displaced_from__isnull=False,
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ankara",
-                              government__name="Russia",
+                              government__power__name="Russia",
                               u_type='F').exists())
 
     def test_convoying_a_unit_dislodging_a_unit_of_same_power(self):
@@ -887,13 +887,13 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="London",
-                              government__name="England",
+                              government__power__name="England",
                               displaced_from__isnull=False,
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="London",
-                              government__name="France",
+                              government__power__name="France",
                               u_type='A').exists())
 
     def test_dislodgement_cuts_supports(self):
@@ -909,13 +909,13 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Constantinople",
-                              government__name="Russia",
+                              government__power__name="Russia",
                               displaced_from__name="Ankara",
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Black Sea",
-                              government__name="Russia",
+                              government__power__name="Russia",
                               u_type='F').exists())
 
         self.assertTrue(
@@ -935,13 +935,13 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ankara",
-                              government__name="Turkey",
+                              government__power__name="Turkey",
                               displaced_from__name="Black Sea",
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ankara",
-                              government__name="Russia",
+                              government__power__name="Russia",
                               u_type='F').exists())
 
     def test_even_when_surviving_is_in_alternative_way(self):
@@ -957,13 +957,13 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Constantinople",
-                              government__name="Russia",
+                              government__power__name="Russia",
                               displaced_from__isnull=True,
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ankara",
-                              government__name="Turkey",
+                              government__power__name="Turkey",
                               displaced_from__name="Black Sea",
                               u_type='F').exists())
 
@@ -980,13 +980,13 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__name="France",
+                              government__power__name="France",
                               displaced_from__name="North Sea",
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__name="England",
+                              government__power__name="England",
                               u_type='F').exists())
 
     def test_dislodging_does_not_cancel_support_cut(self):
@@ -1002,13 +1002,13 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Munich",
-                              government__name="Germany",
+                              government__power__name="Germany",
                               displaced_from__name="Silesia",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__name="Austria-Hungary",
+                              government__power__name="Austria-Hungary",
                               displaced_from__isnull=True,
                               u_type='F').exists())
 
@@ -1021,9 +1021,11 @@ class SupportsAndDislodges(TestCase):
         call_command('loaddata', '6D23.json', **options)
 
         T = models.Turn.objects.get()
-        for o in models.Order.objects.filter(government__name="France"):
+        for o in models.Order.objects.filter(government__power__name=
+                                             "France"):
             self.assertTrue(not T.is_legal(o))
-        for o in models.Order.objects.filter(government__name="Italy"):
+        for o in models.Order.objects.filter(government__power__name=
+                                             "Italy"):
             self.assertTrue(T.is_legal(o))
 
         T.game.generate()
@@ -1031,14 +1033,14 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Spain",
-                              government__name="France",
+                              government__power__name="France",
                               displaced_from__name="Gulf of Lyon",
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Spain",
                               subregion__subname="SC",
-                              government__name="Italy",
+                              government__power__name="Italy",
                               displaced_from__isnull=True).exists())
 
 #     def test_impossible_army_move_cannot_be_supported(self):
@@ -1058,10 +1060,10 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
-                              government__name="Germany",
+                              government__power__name="Germany",
                               displaced_from__isnull=True).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__name="Russia",
+                              government__power__name="Russia",
                               u_type='A').exists())
