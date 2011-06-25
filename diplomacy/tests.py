@@ -1669,3 +1669,278 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
             T.unit_set.filter(subregion__territory__name="Prussia",
                               government__power__name="Russia",
                               u_type='A').exists())
+
+
+class Convoys(TestCase):
+    """
+    Based on section 6.F from the Diplomacy Adjudicator Test Cases
+    website.
+
+    http://web.inter.nl.net/users/L.B.Kruijswijk/#6.F
+
+    """
+
+    fixtures = ['basic_game.json']
+
+    def test_no_convoy_in_coastal_areas(self):
+        # DATC 6.F.1
+        call_command('loaddata', '6F01.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(not T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Greece",
+                              government__power__name="Turkey",
+                              u_type='A').exists())
+
+    def test_convoyed_army_can_bounce(self):
+        # DATC 6.F.2
+        call_command('loaddata', '6F02.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Paris",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+    def test_convoyed_army_can_receive_support(self):
+        # DATC 6.F.3
+        call_command('loaddata', '6F03.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Brest",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Paris",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+    def test_attacked_convoy_is_not_disrupted(self):
+        # DATC 6.F.4
+        call_command('loaddata', '6F04.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Holland",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+    def test_beleaguered_convoy_is_not_disrupted(self):
+        # DATC 6.F.5
+        call_command('loaddata', '6F05.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Holland",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+    def test_dislodged_convoy_does_not_cut_support(self):
+        # DATC 6.F.6
+        call_command('loaddata', '6F06.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              displaced_from__name="Skagerrak",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="Germany",
+                              u_type='A').exists())
+
+    def test_dislodged_convoy_does_not_cause_contested_area(self):
+        # DATC 6.F.7
+        call_command('loaddata', '6F07.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              displaced_from__name="Skagerrak",
+                              u_type='F').exists())
+
+        u = T.unit_set.get(subregion__territory__name="North Sea",
+                           government__power__name="England",
+                           displaced_from__name="Skagerrak",
+                           u_type='F')
+
+        order = {'government': u.government, 'turn': T,
+                 'actor': u.subregion, 'action': 'M', 'assist': None,
+                 'target': models.Subregion.objects.get(territory__name=
+                                                        "Holland",
+                                                        sr_type='S')}
+        self.assertTrue(T.is_legal(order))
+
+    def test_dislodged_convoy_does_not_cause_a_bounce(self):
+        # DATC 6.F.8
+        call_command('loaddata', '6F08.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              displaced_from__name="Skagerrak",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Holland",
+                              government__power__name="Germany",
+                              u_type='A').exists())
+
+    def test_dislodge_of_multi_route_convoy(self):
+        # DATC 6.F.9
+        call_command('loaddata', '6F09.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="England",
+                              displaced_from__name="Mid-Atlantic Ocean",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+    def test_dislodge_of_multi_route_convoy_with_foreign_fleet(self):
+        # DATC 6.F.10
+        call_command('loaddata', '6F10.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="Germany",
+                              displaced_from__name="Mid-Atlantic Ocean",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+    def test_dislodge_of_multi_route_convoy_with_only_foreign_fleets(self):
+        # DATC 6.F.11
+        call_command('loaddata', '6F11.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="Germany",
+                              displaced_from__name="Mid-Atlantic Ocean",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+    def test_dislodged_convoying_fleet_not_on_route(self):
+        # DATC 6.F.12
+        call_command('loaddata', '6F12.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Irish Sea",
+                              government__power__name="England",
+                              displaced_from__name="Mid-Atlantic Ocean",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="England",
+                              u_type='A').exists())
