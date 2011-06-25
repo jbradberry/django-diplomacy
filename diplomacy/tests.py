@@ -1265,3 +1265,407 @@ class SupportsAndDislodges(TestCase):
             T.unit_set.filter(subregion__territory__name="Prussia",
                               government__power__name="Germany",
                               u_type='A').exists())
+
+
+class HeadToHeadAndBeleagueredGarrison(TestCase):
+    """
+    Based on section 6.E from the Diplomacy Adjudicator Test Cases
+    website.
+
+    http://web.inter.nl.net/users/L.B.Kruijswijk/#6.E
+
+    """
+
+    fixtures = ['basic_game.json']
+
+    def test_dislodged_unit_has_no_effect_on_attackers_area(self):
+        # DATC 6.E.1
+        call_command('loaddata', '6E01.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Prussia",
+                              government__power__name="Russia",
+                              displaced_from__name="Berlin",
+                              u_type='A').exists())
+
+    def test_no_self_dislodgement_in_head_to_head_battle(self):
+        # DATC 6.E.2
+        call_command('loaddata', '6E02.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Prussia",
+                              government__power__name="Russia",
+                              displaced_from__name="Berlin",
+                              u_type='A').exists())
+
+    def test_no_help_dislodging_own_unit(self):
+        # DATC 6.E.3
+        call_command('loaddata', '6E03.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Kiel",
+                              government__power__name="England",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              government__power__name="Germany",
+                              displaced_from__isnull=True,
+                              u_type='A').exists())
+
+    def test_non_dislodged_loser_still_has_effect(self):
+        # DATC 6.E.4
+        call_command('loaddata', '6E04.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="France",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ruhr",
+                              government__power__name="Austria-Hungary",
+                              u_type='A').exists())
+
+    def test_loser_dislodged_by_another_army_still_has_effect(self):
+        # DATC 6.E.5
+        call_command('loaddata', '6E05.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="France",
+                              displaced_from__name="Norwegian Sea",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ruhr",
+                              government__power__name="Austria-Hungary",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Holland",
+                              government__power__name="Germany",
+                              displaced_from__isnull=True).exists())
+
+    def test_not_dislodged_because_own_support_still_has_effect(self):
+        # DATC 6.E.6
+        call_command('loaddata', '6E06.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="France",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ruhr",
+                              government__power__name="Austria-Hungary",
+                              u_type='A').exists())
+
+    def test_no_self_dislodgement_with_beleaguered_garrison(self):
+        # DATC 6.E.7
+        call_command('loaddata', '6E07.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norway",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Helgoland Bight",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+    def test_no_self_dislodgement_with_beleaguered_and_head_to_head(self):
+        # DATC 6.E.8
+        call_command('loaddata', '6E08.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norway",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Helgoland Bight",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+    def test_almost_self_dislodgement_with_beleaguered_garrison(self):
+        # DATC 6.E.9
+        call_command('loaddata', '6E09.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norwegian Sea",
+                              government__power__name="England",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Helgoland Bight",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+    def test_almost_circular_move_self_dislodgement_beleaguered_garrison(self):
+        # DATC 6.E.10
+        call_command('loaddata', '6E10.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norway",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Helgoland Bight",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Denmark",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+    def test_no_self_dislodgement_garrison_unit_swap(self):
+        # DATC 6.E.11
+        call_command('loaddata', '6E11.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Portugal",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Spain",
+                              government__power__name="Italy",
+                              subregion__subname="NC",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Gascony",
+                              government__power__name="Germany",
+                              u_type='A').exists())
+
+    def test_support_attack_on_own_unit_can_be_used_for_other_means(self):
+        # DATC 6.E.12
+        call_command('loaddata', '6E12.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Budapest",
+                              government__power__name="Austria-Hungary",
+                              displaced_from__isnull=True,
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Vienna",
+                              government__power__name="Italy",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Galicia",
+                              government__power__name="Russia",
+                              u_type='A').exists())
+
+    def test_three_way_beleaguered_garrison(self):
+        # DATC 6.E.13
+        call_command('loaddata', '6E13.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="Germany",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Yorkshire",
+                              government__power__name="England",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="France",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norwegian Sea",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+    def test_illegal_head_to_head_battle_can_still_defend(self):
+        # DATC 6.E.14
+        call_command('loaddata', '6E14.json', **options)
+
+        T = models.Turn.objects.get()
+        self.assertTrue(T.is_legal(
+                models.Order.objects.get(government__power__name="England")))
+        self.assertTrue(not T.is_legal(
+                models.Order.objects.get(government__power__name="Russia")))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Liverpool",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Edinburgh",
+                              government__power__name="Russia",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+    def test_friendly_head_to_head_battle(self):
+        # DATC 6.E.15
+        call_command('loaddata', '6E15.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Kiel",
+                              government__power__name="France",
+                              displaced_from__isnull=True,
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              government__power__name="Germany",
+                              displaced_from__isnull=True,
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ruhr",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Prussia",
+                              government__power__name="Russia",
+                              u_type='A').exists())
