@@ -1,0 +1,132 @@
+[
+  {
+    "pk": 1, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 3, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 100, 
+      "displaced_from": null, 
+      "u_type": "A"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 3, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 119, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 3, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 112, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 5, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 42, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 5, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 5, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 46, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 41, 
+      "government": 3, 
+      "timestamp": "2011-06-29 22:15:50", 
+      "assist": null, 
+      "actor": 100, 
+      "turn": 1, 
+      "action": "M"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 1, 
+      "target": 41, 
+      "government": 3, 
+      "timestamp": "2011-06-29 22:15:50", 
+      "assist": 100, 
+      "actor": 119, 
+      "turn": 1, 
+      "action": "C"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 2, 
+      "target": 41, 
+      "government": 3, 
+      "timestamp": "2011-06-29 22:15:50", 
+      "assist": 100, 
+      "actor": 112, 
+      "turn": 1, 
+      "action": "C"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 119, 
+      "government": 5, 
+      "timestamp": "2011-06-29 22:15:50", 
+      "assist": 46, 
+      "actor": 42, 
+      "turn": 1, 
+      "action": "S"
+    }
+  }, 
+  {
+    "pk": 5, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 1, 
+      "target": 119, 
+      "government": 5, 
+      "timestamp": "2011-06-29 22:15:50", 
+      "assist": null, 
+      "actor": 46, 
+      "turn": 1, 
+      "action": "M"
+    }
+  }
+]

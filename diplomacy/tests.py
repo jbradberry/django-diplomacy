@@ -1944,3 +1944,295 @@ class Convoys(TestCase):
             T.unit_set.filter(subregion__territory__name="Belgium",
                               government__power__name="England",
                               u_type='A').exists())
+
+    def test_the_unwanted_alternative(self):
+        # DATC 6.F.13
+        call_command('loaddata', '6F13.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              displaced_from__name="Denmark",
+                              u_type='F').exists())
+
+    def test_simple_convoy_paradox(self):
+        # DATC 6.F.14
+        call_command('loaddata', '6F14.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Brest",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="France",
+                              displaced_from__name="Wales",
+                              u_type='F').exists())
+
+    def test_simple_convoy_paradox_with_additional_convoy(self):
+        # DATC 6.F.15
+        call_command('loaddata', '6F15.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Brest",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="France",
+                              displaced_from__name="Wales",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Wales",
+                              government__power__name="Italy",
+                              u_type='A').exists())
+
+    def test_pandins_paradox(self):
+        # DATC 6.F.16
+        call_command('loaddata', '6F16.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="France",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Brest",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+    def test_pandins_extended_paradox(self):
+        # DATC 6.F.17
+        call_command('loaddata', '6F17.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="France",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Brest",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+    def test_betrayal_paradox(self):
+        # DATC 6.F.18
+        call_command('loaddata', '6F18.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+    def test_multi_route_convoy_disruption_paradox(self):
+        # DATC 6.F.19
+        call_command('loaddata', '6F19.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Tyrhennian Sea",
+                              government__power__name="France",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Rome",
+                              government__power__name="Italy",
+                              u_type='F').exists())
+
+    def test_unwanted_multi_route_convoy_paradox(self):
+        # DATC 6.F.20
+        call_command('loaddata', '6F20.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ionian Sea",
+                              government__power__name="Italy",
+                              displaced_from__name="Eastern Mediterranean",
+                              u_type='F').exists())
+
+    def test_dads_army(self):
+        # DATC 6.F.21
+        call_command('loaddata', '6F21.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Atlantic Ocean",
+                              government__power__name="England",
+                              displaced_from__name="Mid-Atlantic Ocean",
+                              u_type='F').exists())
+
+    def test_second_order_paradox_with_two_solutions(self):
+        # DATC 6.F.22
+        call_command('loaddata', '6F22.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="France",
+                              displaced_from__name="Picardy",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="Russia",
+                              displaced_from__name="Edinburgh",
+                              u_type='F').exists())
+
+    def test_second_order_paradox_with_two_exclusive_convoys(self):
+        # DATC 6.F.23
+        call_command('loaddata', '6F23.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Brest",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norway",
+                              government__power__name="Russia",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="France",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="Russia",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+    def test_second_order_paradox_with_no_resolution(self):
+        # DATC 6.F.24
+        call_command('loaddata', '6F24.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Brest",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norway",
+                              government__power__name="Russia",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="France",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="Russia",
+                              displaced_from__name="Edinburgh",
+                              u_type='F').exists())
