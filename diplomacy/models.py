@@ -196,7 +196,7 @@ class Game(models.Model):
                     elif (Government.objects.filter(
                             unit__turn=turn,
                             unit__subregion__territory__id__in=(T,T2)
-                            ).count() != 1):
+                            ).distinct().count() != 1):
                         attack_str[order['assist'].territory.id] += 1
                 if defend_str[territory(order['assist'])]:
                     defend_str[territory(order['assist'])] += 1
