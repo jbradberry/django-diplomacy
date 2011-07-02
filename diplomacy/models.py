@@ -227,13 +227,13 @@ class Game(models.Model):
                     move = False
                 if any(attack_str[T] <= prevent_str[T2]
                        for T2, o2 in orders.iteritems()
-                       if o2['action'] == 'M' and
+                       if T != T2 and o2['action'] == 'M' and
                        o2['target'].territory.id == target):
                     move = False
                 if not path[T]:
                     move = False
 
-                if move ^ d:
+                if d ^ move:
                     return False
 
             if order['action'] == 'S':
