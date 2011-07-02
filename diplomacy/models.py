@@ -29,25 +29,26 @@ SUBREGION_CHOICES = (
 
 convert = {'L': 'A', 'S': 'F'}
 
-def assist(a1, o1, a2, o2):
-    return o2['assist'] == a1
+def assist(T1, o1, T2, o2):
+    return o2['assist'].territory.id == T1
 
-def attack_us(a1, o1, a2, o2):
-    return Territory.is_same(o2['target'], a1)
+def attack_us(T1, o1, T2, o2):
+    return o2['target'].territory.id == T1
 
-def head_to_head(a1, o1, a2, o2):
-    a2 = o2['assist'] if o2['assist'] else a2
-    return (Territory.is_same(o2['target'], a1) and
-            Territory.is_same(o1['target'], a2))
+def head_to_head(T1, o1, T2, o2):
+    T2 = o2['assist'].territory.id if o2['assist'] else T2
+    return (o2['target'].territory.id == T1 and
+            o1['target'].territory.id == T2)
 
-def hostile_assist_hold(a1, o1, a2, o2):
+def hostile_assist_hold(T1, o1, T2, o2):
     return o2['assist'] == o1['target'] and o2['target'] is None
 
-def hostile_assist_compete(a1, o1, a2, o2):
-    return o2['assist'] != a1 and Territory.is_same(o2['target'], o1['target'])
+def hostile_assist_compete(T1, o1, T2, o2):
+    return (o2['assist'].territory.id != T1 and
+            o2['target'].territory.id == o1['target'].territory.id)
 
-def move_away(a1, o1, a2, o2):
-    return Territory.is_same(o1['target'], a2) # and o2['target'] != a1 ?
+def move_away(T1, o1, T2, o2):
+    return o1['target'].territory.id == T2 # and o2['target'] != T1 ?
 
 
 DEPENDENCIES = {('C', 'M'): (attack_us,),
@@ -93,25 +94,22 @@ class Game(models.Model):
                            if o['government'] == gvt)]
 
     def construct_dependencies(self, orders):
-        dep = {}
-        for (a1, o1), (a2, o2) in permutations(orders.iteritems(), 2):
+        dep = defaultdict(list)
+        for (T1, o1), (T2, o2) in permutations(orders.iteritems(), 2):
             depend = False
-            dep.setdefault(a1, [])
             act1, act2 = o1['action'], o2['action']
             if (act1, act2) in DEPENDENCIES:
-                depend = any(f(a1, o1, a2, o2) for f in
+                depend = any(f(T1, o1, T2, o2) for f in
                              DEPENDENCIES[(act1, act2)])
 
             if depend:
-                dep[a1].append(a2)
+                dep[T1].append(T2)
 
         return dep
 
     # FIXME
     def consistent(self, state, orders):
-        state = dict((orders[S]['actor'].territory.id, d) for S, d in state)
-        orders = dict((order['actor'].territory.id, order)
-                      for S, order in orders.iteritems())
+        state = dict(state)
 
         turn = self.current_turn()
 
@@ -259,28 +257,28 @@ class Game(models.Model):
                            for T2 in attackers if T2 != A):
                     hold = False
 
-                if hold ^ d:
+                if d ^ hold:
                     return False
 
         return True
 
     def resolve(self, state, orders, dep):
-        _state = set(o for o, d in state)
+        _state = set(T for T, d in state)
 
         # Only bother calculating whether the hypothetical solution is
         # consistent if all orders within it have no remaining
         # unresolved dependencies.
         firewall = False
-        if all(all(o in _state for o in dep[order]) for order, d in state):
+        if all(all(o in _state for o in dep[T]) for T, d in state):
             if not self.consistent(state, orders):
                 return ()
             firewall = True
 
         # For those orders not already in 'state', sort from least to
         # most remaining dependencies.
-        remaining_deps = sorted((sum(1 for o in dep[order]
-                                     if o not in _state), order)
-                                for order in orders if order not in _state)
+        remaining_deps = sorted((sum(1 for o in dep[T]
+                                     if o not in _state), T)
+                                for T in orders if T not in _state)
         if not remaining_deps:
             return state
         # Go with the order with the fewest remaining deps.
@@ -305,7 +303,8 @@ class Game(models.Model):
 
         turn.consistency_check()
 
-        orders = dict((o['actor'].id, o) for o in turn.canonical_orders())
+        orders = dict((o['actor'].territory.id, o)
+                      for o in turn.canonical_orders())
         if turn.season in ('S', 'F'):
             # FIXME: do something with civil disorder
             disorder = self.detect_civil_disorder(orders)
@@ -563,7 +562,8 @@ class Turn(models.Model):
             action = 'H' if self.season in ('S', 'F') else None
             orders = dict(((g, s),
                            {'government': g, 'slot': s, 'turn': self,
-                            'actor': a, 'action': action})
+                            'actor': a, 'action': action,
+                            'assist': None, 'target': None})
                           for g in gvts for s, a in enumerate(g.actors(self)))
 
         # use the most recent legal order
@@ -580,15 +580,15 @@ class Turn(models.Model):
 
     def immediate_fails(self, orders):
         results = ()
-        for a, o in orders.iteritems():
+        for T, o in orders.iteritems():
             if o['action'] == 'M':
                 if o['target'] not in o['actor'].borders.all():
-                    matching = [a2 for a2, o2 in orders.iteritems()
+                    matching = [o2['actor'].id for T2, o2 in orders.iteritems()
                                 if o2['action'] == 'C' and
                                 o2['assist'] == o['actor'] and
                                 o2['target'] == o['target']]
                     matching = Subregion.objects.filter(id__in=matching)
-                    if any(a in L and o['target'].id in L
+                    if any(o['actor'].id in L and o['target'].id in L
                            for F, L in self.find_convoys(matching)):
                         continue
                 else:
@@ -596,7 +596,7 @@ class Turn(models.Model):
             elif o['action'] not in ('S', 'C'):
                 continue
             else:
-                assist = orders[o['assist'].id]
+                assist = orders[o['assist'].territory.id]
                 if o['target'] is not None:
                     if (assist['action'] == 'M' and
                         assist['target'] == o['target']):
@@ -604,7 +604,7 @@ class Turn(models.Model):
                 else:
                     if assist['action'] in ('H', 'C', 'S'):
                         continue
-            results = results + ((a, False),)
+            results = results + ((T, False),)
 
         return results
 
@@ -625,18 +625,19 @@ class Turn(models.Model):
                 if d: # move succeeded
                     units[(a, retreat)]['subregion'] = t
                     if not retreat:
-                        self.displaced[t.id] = orders[a]['actor']
+                        self.displaced[t.territory.id] = orders[a]['actor']
                 elif retreat: # move is a failed retreat
                     del units[(a, retreat)]
                     continue
                 else: # move failed
-                    self.failed[t.id].append(orders[a]['actor'])
+                    self.failed[t.territory.id].append(orders[a]['actor'])
 
             # successful build
             if d and orders[a]['action'] == 'B':
                 units[(a, False)] = {'turn': self,
                                      'government': orders[a]['government'],
-                                     'u_type': convert[orders[a]['actor']],
+                                     'u_type':
+                                         convert[orders[a]['actor'].sr_type],
                                      'subregion': orders[a]['actor']}
 
             if orders[a]['action'] == 'D':
@@ -651,10 +652,12 @@ class Turn(models.Model):
             # successful move, we are displaced.
             if a in self.displaced:
                 units[key]['displaced_from'] = self.displaced[a].territory
-            t = orders[a]['target']
+            if orders[a]['action'] != 'M':
+                continue
+            t = orders[a]['target'].territory
             # if multiple moves to our target failed, we have a standoff.
-            if len(self.failed.get(t.id, [])) > 1:
-                units[key]['standoff_from'] = t.territory
+            if len(self.failed[t.id]) > 1:
+                units[key]['standoff_from'] = t
 
     def _update_units_autodisband(self):
         sr = Subregion.objects.all()
@@ -694,10 +697,9 @@ class Turn(models.Model):
         self.prev = Turn.objects.get(number=self.number-1)
 
         orders = dict(orders)
-        units = dict(((u.subregion.id, x), {'turn': self,
-                                            'government': u.government,
-                                            'u_type': u.u_type,
-                                            'subregion': u.subregion})
+        units = dict(((u.subregion.territory.id, x),
+                      {'turn': self, 'government': u.government,
+                       'u_type': u.u_type, 'subregion': u.subregion})
                      for x in (True, False) # displaced or not
                      for u in
                      self.prev.unit_set.filter(displaced_from__isnull=not x))
