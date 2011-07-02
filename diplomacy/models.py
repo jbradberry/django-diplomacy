@@ -423,7 +423,7 @@ class Turn(models.Model):
                 # only go to empty territories ...
                 territory__subregion__unit__turn=self).exclude(
                 # that we weren't displaced from ...
-                territory=unit.displaced_from).exclude(
+                territory__in=[u.displaced_from for u in unit]).exclude(
                 # and that isn't empty because of a standoff.
                 territory__standoff__turn=self).distinct()
 
