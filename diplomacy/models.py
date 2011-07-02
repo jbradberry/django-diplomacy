@@ -57,6 +57,8 @@ def move_away(T1, o1, T2, o2):
 
 DEPENDENCIES = {('C', 'M'): (attack_us,),
                 ('S', 'C'): (attack_us,),
+                ('S', 'S'): (assist,),
+                ('C', 'S'): (assist,),
                 ('H', 'S'): (assist, attack_us),
                 ('M', 'S'): (assist, hostile_assist_compete,
                              head_to_head, hostile_assist_hold),
@@ -157,12 +159,6 @@ class Game(models.Model):
                                 ).distinct().count() == 1):
                             attack_str[T] = 0
 
-                        # a support can't be successful if there is a
-                        # move with a valid path to its territory.
-                        if (d2 and attack_str[T] and
-                            orders[T2]['action'] == 'S'):
-                            return False
-
                         # prevent strength
                         if d2 and head_to_head(T, order, T2, orders[T2]):
                             prevent_str[T] = 0
@@ -171,10 +167,6 @@ class Game(models.Model):
                     hold_str[T] = 0 if state[T] else 1
 
                     if state[T]:
-                        # must have a valid path to succeed
-                        if not path[T]:
-                            return False
-
                         # stationary units can't be successful and dislodged
                         T2 = territory(order['target'])
                         if (T2 in state and state[T2] and
@@ -235,10 +227,15 @@ class Game(models.Model):
                     return False
 
             if order['action'] == 'S':
-                attackers = [T2 for T2, o2 in orders.iteritems()
-                             if o2['action'] == 'M' and
-                             territory(o2['target']) == T]
-                if (not d) ^ any(attack_str[T2] > 0 for T2 in attackers):
+                target = territory(order['target'])
+                attackers = set(T2 for T2, o2 in orders.iteritems()
+                                if o2['action'] == 'M' and
+                                territory(o2['target']) == T)
+                cut = ((target in attackers and
+                        attack_str[target] > hold_str[T]) or
+                       any(attack_str[T2] > 0 for T2 in attackers
+                           if T2 != target))
+                if d ^ (not cut):
                     return False
 
             if order['action'] in ('H', 'C'):
