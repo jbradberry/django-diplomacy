@@ -256,10 +256,8 @@ class Game(models.Model):
                     continue
                 S, P, A = max((attack_str[T2], prevent_str[T2], T2)
                               for T2 in attackers)
-                if S > hold_str[T]:
-                    hold = False
-                if not any(prevent_str[T2] >= S
-                           for T2 in attackers if T2 != A):
+                if S > hold_str[T] and not any(prevent_str[T2] >= S
+                                               for T2 in attackers if T2 != A):
                     hold = False
 
                 if d ^ hold:
