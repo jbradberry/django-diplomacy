@@ -121,23 +121,25 @@ class Game(models.Model):
 
         for T, order in orders.iteritems():
             if order['action'] == 'M':
-                defend_str[T] = 1
+                defend_str[T], path[T] = 1, True
+                if order['target'] not in order['actor'].borders.all():
+                    # determine if we have a valid convoy path
+                    matching = [orders[T2]['actor'].id
+                                for T2, d2 in state.iteritems()
+                                if d2 and orders[T2]['action'] == 'C' and
+                                orders[T2]['assist'] == order['actor'] and
+                                orders[T2]['target'] == order['target']]
+                    matching = Subregion.objects.filter(id__in=matching)
+                    if not any(order['actor'].id in L and
+                               order['target'].id in L
+                               for F, L in turn.find_convoys(matching)):
+                        path[T] = False
+
+                if path[T]:
+                    prevent_str[T] = 1
+
                 if T in state:
                     hold_str[T] = 0 if state[T] else 1
-
-                    path[T] = True
-                    if order['target'] not in order['actor'].borders.all():
-                        # determine if we have a valid convoy path
-                        matching = [orders[T2]['actor'].id
-                                    for T2, d2 in state.iteritems()
-                                    if d2 and orders[T2]['action'] == 'C' and
-                                    orders[T2]['assist'] == order['actor'] and
-                                    orders[T2]['target'] == order['target']]
-                        matching = Subregion.objects.filter(id__in=matching)
-                        if not any(order['actor'] in L and
-                                   order['target'].id in L
-                                   for F, L in turn.find_convoys(matching)):
-                            path[T] = False
 
                     if state[T]:
                         # must have a valid path to succeed
@@ -151,7 +153,7 @@ class Game(models.Model):
                             return False
 
                     if path[T]:
-                        attack_str[T], prevent_str[T] = 1, 1
+                        attack_str[T] = 1
 
                         if order['target'].territory.id in state:
                             T2 = order['target'].territory.id
