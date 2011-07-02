@@ -62,7 +62,7 @@ DEPENDENCIES = {('C', 'M'): (attack_us,),
                 ('H', 'S'): (assist, attack_us),
                 ('M', 'S'): (assist, hostile_assist_compete,
                              head_to_head, hostile_assist_hold),
-                ('M', 'C'): (assist,),
+                ('M', 'C'): (assist, hostile_assist_compete),
                 ('M', 'M'): (move_away,),}
 
 
@@ -166,13 +166,6 @@ class Game(models.Model):
                 if T in state:
                     hold_str[T] = 0 if state[T] else 1
 
-                    if state[T]:
-                        # stationary units can't be successful and dislodged
-                        T2 = territory(order['target'])
-                        if (T2 in state and state[T2] and
-                            orders[T2]['action'] != 'M'):
-                            return False
-
             if order['action'] in ('H', 'S', 'C'):
                 hold_str[T] = 1
 
@@ -275,11 +268,9 @@ class Game(models.Model):
         # Only bother calculating whether the hypothetical solution is
         # consistent if all orders within it have no remaining
         # unresolved dependencies.
-        firewall = False
         if all(all(o in _state for o in dep[T]) for T, d in state):
             if not self.consistent(state, orders):
                 return ()
-            firewall = True
 
         # For those orders not already in 'state', sort from least to
         # most remaining dependencies.
@@ -302,10 +293,6 @@ class Game(models.Model):
             if result:
                 return result
 
-        # FIXME: detect and handle convoy paradoxes
-        if firewall:
-            raise Exception("Unable to find a consistent solution,"
-                            " probably due to a convoy paradox.")
         return ()
 
     def generate(self):
