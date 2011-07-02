@@ -40,6 +40,10 @@ def assist(T1, o1, T2, o2):
 def attack_us(T1, o1, T2, o2):
     return territory(o2['target']) == T1
 
+def attack_us_from_target(T1, o1, T2, o2):
+    return (territory(o2['assist']) == territory(o1['target']) and
+            territory(o2['target']) == T1)
+
 def head_to_head(T1, o1, T2, o2):
     T2 = territory(o2['assist']) if o2['assist'] else T2
     return territory(o2['target']) == T1 and territory(o1['target']) == T2
@@ -57,7 +61,7 @@ def move_away(T1, o1, T2, o2):
 
 DEPENDENCIES = {('C', 'M'): (attack_us,),
                 ('S', 'C'): (attack_us,),
-                ('S', 'S'): (assist,),
+                ('S', 'S'): (assist, attack_us_from_target),
                 ('C', 'S'): (assist,),
                 ('H', 'S'): (assist, attack_us),
                 ('M', 'S'): (assist, hostile_assist_compete,
