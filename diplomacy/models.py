@@ -142,6 +142,31 @@ class Game(models.Model):
                 if path[T]:
                     prevent_str[T], attack_str[T] = 1, 1
 
+                    if territory(order['target']) in state:
+                        T2 = territory(order['target'])
+                        d2 = state[T2]
+
+                        # other unit moves away
+                        if (d2 and orders[T2]['action'] == 'M' and not
+                            head_to_head(T, order, T2, orders[T2])):
+                            attack_str[T] = 1
+                        # other unit is also ours
+                        elif (Government.objects.filter(
+                                unit__turn=turn,
+                                unit__subregion__territory__id__in=(T,T2)
+                                ).distinct().count() == 1):
+                            attack_str[T] = 0
+
+                        # a support can't be successful if there is a
+                        # move with a valid path to its territory.
+                        if (d2 and attack_str[T] and
+                            orders[T2]['action'] == 'S'):
+                            return False
+
+                        # prevent strength
+                        if d2 and head_to_head(T, order, T2, orders[T2]):
+                            prevent_str[T] = 0
+
                 if T in state:
                     hold_str[T] = 0 if state[T] else 1
 
@@ -155,31 +180,6 @@ class Game(models.Model):
                         if (T2 in state and state[T2] and
                             orders[T2]['action'] != 'M'):
                             return False
-
-                    if path[T]:
-                        if territory(order['target']) in state:
-                            T2 = territory(order['target'])
-                            d2 = state[T2]
-
-                            # a support can't be successful if there is a
-                            # move with a valid path to its territory.
-                            if d2 and orders[T2]['action'] == 'S':
-                                return False
-
-                            # other unit moves away
-                            if (d2 and orders[T2]['action'] == 'M' and not
-                                head_to_head(T, order, T2, orders[T2])):
-                                attack_str[T] = 1
-                            # other unit is also ours
-                            elif (Government.objects.filter(
-                                    unit__turn=turn,
-                                    unit__subregion__territory__id__in=(T,T2)
-                                    ).count() == 1):
-                                attack_str[T] = 0
-
-                            # prevent strength
-                            if d2 and head_to_head(T, order, T2, orders[T2]):
-                                prevent_str[T] = 0
 
             if order['action'] in ('H', 'S', 'C'):
                 hold_str[T] = 1
