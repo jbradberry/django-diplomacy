@@ -700,7 +700,7 @@ class Turn(models.Model):
                                             'subregion': u.subregion})
                      for x in (True, False) # displaced or not
                      for u in
-                     self.prev.unit_set.filter(displaced_from__isnull=x))
+                     self.prev.unit_set.filter(displaced_from__isnull=not x))
 
         self._update_units_changes(orders, decisions, units)
 
