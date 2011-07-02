@@ -140,7 +140,7 @@ class Game(models.Model):
                         path[T] = False
 
                 if path[T]:
-                    prevent_str[T] = 1
+                    prevent_str[T], attack_str[T] = 1, 1
 
                 if T in state:
                     hold_str[T] = 0 if state[T] else 1
@@ -157,8 +157,6 @@ class Game(models.Model):
                             return False
 
                     if path[T]:
-                        attack_str[T] = 1
-
                         if territory(order['target']) in state:
                             T2 = territory(order['target'])
                             d2 = state[T2]
