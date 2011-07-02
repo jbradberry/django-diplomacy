@@ -420,7 +420,8 @@ class Turn(models.Model):
                 # that we weren't displaced from ...
                 territory__in=[u.displaced_from for u in unit]).exclude(
                 # and that isn't empty because of a standoff.
-                territory__standoff__turn=self).distinct()
+                territory__in=[u.standoff_from for u in self.unit_set.filter(
+                        standoff_from__isnull=False)]).distinct()
 
         if unit.count() != 1:
             return {}
