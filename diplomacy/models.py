@@ -29,26 +29,30 @@ SUBREGION_CHOICES = (
 
 convert = {'L': 'A', 'S': 'F'}
 
+def territory(sr):
+    if sr is None:
+        return None
+    return sr.territory.id
+
 def assist(T1, o1, T2, o2):
-    return o2['assist'].territory.id == T1
+    return territory(o2['assist']) == T1
 
 def attack_us(T1, o1, T2, o2):
-    return o2['target'].territory.id == T1
+    return territory(o2['target']) == T1
 
 def head_to_head(T1, o1, T2, o2):
-    T2 = o2['assist'].territory.id if o2['assist'] else T2
-    return (o2['target'].territory.id == T1 and
-            o1['target'].territory.id == T2)
+    T2 = territory(o2['assist']) if o2['assist'] else T2
+    return territory(o2['target']) == T1 and territory(o1['target']) == T2
 
 def hostile_assist_hold(T1, o1, T2, o2):
     return o2['assist'] == o1['target'] and o2['target'] is None
 
 def hostile_assist_compete(T1, o1, T2, o2):
-    return (o2['assist'].territory.id != T1 and
-            o2['target'].territory.id == o1['target'].territory.id)
+    return (territory(o2['assist']) != T1 and
+            territory(o2['target']) == territory(o1['target']))
 
 def move_away(T1, o1, T2, o2):
-    return o1['target'].territory.id == T2 # and o2['target'] != T1 ?
+    return territory(o1['target']) == T2 # and territory(o2['target']) != T1 ?
 
 
 DEPENDENCIES = {('C', 'M'): (attack_us,),
@@ -147,7 +151,7 @@ class Game(models.Model):
                             return False
 
                         # stationary units can't be successful and dislodged
-                        T2 = order['target'].territory.id
+                        T2 = territory(order['target'])
                         if (T2 in state and state[T2] and
                             orders[T2]['action'] != 'M'):
                             return False
@@ -155,8 +159,8 @@ class Game(models.Model):
                     if path[T]:
                         attack_str[T] = 1
 
-                        if order['target'].territory.id in state:
-                            T2 = order['target'].territory.id
+                        if territory(order['target']) in state:
+                            T2 = territory(order['target'])
                             d2 = state[T2]
 
                             # a support can't be successful if there is a
@@ -193,33 +197,31 @@ class Game(models.Model):
                 continue
 
             if order['target'] is None:
-                hold_str[order['assist'].territory.id] += 1
+                hold_str[territory(order['assist'])] += 1
             else:
-                if attack_str[order['assist'].territory.id]:
-                    T2 = order['target'].territory.id
+                if attack_str[territory(order['assist'])]:
+                    T2 = territory(order['target'])
                     d2 = state.get(T2, False)
                     if T2 not in orders:
-                        attack_str[order['assist'].territory.id] += 1
+                        attack_str[territory(order['assist'])] += 1
                     elif (d2 and orders[T2]['action'] == 'M' and not
-                          head_to_head(
-                            order['actor'].id, order,
-                            orders[T2]['actor'].id, orders[T2])):
-                        attack_str[order['assist'].territory.id] += 1
+                          head_to_head(T, order, T2, orders[T2])):
+                        attack_str[territory(order['assist'])] += 1
                     elif (Government.objects.filter(
                             unit__turn=turn,
                             unit__subregion__territory__id__in=(T,T2)
                             ).count() != 1):
                         attack_str[order['assist'].territory.id] += 1
-                if defend_str[order['assist'].territory.id]:
-                    defend_str[order['assist'].territory.id] += 1
-                if prevent_str[order['assist'].territory.id]:
-                    prevent_str[order['assist'].territory.id] += 1
+                if defend_str[territory(order['assist'])]:
+                    defend_str[territory(order['assist'])] += 1
+                if prevent_str[territory(order['assist'])]:
+                    prevent_str[territory(order['assist'])] += 1
 
         for T, d in state.iteritems():
             order = orders[T]
 
             if order['action'] == 'M':
-                target = order['target'].territory.id
+                target = territory(order['target'])
                 move = True
                 if attack_str[T] <= defend_str[target]:
                     move = False
@@ -228,7 +230,7 @@ class Game(models.Model):
                 if any(attack_str[T] <= prevent_str[T2]
                        for T2, o2 in orders.iteritems()
                        if T != T2 and o2['action'] == 'M' and
-                       o2['target'].territory.id == target):
+                       territory(o2['target']) == target):
                     move = False
                 if not path[T]:
                     move = False
@@ -239,7 +241,7 @@ class Game(models.Model):
             if order['action'] == 'S':
                 attackers = [T2 for T2, o2 in orders.iteritems()
                              if o2['action'] == 'M' and
-                             o2['target'].territory.id == T]
+                             territory(o2['target']) == T]
                 if (not d) ^ any(attack_str[T2] > 0 for T2 in attackers):
                     return False
 
@@ -247,7 +249,7 @@ class Game(models.Model):
                 hold = True
                 attackers = set(T2 for T2, o2 in orders.iteritems()
                                 if o2['action'] == 'M' and
-                                o2['target'].territory.id == T)
+                                territory(o2['target']) == T)
                 if not attackers:
                     if not d:
                         return False
@@ -306,7 +308,7 @@ class Game(models.Model):
 
         turn.consistency_check()
 
-        orders = dict((o['actor'].territory.id, o)
+        orders = dict((territory(o['actor']), o)
                       for o in turn.canonical_orders())
         if turn.season in ('S', 'F'):
             # FIXME: do something with civil disorder
@@ -599,7 +601,7 @@ class Turn(models.Model):
             elif o['action'] not in ('S', 'C'):
                 continue
             else:
-                assist = orders[o['assist'].territory.id]
+                assist = orders[territory(o['assist'])]
                 if o['target'] is not None:
                     if (assist['action'] == 'M' and
                         assist['target'] == o['target']):
@@ -628,12 +630,12 @@ class Turn(models.Model):
                 if d: # move succeeded
                     units[(a, retreat)]['subregion'] = t
                     if not retreat:
-                        self.displaced[t.territory.id] = orders[a]['actor']
+                        self.displaced[territory(t)] = orders[a]['actor']
                 elif retreat: # move is a failed retreat
                     del units[(a, retreat)]
                     continue
                 else: # move failed
-                    self.failed[t.territory.id].append(orders[a]['actor'])
+                    self.failed[territory(t)].append(orders[a]['actor'])
 
             # successful build
             if d and orders[a]['action'] == 'B':
@@ -700,7 +702,7 @@ class Turn(models.Model):
         self.prev = Turn.objects.get(number=self.number-1)
 
         orders = dict(orders)
-        units = dict(((u.subregion.territory.id, x),
+        units = dict(((territory(u.subregion), x),
                       {'turn': self, 'government': u.government,
                        'u_type': u.u_type, 'subregion': u.subregion})
                      for x in (True, False) # displaced or not
