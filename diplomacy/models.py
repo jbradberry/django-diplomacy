@@ -170,9 +170,7 @@ class Game(models.Model):
 
                             # other unit moves away
                             if (d2 and orders[T2]['action'] == 'M' and not
-                                head_to_head(
-                                    order['actor'].id, order,
-                                    orders[T2]['actor'].id, orders[T2])):
+                                head_to_head(T, order, T2, orders[T2])):
                                 attack_str[T] = 1
                             # other unit is also ours
                             elif (Government.objects.filter(
@@ -182,9 +180,7 @@ class Game(models.Model):
                                 attack_str[T] = 0
 
                             # prevent strength
-                            if d2 and head_to_head(order['actor'].id, order,
-                                                   orders[T2]['actor'].id,
-                                                   orders[T2]):
+                            if d2 and head_to_head(T, order, T2, orders[T2]):
                                 prevent_str[T] = 0
 
             if order['action'] in ('H', 'S', 'C'):
@@ -223,7 +219,9 @@ class Game(models.Model):
             if order['action'] == 'M':
                 target = territory(order['target'])
                 move = True
-                if attack_str[T] <= defend_str[target]:
+                if (target in orders and
+                    head_to_head(T, order, target, orders[target]) and
+                    attack_str[T] <= defend_str[target]):
                     move = False
                 if attack_str[T] <= hold_str[target]:
                     move = False
