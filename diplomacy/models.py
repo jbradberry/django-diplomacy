@@ -36,6 +36,7 @@ def attack_us(a1, o1, a2, o2):
     return Territory.is_same(o2['target'], a1)
 
 def head_to_head(a1, o1, a2, o2):
+    a2 = o2['assist'] if o2['assist'] else a2
     return (Territory.is_same(o2['target'], a1) and
             Territory.is_same(o1['target'], a2))
 
@@ -108,7 +109,160 @@ class Game(models.Model):
 
     # FIXME
     def consistent(self, state, orders):
-        pass
+        state = dict((orders[S]['actor'].territory.id, d) for S, d in state)
+        orders = dict((order['actor'].territory.id, order)
+                      for S, order in orders.iteritems())
+
+        turn = self.current_turn()
+
+        hold_str = defaultdict(int)
+        attack_str = defaultdict(int)
+        defend_str = defaultdict(int)
+        prevent_str = defaultdict(int)
+        path = {}
+
+        for T, order in orders.iteritems():
+            if order['action'] == 'M':
+                defend_str[T] = 1
+                if T in state:
+                    hold_str[T] = 0 if state[T] else 1
+
+                    path[T] = True
+                    if order['target'] not in order['actor'].borders.all():
+                        # determine if we have a valid convoy path
+                        matching = [orders[T2]['actor'].id
+                                    for T2, d2 in state.iteritems()
+                                    if d2 and orders[T2]['action'] == 'C' and
+                                    orders[T2]['assist'] == order['actor'] and
+                                    orders[T2]['target'] == order['target']]
+                        matching = Subregion.objects.filter(id__in=matching)
+                        if not any(order['actor'] in L and
+                                   order['target'].id in L
+                                   for F, L in turn.find_convoys(matching)):
+                            path[T] = False
+
+                    if state[T]:
+                        # must have a valid path to succeed
+                        if not path[T]:
+                            return False
+
+                        # stationary units can't be successful and dislodged
+                        T2 = order['target'].territory.id
+                        if (T2 in state and state[T2] and
+                            orders[T2]['action'] != 'M'):
+                            return False
+
+                    if path[T]:
+                        attack_str[T], prevent_str[T] = 1, 1
+
+                        if order['target'].territory.id in state:
+                            T2 = order['target'].territory.id
+                            d2 = state[T2]
+
+                            # a support can't be successful if there is a
+                            # move with a valid path to its territory.
+                            if d2 and orders[T2]['action'] == 'S':
+                                return False
+
+                            # other unit moves away
+                            if (d2 and orders[T2]['action'] == 'M' and not
+                                head_to_head(
+                                    order['actor'].id, order,
+                                    orders[T2]['actor'].id, orders[T2])):
+                                attack_str[T] = 1
+                            # other unit is also ours
+                            elif (Government.objects.filter(
+                                    unit__turn=turn,
+                                    unit__subregion__territory__id__in=(T,T2)
+                                    ).count() == 1):
+                                attack_str[T] = 0
+
+                            # prevent strength
+                            if d2 and head_to_head(order['actor'].id, order,
+                                                   orders[T2]['actor'].id,
+                                                   orders[T2]):
+                                prevent_str[T] = 0
+
+            if order['action'] in ('H', 'S', 'C'):
+                hold_str[T] = 1
+
+        for T, d in state.iteritems():
+            order = orders[T]
+
+            if not d or order['action'] != 'S':
+                continue
+
+            if order['target'] is None:
+                hold_str[order['assist'].territory.id] += 1
+            else:
+                if attack_str[order['assist'].territory.id]:
+                    T2 = order['target'].territory.id
+                    d2 = state.get(T2, False)
+                    if T2 not in orders:
+                        attack_str[order['assist'].territory.id] += 1
+                    elif (d2 and orders[T2]['action'] == 'M' and not
+                          head_to_head(
+                            order['actor'].id, order,
+                            orders[T2]['actor'].id, orders[T2])):
+                        attack_str[order['assist'].territory.id] += 1
+                    elif (Government.objects.filter(
+                            unit__turn=turn,
+                            unit__subregion__territory__id__in=(T,T2)
+                            ).count() != 1):
+                        attack_str[order['assist'].territory.id] += 1
+                if defend_str[order['assist'].territory.id]:
+                    defend_str[order['assist'].territory.id] += 1
+                if prevent_str[order['assist'].territory.id]:
+                    prevent_str[order['assist'].territory.id] += 1
+
+        for T, d in state.iteritems():
+            order = orders[T]
+
+            if order['action'] == 'M':
+                target = order['target'].territory.id
+                move = True
+                if attack_str[T] <= defend_str[target]:
+                    move = False
+                if attack_str[T] <= hold_str[target]:
+                    move = False
+                if any(attack_str[T] <= prevent_str[T2]
+                       for T2, o2 in orders.iteritems()
+                       if o2['action'] == 'M' and
+                       o2['target'].territory.id == target):
+                    move = False
+                if not path[T]:
+                    move = False
+
+                if move ^ d:
+                    return False
+
+            if order['action'] == 'S':
+                if d ^ any(attack_str[T2] > 0 for T2, o2 in orders.iteritems()
+                           if o2['action'] == 'M' and
+                           o2['target'].territory.id == T):
+                    return False
+
+            if order['action'] in ('H', 'C'):
+                hold = True
+                attackers = set(T2 for T2, o2 in orders.iteritems()
+                                if o2['action'] == 'M' and
+                                o2['target'].territory.id == T)
+                if not attackers:
+                    if not d:
+                        return False
+                    continue
+                S, P, A = max((attack_str[T2], prevent_str[T2], T2)
+                              for T2 in attackers)
+                if S > hold_str[T]:
+                    hold = False
+                if not any(prevent_str[T2] >= S
+                           for T2 in attackers if T2 != A):
+                    hold = False
+
+                if hold ^ d:
+                    return False
+
+        return True
 
     def resolve(self, state, orders, dep):
         _state = set(o for o, d in state)
@@ -116,9 +270,11 @@ class Game(models.Model):
         # Only bother calculating whether the hypothetical solution is
         # consistent if all orders within it have no remaining
         # unresolved dependencies.
+        firewall = False
         if all(all(o in _state for o in dep[order]) for order, d in state):
             if not self.consistent(state, orders):
                 return ()
+            firewall = True
 
         # For those orders not already in 'state', sort from least to
         # most remaining dependencies.
@@ -139,8 +295,10 @@ class Game(models.Model):
                 return result
 
         # FIXME: detect and handle convoy paradoxes
-        raise Exception("Unable to find a consistent solution,"
-                        " probably due to a convoy paradox.")
+        if firewall:
+            raise Exception("Unable to find a consistent solution,"
+                            " probably due to a convoy paradox.")
+        return ()
 
     def generate(self):
         turn = self.current_turn()
@@ -713,6 +871,7 @@ class Unit(models.Model):
     government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
+    #previous = models.ForeignKey("self", null=True, blank=True)
     displaced_from = models.ForeignKey(Territory, null=True, blank=True,
                                        related_name='displaced')
     standoff_from = models.ForeignKey(Territory, null=True, blank=True,
