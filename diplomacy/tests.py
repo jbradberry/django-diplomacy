@@ -1314,13 +1314,13 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
                               government__power__name="Germany",
-                              u_type='F').exists())
+                              u_type='A').exists())
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__power__name="Russia",
-                              displaced_from__name="Berlin",
-                              u_type='A').exists())
+            T.unit_set.filter(subregion__territory__name="Kiel",
+                              government__power__name="Germany",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
 
     def test_no_help_dislodging_own_unit(self):
         # DATC 6.E.3
