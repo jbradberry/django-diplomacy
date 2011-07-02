@@ -468,7 +468,13 @@ class Turn(models.Model):
         # support to convoyed attack
         attackers = sr.filter(unit__turn=self, sr_type='L'
                               ).exclude(id=actor.id).distinct()
-        for fset, lset in self.find_convoys():
+        fleets = Subregion.objects.filter(
+            sr_type='S', unit__turn=self).exclude(
+            territory__subregion__sr_type='L').exclude(
+            # if we are issuing a support, we can't convoy.
+            id=actor.id).distinct()
+
+        for fset, lset in self.find_convoys(fleets):
             for a in attackers:
                 if a.id not in lset:
                     continue
