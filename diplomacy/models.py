@@ -227,11 +227,22 @@ class Game(models.Model):
                     return False
 
             if order['action'] == 'S':
+                o = orders.get(territory(order['assist']), None)
+                unmatched = False
+                if o is None:
+                    unmatched = True
+                elif o['action'] == 'M' and o['target'] != order['target']:
+                    unmatched = True
+                elif (o['action'] in ('H', 'S', 'C') and
+                      order['target'] is not None):
+                    unmatched = True
+
                 target = territory(order['target'])
                 attackers = set(T2 for T2, o2 in orders.iteritems()
                                 if o2['action'] == 'M' and
                                 territory(o2['target']) == T)
-                cut = ((target in attackers and
+                cut = (unmatched or
+                       (target in attackers and
                         attack_str[target] > hold_str[T]) or
                        any(attack_str[T2] > 0 for T2 in attackers
                            if T2 != target))
