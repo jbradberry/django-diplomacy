@@ -237,9 +237,10 @@ class Game(models.Model):
                     return False
 
             if order['action'] == 'S':
-                if d ^ any(attack_str[T2] > 0 for T2, o2 in orders.iteritems()
-                           if o2['action'] == 'M' and
-                           o2['target'].territory.id == T):
+                attackers = [T2 for T2, o2 in orders.iteritems()
+                             if o2['action'] == 'M' and
+                             o2['target'].territory.id == T]
+                if (not d) ^ any(attack_str[T2] > 0 for T2 in attackers):
                     return False
 
             if order['action'] in ('H', 'C'):
