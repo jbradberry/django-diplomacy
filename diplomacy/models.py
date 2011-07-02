@@ -264,7 +264,7 @@ class Game(models.Model):
                                                for T2 in attackers if T2 != A):
                     hold = False
 
-                if d ^ hold:
+                if (d != False) ^ hold:
                     return False
 
         return True
@@ -289,13 +289,16 @@ class Game(models.Model):
         if not remaining_deps:
             return state
         # Go with the order with the fewest remaining deps.
-        q, order = remaining_deps[0]
+        q, T = remaining_deps[0]
 
         # Unresolved dependencies might be circular, so it isn't
         # obvious how to resolve them.  Try both ways, with preference
         # for 'success'.
-        for S in (True, False):
-            result = self.resolve(state+((order, S),), orders, dep)
+        resolutions = (True, False)
+        if orders[T]['action'] == 'C':
+            resolutions += (None,)
+        for S in resolutions:
+            result = self.resolve(state+((T, S),), orders, dep)
             if result:
                 return result
 
