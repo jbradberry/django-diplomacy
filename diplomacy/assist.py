@@ -13,8 +13,6 @@ class Setup(object):
         self.index = 1
         self.u_index = 1
         self.gvt_index = defaultdict(int)
-        self.gvt = dict((unicode(g.power), g)
-                        for g in models.Government.objects.all())
         self.sr = dict(("%s %s" % (convert[sr.sr_type], unicode(sr)), sr)
                        for sr in models.Subregion.objects.all())
         self.sr[None] = None
@@ -24,10 +22,11 @@ class Setup(object):
         self.turn = models.Turn.objects.get()
 
     def order(self, gvt, actor, action, assist, target):
+        gvt = models.Government.objects.get(power__name__istartswith=gvt)
         if action != 'B':
             models.Unit.objects.create(id=self.u_index,
                                        turn=self.turn,
-                                       government=self.gvt[gvt],
+                                       government=gvt,
                                        u_type=convert[self.sr[actor].sr_type],
                                        subregion=self.sr[actor])
             self.u_index += 1
@@ -36,7 +35,7 @@ class Setup(object):
             target = "%s %s" % (convert[self.sr[sr].sr_type], target)
         models.Order.objects.create(id=self.index,
                                     turn=self.turn,
-                                    government=self.gvt[gvt],
+                                    government=gvt,
                                     slot=self.gvt_index[gvt],
                                     actor=self.sr[actor],
                                     action=action,
