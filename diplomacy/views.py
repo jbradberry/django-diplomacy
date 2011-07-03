@@ -1,5 +1,6 @@
 from django.views.generic.list_detail import object_list, object_detail
 from django.shortcuts import render_to_response, get_object_or_404
+from django.views.generic.simple import direct_to_template
 from django.forms.models import ModelChoiceField
 from django.forms.formsets import formset_factory
 from django.contrib.auth.decorators import login_required
@@ -54,8 +55,8 @@ def orders(request, slug, power):
         formset.save()
         return HttpResponseRedirect('../../')
 
-    return render_to_response('diplomacy/manage_orders.html',
-                              {'formset': formset, 'game': g})
+    return direct_to_template(request, 'diplomacy/manage_orders.html',
+                              extra_context={'formset': formset, 'game': g})
 
 # WISHLIST: dump directly to template instead?
 def select_filter(request, slug, power):

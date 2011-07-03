@@ -99,7 +99,7 @@
 {% endblock %}
     
 {% block content %}
-    <form method="POST" action="">
+    <form method="POST" action="">{% csrf_token %}
       {{ formset.management_form }}
       {{ formset.non_form_errors.as_ul }}
       <table class="formset">
