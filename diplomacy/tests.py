@@ -2236,3 +2236,173 @@ class Convoys(TestCase):
                               government__power__name="Russia",
                               displaced_from__name="Edinburgh",
                               u_type='F').exists())
+
+
+class ConvoyingToAdjacent(TestCase):
+    """
+    Based on section 6.G from the Diplomacy Adjudicator Test Cases
+    website.
+
+    http://web.inter.nl.net/users/L.B.Kruijswijk/#6.G
+
+    """
+
+    fixtures = ['basic_game.json']
+
+    def test_two_units_can_swap_by_convoy(self):
+        # DATC 6.G.1
+        call_command('loaddata', '6G01.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Sweden",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norway",
+                              government__power__name="Russia",
+                              u_type='A').exists())
+
+    def test_kidnapping_an_army(self):
+        # DATC 6.G.2
+        call_command('loaddata', '6G02.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norway",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Sweden",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+    def test_kidnapping_with_disrupted_convoy(self):
+        # DATC 6.G.3
+        call_command('loaddata', '6G03.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="England",
+                              displaced_from__name="Brest",
+                              u_type='F').exists())
+
+    def test_kidnapping_with_disrupted_convoy_and_opposite_move(self):
+        # DATC 6.G.4
+        call_command('loaddata', '6G04.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="England",
+                              displaced_from__name="Brest",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="England",
+                              displaced_from__name="Picardy",
+                              u_type='A').exists())
+
+    def test_swapping_with_intent(self):
+        # DATC 6.G.5
+        call_command('loaddata', '6G05.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Apulia",
+                              government__power__name="Italy",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Rome",
+                              government__power__name="Turkey",
+                              u_type='A').exists())
+
+    def test_swapping_with_unintended_intent(self):
+        # DATC 6.G.6
+        call_command('loaddata', '6G06.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Edinburgh",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Liverpool",
+                              government__power__name="Germany",
+                              u_type='A').exists())
+
+    def test_swapping_with_illegal_intent(self):
+        # DATC 6.G.7
+        call_command('loaddata', '6G07.json', **options)
+
+        T = models.Turn.objects.get()
+        for o in models.Order.objects.exclude(actor__territory__name=
+                                              "Gulf of Bothnia"):
+            self.assertTrue(T.is_legal(o))
+        self.assertTrue(not T.is_legal(models.Order.objects.get(
+                    actor__territory__name="Gulf of Bothnia")))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norway",
+                              government__power__name="England",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Sweden",
+                              government__power__name="Russia",
+                              u_type='A').exists())
