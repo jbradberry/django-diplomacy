@@ -45,7 +45,12 @@ def attack_us_from_target(T1, o1, T2, o2):
             territory(o2['target']) == T1)
 
 def head_to_head(T1, o1, T2, o2):
-    T2 = territory(o2['assist']) if o2['assist'] else T2
+    actor = o2['assist'] if o2['assist'] else o2['actor']
+    T2 = territory(actor)
+    if not any(territory(S) == T2 for S in o1['actor'].borders.all()):
+        return False
+    if not any(territory(S) == T1 for S in actor.borders.all()):
+        return False
     return territory(o2['target']) == T1 and territory(o1['target']) == T2
 
 def hostile_assist_hold(T1, o1, T2, o2):
@@ -56,7 +61,7 @@ def hostile_assist_compete(T1, o1, T2, o2):
             territory(o2['target']) == territory(o1['target']))
 
 def move_away(T1, o1, T2, o2):
-    return territory(o1['target']) == T2 # and territory(o2['target']) != T1 ?
+    return territory(o1['target']) == T2 and territory(o2['target']) != T1
 
 
 DEPENDENCIES = {('C', 'M'): (attack_us,),
@@ -67,7 +72,7 @@ DEPENDENCIES = {('C', 'M'): (attack_us,),
                 ('H', 'C'): (attack_us,),
                 ('M', 'S'): (assist, hostile_assist_compete,
                              head_to_head, hostile_assist_hold),
-                ('M', 'C'): (assist, hostile_assist_compete),
+                ('M', 'C'): (assist, hostile_assist_compete, head_to_head),
                 ('M', 'M'): (move_away,),}
 
 
