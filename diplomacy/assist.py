@@ -21,7 +21,7 @@ class Setup(object):
         models.Turn.objects.exclude(number=0).delete()
         self.turn = models.Turn.objects.get()
 
-    def order(self, gvt, actor, action, assist, target):
+    def order(self, gvt, actor, action, assist, target, via_convoy=False):
         gvt = models.Government.objects.get(power__name__istartswith=gvt)
         if action != 'B':
             models.Unit.objects.create(id=self.u_index,
@@ -40,6 +40,7 @@ class Setup(object):
                                     actor=self.sr[actor],
                                     action=action,
                                     assist=self.sr[assist],
-                                    target=self.sr[target])
+                                    target=self.sr[target],
+                                    via_convoy=via_convoy)
         self.index += 1
         self.gvt_index[gvt] += 1

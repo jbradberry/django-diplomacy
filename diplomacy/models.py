@@ -920,6 +920,7 @@ class Order(models.Model):
                                related_name='assisted')
     target = models.ForeignKey(Subregion, null=True, blank=True,
                                related_name='targeted')
+    via_convoy = models.BooleanField()
 
     def __unicode__(self):
         result = "%s %s %s" % (convert[self.actor.sr_type], self.actor,
@@ -928,4 +929,6 @@ class Order(models.Model):
             result += " %s %s" % (convert[self.assist.sr_type], self.assist)
         if self.target:
             result += " %s" % self.target
+        if self.via_convoy:
+            result += " via Convoy"
         return result
