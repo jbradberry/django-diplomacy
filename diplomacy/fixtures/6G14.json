@@ -1,0 +1,218 @@
+[
+  {
+    "pk": 1, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 2, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 86, 
+      "displaced_from": null, 
+      "u_type": "A"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 2, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 81, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 2, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 52, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 3, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 117, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 5, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 3, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 116, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 6, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 4, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 118, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 7, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 6, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 98, 
+      "displaced_from": null, 
+      "u_type": "A"
+    }
+  }, 
+  {
+    "pk": 8, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 6, 
+      "standoff_from": null, 
+      "turn": 1, 
+      "subregion": 105, 
+      "displaced_from": null, 
+      "u_type": "F"
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 98, 
+      "government": 2, 
+      "timestamp": "2011-07-05 22:48:34", 
+      "assist": null, 
+      "actor": 86, 
+      "turn": 1, 
+      "via_convoy": false, 
+      "action": "M"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 1, 
+      "target": 98, 
+      "government": 2, 
+      "timestamp": "2011-07-05 22:48:34", 
+      "assist": 86, 
+      "actor": 81, 
+      "turn": 1, 
+      "via_convoy": false, 
+      "action": "S"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 2, 
+      "target": 98, 
+      "government": 2, 
+      "timestamp": "2011-07-05 22:48:34", 
+      "assist": 86, 
+      "actor": 52, 
+      "turn": 1, 
+      "via_convoy": false, 
+      "action": "S"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 87, 
+      "government": 3, 
+      "timestamp": "2011-07-05 22:48:34", 
+      "assist": null, 
+      "actor": 117, 
+      "turn": 1, 
+      "via_convoy": false, 
+      "action": "M"
+    }
+  }, 
+  {
+    "pk": 5, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 1, 
+      "target": 87, 
+      "government": 3, 
+      "timestamp": "2011-07-05 22:48:34", 
+      "assist": 117, 
+      "actor": 116, 
+      "turn": 1, 
+      "via_convoy": false, 
+      "action": "S"
+    }
+  }, 
+  {
+    "pk": 6, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 86, 
+      "government": 4, 
+      "timestamp": "2011-07-05 22:48:34", 
+      "assist": 98, 
+      "actor": 118, 
+      "turn": 1, 
+      "via_convoy": false, 
+      "action": "C"
+    }
+  }, 
+  {
+    "pk": 7, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 86, 
+      "government": 6, 
+      "timestamp": "2011-07-05 22:48:34", 
+      "assist": null, 
+      "actor": 98, 
+      "turn": 1, 
+      "via_convoy": true, 
+      "action": "M"
+    }
+  }, 
+  {
+    "pk": 8, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 1, 
+      "target": 86, 
+      "government": 6, 
+      "timestamp": "2011-07-05 22:48:34", 
+      "assist": 98, 
+      "actor": 105, 
+      "turn": 1, 
+      "via_convoy": false, 
+      "action": "S"
+    }
+  }
+]
