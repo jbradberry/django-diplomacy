@@ -305,6 +305,27 @@ class Game(models.Model):
 
         return ()
 
+    def resolve_retreats(self, orders):
+        decisions = []
+        target_count = defaultdict(int)
+        for T, order in orders.iteritems():
+            if order['action'] == 'M':
+                target_count[T] += 1
+            else:
+                decisions.append((T, None))
+        for T, order in orders.iteritems():
+            if order['action'] != 'M':
+                continue
+            if target_count[T] == 1:
+                decisions.append((T, True))
+            else:
+                decisions.append((T, False))
+        return decisions
+
+    # FIXME
+    def resolve_adjusts(self, orders):
+        pass
+
     def generate(self):
         turn = self.current_turn()
 
@@ -318,6 +339,10 @@ class Game(models.Model):
             dependencies = self.construct_dependencies(orders)
             state = turn.immediate_fails(orders)
             decisions = self.resolve(state, orders, dependencies)
+        if turn.season in ('SR', 'FR'):
+            decisions = self.resolve_retreats(orders)
+        else:
+            decisions = self.resolve_adjusts(orders)
 
         turn = self.turn_set.create(number=turn.number+1)
         turn.update_units(orders, decisions)
@@ -636,6 +661,7 @@ class Turn(models.Model):
             # units that are displaced must retreat or be disbanded
             if retreat and orders[a]['action'] == None:
                 del units[(a, retreat)]
+                self.disbands[orders[a]['government'].id].add(a)
                 continue
 
             if orders[a]['action'] == 'M':
