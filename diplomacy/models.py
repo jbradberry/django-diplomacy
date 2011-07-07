@@ -535,12 +535,16 @@ class Turn(models.Model):
                      'actor': order.actor, 'action': order.action,
                      'assist': order.assist, 'target': order.target}
         units = order['actor'].unit_set.filter(turn=self)
+        if order['action'] != 'B' and not units.exists():
+            return False
 
         if self.season in ('S', 'F'):
             if units.get().government != order['government']:
                 return False
         elif self.season in ('SR', 'FR'):
             units = units.filter(displaced_from__isnull=False)
+            if not units.exists():
+                return False
             if units.get().government != order['government']:
                 return False
         elif order['action'] == 'D':
