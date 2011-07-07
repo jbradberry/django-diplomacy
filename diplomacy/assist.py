@@ -21,15 +21,34 @@ class Setup(object):
         models.Turn.objects.exclude(number=0).delete()
         self.turn = models.Turn.objects.get()
 
+    def new_turn(self):
+        self.turn = models.Turn.objects.create(game=self.turn.game,
+                                               number=self.turn.number+1)
+        models.Turn.objects.filter(number=self.turn.number
+                                   ).update(id=self.turn.number+1)
+        self.turn.id = self.turn.number + 1
+
+    def unit(self, gvt, subregion, displaced_from=None, standoff_from=None):
+        gvt = models.Government.objects.get(power__name__istartswith=gvt)
+        if displaced_from is not None:
+            displaced_from = models.Territory.objects.get(name=displaced_from)
+        if standoff_from is not None:
+            standoff_from = models.Territory.objects.get(name=standoff_from)
+        models.Unit.objects.create(id=self.u_index,
+                                   turn=self.turn,
+                                   government=gvt,
+                                   u_type=convert[self.sr[subregion].sr_type],
+                                   subregion=self.sr[subregion],
+                                   displaced_from=displaced_from,
+                                   standoff_from=standoff_from)
+        self.u_index += 1
+
     def order(self, gvt, actor, action, assist, target, via_convoy=False):
         gvt = models.Government.objects.get(power__name__istartswith=gvt)
-        if action != 'B':
-            models.Unit.objects.create(id=self.u_index,
-                                       turn=self.turn,
-                                       government=gvt,
-                                       u_type=convert[self.sr[actor].sr_type],
-                                       subregion=self.sr[actor])
-            self.u_index += 1
+        if action != 'B' and '*' not in action:
+            self.unit(gvt, actor)
+        if '*' in action:
+            action = action.strip('*')
         if target:
             sr = assist if assist else actor
             target = "%s %s" % (convert[self.sr[sr].sr_type], target)
