@@ -2104,7 +2104,7 @@ class Convoys(TestCase):
         T = T.game.current_turn()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Tyrhennian Sea",
+            T.unit_set.filter(subregion__territory__name="Tyrrhenian Sea",
                               government__power__name="France",
                               displaced_from__isnull=True,
                               u_type='F').exists())

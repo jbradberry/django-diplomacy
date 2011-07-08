@@ -123,6 +123,45 @@ class Game(models.Model):
 
         return dep
 
+    def detect_paradox(self, orders, dep):
+        """
+        Implements Tarjan's strongly connected components algorithm to
+        find the paradoxical convoys.
+
+        """
+        dep = dict(dep)
+
+        low = {}
+        stack = []
+        result = []
+
+        def visit(node, orders, dep):
+            if node in low:
+                return
+
+            index = len(low)
+            low[node] = index
+            stack_pos = len(stack)
+            stack.append(node)
+
+            if node in dep:
+                for w in dep[node]:
+                    visit(w, orders, dep)
+                    low[node] = min(low[node], low[w])
+
+            if low[node] == index:
+                component = tuple(stack[stack_pos:])
+                del stack[stack_pos:]
+                if len(component) > 1:
+                    result.extend(c for c in component
+                                  if orders[c]['action'] == 'C')
+                for item in component:
+                    low[item] = len(orders)
+
+        for node in orders:
+            visit(node, orders, dep)
+        return result
+
     # FIXME
     def consistent(self, state, orders):
         state = dict(state)
@@ -272,7 +311,7 @@ class Game(models.Model):
 
         return True
 
-    def resolve(self, state, orders, dep):
+    def resolve(self, state, orders, dep, paradox):
         _state = set(T for T, d in state)
 
         # Only bother calculating whether the hypothetical solution is
@@ -295,11 +334,9 @@ class Game(models.Model):
         # Unresolved dependencies might be circular, so it isn't
         # obvious how to resolve them.  Try both ways, with preference
         # for 'success'.
-        resolutions = (True, False)
-        if orders[T]['action'] == 'C':
-            resolutions += (None,)
+        resolutions = (None, False) if T in paradox else (True, False)
         for S in resolutions:
-            result = self.resolve(state+((T, S),), orders, dep)
+            result = self.resolve(state+((T, S),), orders, dep, paradox)
             if result:
                 return result
 
@@ -337,9 +374,11 @@ class Game(models.Model):
             # FIXME: do something with civil disorder
             disorder = self.detect_civil_disorder(orders)
             dependencies = self.construct_dependencies(orders)
+            paradox_convoys = self.detect_paradox(orders, dependencies)
             state = turn.immediate_fails(orders)
-            decisions = self.resolve(state, orders, dependencies)
-        if turn.season in ('SR', 'FR'):
+            decisions = self.resolve(state, orders, dependencies,
+                                     paradox_convoys)
+        elif turn.season in ('SR', 'FR'):
             decisions = self.resolve_retreats(orders)
         else:
             decisions = self.resolve_adjusts(orders)
