@@ -1,6 +1,17 @@
 [
   {
     "pk": 1, 
+    "model": "diplomacy.turn", 
+    "fields": {
+      "generated": "2011-05-07 16:29:30", 
+      "season": "S", 
+      "game": 1, 
+      "number": 0, 
+      "year": 1900
+    }
+  }, 
+  {
+    "pk": 1, 
     "model": "diplomacy.unit", 
     "fields": {
       "government": 3, 
@@ -84,20 +95,6 @@
     }
   }, 
   {
-    "pk": 1, 
-    "model": "diplomacy.order", 
-    "fields": {
-      "slot": 0, 
-      "target": 90, 
-      "government": 3, 
-      "timestamp": "2011-06-24 20:31:04", 
-      "assist": null, 
-      "actor": 95, 
-      "turn": 1, 
-      "action": "M"
-    }
-  }, 
-  {
     "pk": 2, 
     "model": "diplomacy.order", 
     "fields": {
@@ -108,6 +105,7 @@
       "assist": 95, 
       "actor": 114, 
       "turn": 1, 
+      "via_convoy": false, 
       "action": "C"
     }
   }, 
@@ -122,6 +120,7 @@
       "assist": 91, 
       "actor": 110, 
       "turn": 1, 
+      "via_convoy": false, 
       "action": "S"
     }
   }, 
@@ -136,6 +135,7 @@
       "assist": 23, 
       "actor": 25, 
       "turn": 1, 
+      "via_convoy": false, 
       "action": "S"
     }
   }, 
@@ -150,6 +150,7 @@
       "assist": null, 
       "actor": 23, 
       "turn": 1, 
+      "via_convoy": false, 
       "action": "M"
     }
   }, 
@@ -164,6 +165,7 @@
       "assist": null, 
       "actor": 91, 
       "turn": 1, 
+      "via_convoy": false, 
       "action": "M"
     }
   }, 
@@ -178,7 +180,23 @@
       "assist": 91, 
       "actor": 120, 
       "turn": 1, 
+      "via_convoy": false, 
       "action": "S"
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 90, 
+      "government": 3, 
+      "timestamp": "2011-06-24 20:31:04", 
+      "assist": null, 
+      "actor": 95, 
+      "turn": 1, 
+      "via_convoy": true, 
+      "action": "M"
     }
   }
 ]

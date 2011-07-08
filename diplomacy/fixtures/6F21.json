@@ -175,7 +175,8 @@
       "timestamp": "2011-06-29 22:31:58", 
       "assist": null, 
       "actor": 12, 
-      "turn": 1, 
+      "turn": 1,
+      "via_convoy": true,
       "action": "M"
     }
   }, 

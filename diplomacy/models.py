@@ -44,12 +44,14 @@ def attack_us_from_target(T1, o1, T2, o2):
     return (territory(o2['assist']) == territory(o1['target']) and
             territory(o2['target']) == T1)
 
-def head_to_head(T1, o1, T2, o2):
+def head_to_head(T1, o1, T2, o2, c1=False, c2=False):
     actor = o2['assist'] if o2['assist'] else o2['actor']
     T2 = territory(actor)
     if not any(territory(S) == T2 for S in o1['actor'].borders.all()):
         return False
     if not any(territory(S) == T1 for S in actor.borders.all()):
+        return False
+    if c1 or c2:
         return False
     return territory(o2['target']) == T1 and territory(o1['target']) == T2
 
@@ -162,7 +164,6 @@ class Game(models.Model):
             visit(node, orders, dep)
         return result
 
-    # FIXME
     def consistent(self, state, orders):
         state = dict(state)
 
@@ -172,23 +173,27 @@ class Game(models.Model):
         attack_str = defaultdict(int)
         defend_str = defaultdict(int)
         prevent_str = defaultdict(int)
-        path = {}
+        path, convoy = {}, defaultdict(lambda: False)
 
         for T, order in orders.iteritems():
             if order['action'] == 'M':
                 defend_str[T], path[T] = 1, True
-                if order['target'] not in order['actor'].borders.all():
-                    # determine if we have a valid convoy path
-                    matching = [orders[T2]['actor'].id
-                                for T2, d2 in state.iteritems()
-                                if d2 and orders[T2]['action'] == 'C' and
-                                orders[T2]['assist'] == order['actor'] and
-                                orders[T2]['target'] == order['target']]
-                    matching = Subregion.objects.filter(id__in=matching)
-                    if not any(order['actor'].id in L and
-                               order['target'].id in L
-                               for F, L in turn.find_convoys(matching)):
-                        path[T] = False
+
+                # determine if we have a valid convoy path
+                matching = [orders[T2]['actor'].id
+                            for T2, d2 in state.iteritems()
+                            if d2 and orders[T2]['action'] == 'C' and
+                            orders[T2]['assist'] == order['actor'] and
+                            orders[T2]['target'] == order['target']]
+                matching = Subregion.objects.filter(id__in=matching)
+                if not any(order['actor'].id in L and
+                           order['target'].id in L
+                           for F, L in turn.find_convoys(matching)):
+                    path[T] = False
+
+                convoy[T] = path[T]
+                if order['target'] in order['actor'].borders.all():
+                    path[T] = True
 
                 if path[T]:
                     prevent_str[T], attack_str[T] = 1, 1
@@ -199,7 +204,8 @@ class Game(models.Model):
 
                         # other unit moves away
                         if (d2 and orders[T2]['action'] == 'M' and not
-                            head_to_head(T, order, T2, orders[T2])):
+                            head_to_head(T, order, T2, orders[T2],
+                                         convoy[T], convoy[T2])):
                             attack_str[T] = 1
                         # other unit is also ours
                         elif (Government.objects.filter(
@@ -209,7 +215,8 @@ class Game(models.Model):
                             attack_str[T] = 0
 
                         # prevent strength
-                        if d2 and head_to_head(T, order, T2, orders[T2]):
+                        if d2 and head_to_head(T, order, T2, orders[T2],
+                                               convoy[T], convoy[T2]):
                             prevent_str[T] = 0
 
                 if T in state:
@@ -233,7 +240,8 @@ class Game(models.Model):
                     if T2 not in orders:
                         attack_str[territory(order['assist'])] += 1
                     elif (d2 and orders[T2]['action'] == 'M' and not
-                          head_to_head(T, order, T2, orders[T2])):
+                          head_to_head(T, order, T2, orders[T2],
+                                       convoy[T], convoy[T2])):
                         attack_str[territory(order['assist'])] += 1
                     elif (Government.objects.filter(
                             unit__turn=turn,
@@ -252,7 +260,8 @@ class Game(models.Model):
                 target = territory(order['target'])
                 move = True
                 if (target in orders and
-                    head_to_head(T, order, target, orders[target]) and
+                    head_to_head(T, order, target, orders[target],
+                                 convoy[T], convoy[target]) and
                     attack_str[T] <= defend_str[target]):
                     move = False
                 if attack_str[T] <= hold_str[target]:
