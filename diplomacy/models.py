@@ -768,8 +768,8 @@ class Turn(models.Model):
         for a, d in decisions:
             key = (a, False)
             # if our location is marked as the target of a
-            # successful move, we are displaced.
-            if a in self.displaced:
+            # successful move and we failed to move, we are displaced.
+            if not d and a in self.displaced:
                 units[key]['displaced_from'] = self.displaced[a].territory
             if orders[a]['action'] != 'M':
                 continue
