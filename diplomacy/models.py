@@ -369,13 +369,13 @@ class Game(models.Model):
         target_count = defaultdict(int)
         for T, order in orders.iteritems():
             if order['action'] == 'M':
-                target_count[T] += 1
+                target_count[territory(order['target'])] += 1
             else:
                 decisions.append((T, None))
         for T, order in orders.iteritems():
             if order['action'] != 'M':
                 continue
-            if target_count[T] == 1:
+            if target_count[territory(order['target'])] == 1:
                 decisions.append((T, True))
             else:
                 decisions.append((T, False))
