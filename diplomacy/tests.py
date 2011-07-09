@@ -2533,7 +2533,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__power__name="Austria",
+                              government__power__name="Austria-Hungary",
                               displaced_from__name="Albania",
                               u_type='A').exists())
 

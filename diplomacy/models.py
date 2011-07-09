@@ -736,16 +736,17 @@ class Turn(models.Model):
                 continue
 
             if orders[a]['action'] == 'M':
-                t = orders[a]['target']
+                target = orders[a]['target']
+                T = orders[a]['actor'].territory
                 if d: # move succeeded
-                    units[(a, retreat)]['subregion'] = t
+                    units[(a, retreat)]['subregion'] = target
                     if not retreat:
-                        self.displaced[territory(t)] = orders[a]['actor']
+                        self.displaced[target.territory.id] = T
                 elif retreat: # move is a failed retreat
                     del units[(a, retreat)]
                     continue
                 else: # move failed
-                    self.failed[territory(t)].append(orders[a]['actor'])
+                    self.failed[territory(target)].append(T)
 
             # successful build
             if d and orders[a]['action'] == 'B':
@@ -766,7 +767,7 @@ class Turn(models.Model):
             # if our location is marked as the target of a
             # successful move and we failed to move, we are displaced.
             if not d and a in self.displaced:
-                units[key]['displaced_from'] = self.displaced[a].territory
+                units[key]['displaced_from'] = self.displaced[a]
             if orders[a]['action'] != 'M':
                 continue
             t = orders[a]['target'].territory
