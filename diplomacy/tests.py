@@ -1,5 +1,6 @@
 import models, forms
 from django.test import TestCase
+from django.db.models import Count
 from django.core.management import call_command
 from django.contrib.auth.models import User
 
@@ -2682,3 +2683,177 @@ class ConvoyingToAdjacent(TestCase):
             T.unit_set.filter(subregion__territory__name="Yorkshire",
                               government__power__name="England",
                               u_type='A').exists())
+
+
+class Retreating(TestCase):
+    """
+    Based on section 6.H from the Diplomacy Adjudicator Test Cases
+    website.
+
+    http://web.inter.nl.net/users/L.B.Kruijswijk/#6.H
+
+    """
+
+    fixtures = ['basic_game.json']
+
+    def test_no_supports_during_retreat(self):
+        # DATC 6.H.1
+        call_command('loaddata', '6H01.json', **options)
+
+        T = models.Turn.objects.latest()
+
+        o1, o2, o3 = models.Order.objects.all()
+        self.assertTrue(T.is_legal(o1))
+        self.assertTrue(not T.is_legal(o2))
+        self.assertTrue(T.is_legal(o3))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertFalse(
+            T.unit_set.values('subregion__territory'
+                              ).annotate(count=Count('subregion__territory')
+                                         ).filter(count__gt=1).exists())
+
+        self.assertTrue(
+            not T.unit_set.filter(
+                government__power__name="Austria-Hungary",
+                previous__subregion__territory__name="Trieste").exists())
+
+        self.assertTrue(
+            not T.unit_set.filter(
+                government__power__name="Turkey",
+                previous__subregion__territory__name="Greece").exists())
+
+    def test_no_supports_from_retreating_unit(self):
+        # DATC 6.H.2
+        call_command('loaddata', '6H02.json', **options)
+
+        T = models.Turn.objects.latest()
+
+        o1, o2, o3 = models.Order.objects.all()
+        self.assertTrue(T.is_legal(o1))
+        self.assertTrue(T.is_legal(o2))
+        self.assertTrue(not T.is_legal(o3))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertFalse(
+            T.unit_set.values('subregion__territory'
+                              ).annotate(count=Count('subregion__territory')
+                                         ).filter(count__gt=1).exists())
+
+        self.assertTrue(
+            not T.unit_set.filter(
+                government__power__name="England",
+                previous__subregion__territory__name="Norway").exists())
+
+        self.assertTrue(
+            not T.unit_set.filter(
+                government__power__name="Russia",
+                previous__subregion__territory__name="Edinburgh").exists())
+
+        self.assertTrue(
+            not T.unit_set.filter(
+                government__power__name="Russia",
+                previous__subregion__territory__name="Holland").exists())
+
+    def test_no_convoy_during_retreat(self):
+        # DATC 6.H.3
+        call_command('loaddata', '6H03.json', **options)
+
+        T = models.Turn.objects.latest()
+        for o in models.Order.objects.all():
+            self.assertTrue(not T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertFalse(
+            T.unit_set.values('subregion__territory'
+                              ).annotate(count=Count('subregion__territory')
+                                         ).filter(count__gt=1).exists())
+
+        self.assertTrue(
+            not T.unit_set.filter(
+                government__power__name="England",
+                previous__subregion__territory__name="Holland").exists())
+
+    def test_no_other_moves_during_retreat(self):
+        # DATC 6.H.4
+        call_command('loaddata', '6H04.json', **options)
+
+        T = models.Turn.objects.latest()
+        o1, o2 = models.Order.objects.all()
+        self.assertTrue(T.is_legal(o1))
+        self.assertTrue(not T.is_legal(o2))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertFalse(
+            T.unit_set.values('subregion__territory'
+                              ).annotate(count=Count('subregion__territory')
+                                         ).filter(count__gt=1).exists())
+
+        self.assertTrue(
+            T.unit_set.filter(
+                government__power__name="England",
+                subregion__territory__name="Belgium",
+                previous__subregion__territory__name="Holland").exists())
+
+        self.assertTrue(
+            T.unit_set.filter(
+                government__power__name="England",
+                subregion__territory__name="North Sea").exists())
+
+    def test_unit_may_not_retreat_to_area_it_was_attacked_from(self):
+        # DATC 6.H.5
+        call_command('loaddata', '6H05.json', **options)
+
+        T = models.Turn.objects.latest()
+        for o in models.Order.objects.all():
+            self.assertTrue(not T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertFalse(
+            T.unit_set.values('subregion__territory'
+                              ).annotate(count=Count('subregion__territory')
+                                         ).filter(count__gt=1).exists())
+
+        self.assertTrue(
+            not T.unit_set.filter(government__power__name="Turkey").exists())
+
+    def test_unit_may_not_retreat_to_contested_area(self):
+        # DATC 6.H.6
+        call_command('loaddata', '6H06.json', **options)
+
+        T = models.Turn.objects.latest()
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            2, T.unit_set.filter(standoff_from__isnull=False).count())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Vienna",
+                              government__power__name="Italy",
+                              displaced_from__name="Trieste",
+                              u_type='A').exists())
+
+        italy = models.Government.objects.get(power__name="Italy")
+        vienna = models.Subregion.objects.get(territory__name="Vienna",
+                                              sr_type="L")
+        bohemia = models.Subregion.objects.get(territory__name="Bohemia",
+                                               sr_type="L")
+
+        self.assertTrue(
+            not T.is_legal({'government': italy, 'turn': T,
+                            'actor': vienna, 'action': "M",
+                            'assist': None, 'target': bohemia}))

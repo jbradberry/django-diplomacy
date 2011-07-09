@@ -1,0 +1,106 @@
+[
+  {
+    "pk": 2, 
+    "model": "diplomacy.turn", 
+    "fields": {
+      "generated": "2011-07-09 14:20:01", 
+      "season": "SR", 
+      "game": 1, 
+      "number": 1, 
+      "year": 1900
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.turn", 
+    "fields": {
+      "generated": "2011-05-07 16:29:30", 
+      "season": "S", 
+      "game": 1, 
+      "number": 0, 
+      "year": 1900
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 2, 
+      "standoff_from": null, 
+      "turn": 2, 
+      "subregion": 116, 
+      "displaced_from": null, 
+      "u_type": "F", 
+      "previous": null
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 2, 
+      "standoff_from": null, 
+      "turn": 2, 
+      "subregion": 84, 
+      "displaced_from": 23, 
+      "u_type": "A", 
+      "previous": null
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 4, 
+      "standoff_from": null, 
+      "turn": 2, 
+      "subregion": 33, 
+      "displaced_from": null, 
+      "u_type": "F", 
+      "previous": null
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 4, 
+      "standoff_from": null, 
+      "turn": 2, 
+      "subregion": 84, 
+      "displaced_from": null, 
+      "u_type": "A", 
+      "previous": null
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 75, 
+      "government": 2, 
+      "timestamp": "2011-07-09 14:20:45", 
+      "assist": null, 
+      "actor": 84, 
+      "turn": 2, 
+      "via_convoy": false, 
+      "action": "M"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 1, 
+      "target": 117, 
+      "government": 2, 
+      "timestamp": "2011-07-09 14:20:45", 
+      "assist": null, 
+      "actor": 116, 
+      "turn": 2, 
+      "via_convoy": false, 
+      "action": "M"
+    }
+  }
+]

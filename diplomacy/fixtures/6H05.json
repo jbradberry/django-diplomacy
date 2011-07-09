@@ -1,0 +1,78 @@
+[
+  {
+    "pk": 2, 
+    "model": "diplomacy.turn", 
+    "fields": {
+      "generated": "2011-07-09 16:19:29", 
+      "season": "SR", 
+      "game": 1, 
+      "number": 1, 
+      "year": 1900
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.turn", 
+    "fields": {
+      "generated": "2011-05-07 16:29:30", 
+      "season": "S", 
+      "game": 1, 
+      "number": 0, 
+      "year": 1900
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 6, 
+      "standoff_from": null, 
+      "turn": 2, 
+      "subregion": 68, 
+      "displaced_from": null, 
+      "u_type": "F", 
+      "previous": null
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 6, 
+      "standoff_from": null, 
+      "turn": 2, 
+      "subregion": 64, 
+      "displaced_from": null, 
+      "u_type": "F", 
+      "previous": null
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "diplomacy.unit", 
+    "fields": {
+      "government": 7, 
+      "standoff_from": null, 
+      "turn": 2, 
+      "subregion": 64, 
+      "displaced_from": 61, 
+      "u_type": "F", 
+      "previous": null
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "diplomacy.order", 
+    "fields": {
+      "slot": 0, 
+      "target": 106, 
+      "government": 7, 
+      "timestamp": "2011-07-09 16:20:04", 
+      "assist": null, 
+      "actor": 64, 
+      "turn": 2, 
+      "via_convoy": false, 
+      "action": "M"
+    }
+  }
+]
