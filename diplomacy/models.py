@@ -63,7 +63,8 @@ def hostile_assist_compete(T1, o1, T2, o2):
             territory(o2['target']) == territory(o1['target']))
 
 def move_away(T1, o1, T2, o2):
-    return territory(o1['target']) == T2 and territory(o2['target']) != T1
+    return (territory(o1['target']) == T2 and
+            (territory(o2['target']) != T1 or o1['convoy'] or o2['convoy']))
 
 
 DEPENDENCIES = {('C', 'M'): (attack_us,),
@@ -74,7 +75,7 @@ DEPENDENCIES = {('C', 'M'): (attack_us,),
                 ('H', 'C'): (attack_us,),
                 ('M', 'S'): (assist, hostile_assist_compete,
                              head_to_head, hostile_assist_hold),
-                ('M', 'C'): (assist, hostile_assist_compete, head_to_head),
+                ('M', 'C'): (assist, hostile_assist_compete),
                 ('M', 'M'): (move_away,),}
 
 
@@ -113,6 +114,10 @@ class Game(models.Model):
 
     def construct_dependencies(self, orders):
         dep = defaultdict(list)
+        for (T1, o1), (T2, o2) in permutations(orders.iteritems(), 2):
+            if (o1['action'], o2['action']) == ('M', 'C'):
+                if assist(T1, o1, T2, o2):
+                    o1['convoy'] = True
         for (T1, o1), (T2, o2) in permutations(orders.iteritems(), 2):
             depend = False
             act1, act2 = o1['action'], o2['action']
@@ -183,8 +188,9 @@ class Game(models.Model):
                 matching = [orders[T2]['actor'].id
                             for T2, d2 in state.iteritems()
                             if d2 and orders[T2]['action'] == 'C' and
-                            orders[T2]['assist'] == order['actor'] and
-                            orders[T2]['target'] == order['target']]
+                            assist(T, order, T2, orders[T2]) and
+                            (order['government'] == orders[T2]['government']
+                             or order['foreign'])]
                 matching = Subregion.objects.filter(id__in=matching)
                 if not any(order['actor'].id in L and
                            order['target'].id in L
@@ -195,6 +201,8 @@ class Game(models.Model):
                 if order['target'] in order['actor'].borders.all():
                     path[T] = True
 
+        for T, order in orders.iteritems():
+            if order['action'] == 'M':
                 if path[T]:
                     prevent_str[T], attack_str[T] = 1, 1
 
@@ -654,7 +662,8 @@ class Turn(models.Model):
             orders = dict(((g, s),
                            {'government': g, 'slot': s, 'turn': self,
                             'actor': a, 'action': action,
-                            'assist': None, 'target': None})
+                            'assist': None, 'target': None,
+                            'via_convoy': False, 'convoy': False})
                           for g in gvts for s, a in enumerate(g.actors(self)))
 
         # use the most recent legal order
@@ -666,7 +675,25 @@ class Turn(models.Model):
                 orders[(o.government, o.slot)] = {
                     'id': o.id, 'government': o.government, 'slot': o.slot,
                     'turn': o.turn, 'actor': o.actor, 'action': o.action,
-                    'assist': o.assist, 'target': o.target}
+                    'assist': o.assist, 'target': o.target,
+                    'via_convoy': o.via_convoy and o.action == 'M' and
+                    o.actor.sr_type == 'L' and self.season in ('S', 'F') and
+                    o.target in o.actor.borders.all()}
+        if self.season in ('S', 'F'):
+            for (g, slot), o in orders.iteritems():
+                if o['action'] != 'M':
+                    continue
+                matching = [(g2, o2) for (g2, s2), o2 in orders.iteritems()
+                            if o2['action'] == 'C' and
+                            assist(territory(o['actor']), o,
+                                   territory(o2['actor']), o2)]
+                if o['target'] not in o['actor'].borders.all():
+                    o['convoy'] = bool(matching)
+                    o['foreign'] = o['convoy']
+                else:
+                    o['convoy'] = any(g == g2 or o['via_convoy']
+                                      for g2, o2 in matching)
+                    o['foreign'] = o['via_convoy']
         return [v for k, v in sorted(orders.iteritems())]
 
     def immediate_fails(self, orders):
