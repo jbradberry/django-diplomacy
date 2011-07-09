@@ -136,7 +136,7 @@ class Game(models.Model):
 
         low = {}
         stack = []
-        result = []
+        result = set()
 
         def visit(node, orders, dep):
             if node in low:
@@ -156,7 +156,7 @@ class Game(models.Model):
                 component = tuple(stack[stack_pos:])
                 del stack[stack_pos:]
                 if len(component) > 1:
-                    result.extend(c for c in component
+                    result.update(c for c in component
                                   if orders[c]['action'] == 'C')
                 for item in component:
                     low[item] = len(orders)
@@ -165,7 +165,7 @@ class Game(models.Model):
             visit(node, orders, dep)
         return result
 
-    def consistent(self, state, orders):
+    def consistent(self, state, orders, paradox):
         state = dict(state)
 
         turn = self.current_turn()
@@ -178,7 +178,7 @@ class Game(models.Model):
 
         for T, order in orders.iteritems():
             if order['action'] == 'M':
-                defend_str[T], path[T] = 1, True
+                defend_str[T], path[T], P = 1, True, False
 
                 # determine if we have a valid convoy path
                 matching = [orders[T2]['actor'].id
@@ -187,15 +187,24 @@ class Game(models.Model):
                             assist(T, order, T2, orders[T2]) and
                             (order['government'] == orders[T2]['government']
                              or order['convoy'])]
+                p_matching = matching + [orders[T2]['actor'].id
+                                         for T2 in paradox
+                                         if assist(T, order, T2, orders[T2])
+                                         and order['convoy']]
                 matching = Subregion.objects.filter(id__in=matching)
+                p_matching = Subregion.objects.filter(id__in=p_matching)
                 if not any(order['actor'].id in L and
                            order['target'].id in L
                            for F, L in turn.find_convoys(matching)):
                     path[T] = False
+                    if any(order['actor'].id in L and
+                           order['target'].id in L
+                           for F, L in turn.find_convoys(p_matching)):
+                        P = True
 
                 convoy[T] = path[T]
                 if order['target'] in order['actor'].borders.all():
-                    path[T] = True
+                    path[T] = not P # not constrained to a paradoxical convoy
 
         for T, order in orders.iteritems():
             if order['action'] == 'M':
@@ -331,7 +340,7 @@ class Game(models.Model):
         # consistent if all orders within it have no remaining
         # unresolved dependencies.
         if all(all(o in _state for o in dep[T]) for T, d in state):
-            if not self.consistent(state, orders):
+            if not self.consistent(state, orders, paradox):
                 return ()
 
         # For those orders not already in 'state', sort from least to
