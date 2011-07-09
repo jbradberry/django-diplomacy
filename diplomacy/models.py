@@ -115,10 +115,6 @@ class Game(models.Model):
     def construct_dependencies(self, orders):
         dep = defaultdict(list)
         for (T1, o1), (T2, o2) in permutations(orders.iteritems(), 2):
-            if (o1['action'], o2['action']) == ('M', 'C'):
-                if assist(T1, o1, T2, o2):
-                    o1['convoy'] = True
-        for (T1, o1), (T2, o2) in permutations(orders.iteritems(), 2):
             depend = False
             act1, act2 = o1['action'], o2['action']
             if (act1, act2) in DEPENDENCIES:
