@@ -1,17 +1,6 @@
 [
   {
     "pk": 1, 
-    "model": "diplomacy.turn", 
-    "fields": {
-      "generated": "2011-05-07 16:29:30", 
-      "season": "S", 
-      "game": 1, 
-      "number": 0, 
-      "year": 1900
-    }
-  }, 
-  {
-    "pk": 1, 
     "model": "diplomacy.unit", 
     "fields": {
       "government": 3, 

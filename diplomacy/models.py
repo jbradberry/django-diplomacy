@@ -824,7 +824,8 @@ class Turn(models.Model):
         orders = dict(orders)
         units = dict(((territory(u.subregion), x),
                       {'turn': self, 'government': u.government,
-                       'u_type': u.u_type, 'subregion': u.subregion})
+                       'u_type': u.u_type, 'subregion': u.subregion,
+                       'previous': u})
                      for x in (True, False) # displaced or not
                      for u in
                      self.prev.unit_set.filter(displaced_from__isnull=not x))
@@ -998,7 +999,7 @@ class Unit(models.Model):
     government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
-    #previous = models.ForeignKey("self", null=True, blank=True)
+    previous = models.ForeignKey("self", null=True, blank=True)
     displaced_from = models.ForeignKey(Territory, null=True, blank=True,
                                        related_name='displaced')
     standoff_from = models.ForeignKey(Territory, null=True, blank=True,
