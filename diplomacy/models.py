@@ -190,7 +190,7 @@ class Game(models.Model):
                             if d2 and orders[T2]['action'] == 'C' and
                             assist(T, order, T2, orders[T2]) and
                             (order['government'] == orders[T2]['government']
-                             or order['foreign'])]
+                             or order['convoy'])]
                 matching = Subregion.objects.filter(id__in=matching)
                 if not any(order['actor'].id in L and
                            order['target'].id in L
@@ -687,13 +687,13 @@ class Turn(models.Model):
                             if o2['action'] == 'C' and
                             assist(territory(o['actor']), o,
                                    territory(o2['actor']), o2)]
-                if o['target'] not in o['actor'].borders.all():
-                    o['convoy'] = bool(matching)
-                    o['foreign'] = o['convoy']
+                gvt_matching = [o2 for g2, o2 in matching if g2 == g]
+
+                if o['target'] in o['actor'].borders.all():
+                    o['convoy'] = (gvt_matching or
+                                   (o['via_convoy'] and matching))
                 else:
-                    o['convoy'] = any(g == g2 or o['via_convoy']
-                                      for g2, o2 in matching)
-                    o['foreign'] = o['via_convoy']
+                    o['convoy'] = bool(matching)
         return [v for k, v in sorted(orders.iteritems())]
 
     def immediate_fails(self, orders):
