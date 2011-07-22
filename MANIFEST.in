@@ -1,0 +1,3 @@
+recursive-include diplomacy/fixtures *.json
+recursive-include diplomacy/media *.js *.css *.png *.jpg *.svg
+recursive-include diplomacy/templates *.html
