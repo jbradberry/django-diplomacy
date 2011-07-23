@@ -1,10 +1,6 @@
 from django.conf.urls.defaults import *
 
 urlpatterns = patterns('',
-    # DEVELOPMENT ONLY
-    (r'^media/(?P<path>.*)$', 'django.views.static.serve',
-     {'document_root': '/home/jrb/dev/apps/diplomacy/media/'}),
-    # END DEVELOPMENT ONLY
     (r'^$', 'diplomacy.views.games_list'),
     (r'^games/$', 'diplomacy.views.games_list'),
     (r'^games/page/(?P<page>\w+)/$', 'diplomacy.views.games_list'),
