@@ -455,6 +455,15 @@ class Turn(models.Model):
             'game': self.game.slug,
             'turn': '%s%s' % (self.season, self.year)})
 
+    def previous(self):
+        seasons = {'S': ['F', 'FR', 'FA'],
+                   'SR': ['S'],
+                   'F': ['S', 'SR'],
+                   'FR': ['F'],
+                   'FA': ['F', 'FR']}
+        return self.game.turn_set.filter(season__in=seasons[self.season],
+                                         number__gt=self.number - 5)
+
     def governments(self):
         gvts = Government.objects.filter(game=self.game)
         owns = Ownership.objects.filter(turn=self, territory__is_supply=True)
@@ -995,6 +1004,9 @@ class Ownership(models.Model):
 
 
 class Unit(models.Model):
+    class Meta:
+        ordering = ['-turn', 'government', 'subregion']
+
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
