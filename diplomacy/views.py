@@ -92,5 +92,5 @@ def map_view(request, slug, season=None, year=None):
         t = get_object_or_404(Turn, game=g, season=season, year=int(year))
     else:
         t = game.current_turn()
-    return render_to_response('diplomacy/map.html', {'game': game,
-                                                     'turn': t})
+    return direct_to_template(request, 'diplomacy/map.html',
+                              {'game': game, 'turn': t})

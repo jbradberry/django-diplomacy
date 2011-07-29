@@ -16,14 +16,18 @@
       }
 
       $("#map").ready(function() {
-        $.getJSON("../state/", {}, colormap);
+        $.getJSON({% if turn %}
+                    "{% url turn_state game.slug turn.season turn.year %}"
+                  {% else %}
+                    "{% url game_state game.slug %}"
+                  {% endif %}, {}, colormap);
       });
     </script>
 {% endblock %}
 
 {% block content %}
     <div id="display">
-      <object type="image/svg+xml" data="/diplomacy/media/img/map.svg"
+      <object type="image/svg+xml" data="{{ MEDIA_URL }}img/map.svg"
 	height="600" id="map">
       </object>
     </div>
