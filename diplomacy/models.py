@@ -819,7 +819,7 @@ class Turn(models.Model):
                         break
 
     def update_units(self, orders, decisions):
-        self.prev = Turn.objects.get(number=self.number-1)
+        self.prev = self.game.turn_set.get(number=self.number-1)
 
         orders = dict(orders)
         units = dict(((territory(u.subregion), x),
@@ -842,7 +842,7 @@ class Turn(models.Model):
             Unit.objects.create(**u)
 
     def update_ownership(self):
-        prev = Turn.objects.get(number=self.number-1)
+        prev = self.game.turn_set.get(number=self.number-1)
         for t in Territory.objects.all():
             u = self.unit_set.filter(subregion__territory=t)
 
