@@ -852,11 +852,11 @@ class Turn(models.Model):
 
     def update_ownership(self):
         prev = self.game.turn_set.get(number=self.number-1)
-        for t in Territory.objects.all():
+        for t in Territory.objects.filter(subregion__sr_type='L'):
             u = self.unit_set.filter(subregion__territory=t)
 
             try:
-                if self.season == 'F' and u.exists():
+                if self.season == 'FA' and u.exists():
                     gvt = u[0].government
                 else:
                     gvt = prev.ownership_set.get(territory=t).government
