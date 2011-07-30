@@ -646,8 +646,9 @@ class Turn(models.Model):
             if units.get().government != order['government']:
                 return False
         elif order['action'] == 'B':
-            if not order['government'].owns.filter(
-                turn=self, territory__subregion=order['actor']).exists():
+            if not self.ownership_set.filter(
+                territory__subregion=order['actor'],
+                government=order['government']).exists():
                 return False
 
         actions = {'H': self.valid_hold,
