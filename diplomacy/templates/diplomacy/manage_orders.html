@@ -79,8 +79,6 @@
 	    form.find("select[name$=assist]").change(function() {
 	      assist = $(this).val();
 	      var current = tree[actor][action][assist];
-              console.log(objlen(current));
-              console.log(in_obj("", current));
 	      filter(form.find("select[name$=target]"), current);
 	    }).trigger("change");
 
