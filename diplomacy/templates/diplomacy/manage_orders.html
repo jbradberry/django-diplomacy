@@ -58,6 +58,8 @@
 	  $("tr.form").each(function() {
 	    var form = $(this);
 	    var actor, action, assist;
+
+            filter(form.find("select[name$=actor]"), tree);
 	
 	    if ( unit_fixed ) {
 	      actor = form.find("select[name$=actor]");
