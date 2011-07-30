@@ -670,7 +670,8 @@ class Turn(models.Model):
         # fallback orders
         if self.season == 'FA':
             orders = dict(((g, s), {'government': g, 'slot': s, 'turn': self})
-                          for g in gvts for s in abs(g.builds_available()))
+                          for g in gvts
+                          for s in xrange(abs(g.builds_available())))
         else:
             action = 'H' if self.season in ('S', 'F') else None
             orders = dict(((g, s),
