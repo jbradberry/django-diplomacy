@@ -598,7 +598,7 @@ class Turn(models.Model):
         if not self.season == 'FA':
             return {}
         T = actor.territory
-        G = T.ownership_set.get(turn=self)
+        G = T.ownership_set.get(turn=self).government
         if not (T.is_supply and G.builds_available() > 0):
             return {}
         if T.subregion_set.filter(unit__turn=self).exists():
