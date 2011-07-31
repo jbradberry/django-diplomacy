@@ -1,5 +1,5 @@
 from django.views.generic.list_detail import object_list, object_detail
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import get_object_or_404
 from django.views.generic.simple import direct_to_template
 from django.forms.models import ModelChoiceField
 from django.forms.formsets import formset_factory
@@ -26,14 +26,14 @@ def games_list(request, page=1, paginate_by=30, state=None):
 def games_detail(request, slug):
     game = get_object_or_404(Game, slug=slug)
     t = game.current_turn()
-    return render_to_response('diplomacy/game_detail.html',
-                              {'game': game, 'turn': t})
+    return direct_to_template(request, 'diplomacy/game_detail.html',
+                              extra_context={'game': game, 'turn': t})
 
 def turns_detail(request, slug, season, year):
     game = get_object_or_404(Game, slug=slug)
     t = get_object_or_404(Turn, game=game, season=season, year=year)
-    return render_to_response('diplomacy/turn_detail.html',
-                              {'game': game, 'turn': t})
+    return direct_to_template(request, 'diplomacy/turn_detail.html',
+                              extra_context={'game': game, 'turn': t})
 
 @login_required
 def orders(request, slug, power):
