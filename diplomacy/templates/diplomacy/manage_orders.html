@@ -99,6 +99,27 @@
 {% endblock %}
     
 {% block content %}
+    {% block map %}
+    <script type="text/javascript">
+      function colormap(lst) {
+        var map = $("#map")[0].getSVGDocument();
+        $.each(lst, function(i, v) {
+          var id = "#"+v[0];
+          var territory = $(map).find(id)[0];
+          territory.style.setProperty("fill", v[1], "");
+        });
+      }
+
+      $("#map").ready(function() {
+        $.getJSON("../../state/", {}, colormap);
+      });
+    </script>
+    <object type="image/svg+xml" data="{{ MEDIA_URL }}img/map.svg"
+      width=477 height=400 id="map">
+      Browser does not support SVG!
+    </object>
+    {% endblock %}
+
     <form method="POST" action="">{% csrf_token %}
       {{ formset.management_form }}
       {{ formset.non_form_errors.as_ul }}
