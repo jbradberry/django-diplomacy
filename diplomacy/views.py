@@ -8,8 +8,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
 from django.utils import simplejson
 from django.db.models import ForeignKey, Max
-from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion
-from diplomacy.forms import OrderForm, OrderFormSet
+from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion, Request
+from diplomacy.forms import OrderForm, OrderFormSet, JoinRequestForm
 import re
 
 def games_list(request, page=1, paginate_by=30, state=None):
@@ -28,6 +28,22 @@ def games_detail(request, slug):
     t = game.current_turn()
     return direct_to_template(request, 'diplomacy/game_detail.html',
                               extra_context={'game': game, 'turn': t})
+
+def games_join(request, slug):
+    game = get_object_or_404(Game, slug=slug)
+    form = None
+    if game.open_joins and request.user.is_authenticated():
+        join = Request.objects.filter(game=game, user=request.user)
+        join = join.get() if join else Request(game=game, user=request.user)
+        form = JoinRequestForm(request.POST or None,
+                               initial={'text': join.text})
+        if form.is_valid():
+            join.text = form.cleaned_data['text']
+            join.active = request.POST.get('join', False)
+            join.save()
+    return direct_to_template(request, 'diplomacy/game_join.html',
+                              extra_context={'game': game, 'form': form,
+                                             'join': join})
 
 def turns_detail(request, slug, season, year):
     game = get_object_or_404(Game, slug=slug)

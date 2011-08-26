@@ -88,10 +88,13 @@ class Game(models.Model):
     )
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
+    description = models.TextField()
     owner = models.ForeignKey(User)
     created = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
-    requests = models.ManyToManyField(User, related_name='requests')
+    open_joins = models.BooleanField(default=True)
+    requests = models.ManyToManyField(User, through='Request',
+                                      related_name='requests')
 
     def __unicode__(self):
         return self.name
@@ -433,6 +436,13 @@ def game_changed(sender, **kwargs):
                                     u_type=convert[sr.sr_type],
                                     subregion=sr)
 post_save.connect(game_changed, sender=Game)
+
+
+class Request(models.Model):
+    user = models.ForeignKey(User)
+    game = models.ForeignKey(Game)
+    active = models.BooleanField()
+    text = models.TextField()
 
 
 class Turn(models.Model):

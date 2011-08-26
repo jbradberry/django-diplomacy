@@ -1,5 +1,5 @@
+from django.forms import Form, CharField, Textarea, ValidationError
 from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
-from django.forms import ValidationError
 from diplomacy.models import Order, Subregion, Unit
 
 convert = {'L': 'A', 'S': 'F'}
@@ -94,3 +94,7 @@ class OrderFormSet(BaseFormSet):
                 u = "unit" if builds == -1 else "units"
                 msg = "You must disband exactly %d %s." % (abs(builds), u)
                 raise ValidationError(msg)
+
+
+class JoinRequestForm(Form):
+    text = CharField(widget=Textarea)
