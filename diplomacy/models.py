@@ -88,7 +88,7 @@ class Game(models.Model):
     )
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
-    description = models.TextField()
+    description = models.TextField(blank=True)
     owner = models.ForeignKey(User)
     created = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
