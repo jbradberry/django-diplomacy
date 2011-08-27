@@ -4,15 +4,17 @@
 
 {% block extra_head %}{% endblock %}
 
-{% block page_title %}Join Request{% endblock %}
-
 {% block breadcrumbs %}
 {{ block.super }}
 &rsaquo;
 Join
 {% endblock %}
 
+{% block page_title %}{{ game.name }} - Join Request{% endblock %}
+
 {% block content %}
+  <p>{{ game.description }}</p>
+  {% if form %}
     <form method="POST" action="">{% csrf_token %}
       {{ form }}
       {% if not join.id %}
@@ -24,4 +26,7 @@ Join
 	<input type="submit" value="Rejoin" name="join" />
       {% endif %}{% endif %}
     </form>
+  {% else %}
+    <p>Requests to join are not open at this time.</p>
+  {% endif %}
 {% endblock %}

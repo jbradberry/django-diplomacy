@@ -29,10 +29,11 @@ def games_detail(request, slug):
     return direct_to_template(request, 'diplomacy/game_detail.html',
                               extra_context={'game': game, 'turn': t})
 
+@login_required
 def games_join(request, slug):
     game = get_object_or_404(Game, slug=slug)
-    form = None
-    if game.open_joins and request.user.is_authenticated():
+    context = {'game': game}
+    if game.open_joins:
         join = Request.objects.filter(game=game, user=request.user)
         join = join.get() if join else Request(game=game, user=request.user)
         form = JoinRequestForm(request.POST or None,
@@ -41,9 +42,9 @@ def games_join(request, slug):
             join.text = form.cleaned_data['text']
             join.active = request.POST.get('join', False)
             join.save()
+        context.update(form=form, join=join)
     return direct_to_template(request, 'diplomacy/game_join.html',
-                              extra_context={'game': game, 'form': form,
-                                             'join': join})
+                              extra_context=context)
 
 def turns_detail(request, slug, season, year):
     game = get_object_or_404(Game, slug=slug)
