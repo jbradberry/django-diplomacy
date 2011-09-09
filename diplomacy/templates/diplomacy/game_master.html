@@ -1,0 +1,28 @@
+{% extends "diplomacy/game_list.html" %}
+
+{% block title %}Master | {{ block.super }}{% endblock %}
+
+{% block page_title %}{{ game.name }}{% endblock %}
+
+{% block breadcrumbs %}
+{{ block.super }}
+&rsaquo;
+Game Master
+{% endblock %}
+
+{% block content %}
+<form method="POST" action="">{% csrf_token %}
+{% if game.state == "S" %}
+<input type="submit" value="Activate" name="activate" />
+{% endif %}
+{% if game.state == "A" %}
+<input type="submit" value="Generate" name="generate" />
+<input type="submit" value="Pause" name="pause" />
+<input type="submit" value="Close" name="close" />
+{% endif %}
+{% if game.state == "P" %}
+<input type="submit" value="Unpause" name="unpause" />
+{% endif %}
+</form>
+
+{% endblock %}

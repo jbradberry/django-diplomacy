@@ -98,3 +98,7 @@ class OrderFormSet(BaseFormSet):
 
 class JoinRequestForm(Form):
     text = CharField(widget=Textarea)
+
+
+class GameMasterForm(Form):
+    pass

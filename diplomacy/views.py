@@ -9,7 +9,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidde
 from django.utils import simplejson
 from django.db.models import ForeignKey, Max
 from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion, Request
-from diplomacy.forms import OrderForm, OrderFormSet, JoinRequestForm
+from diplomacy.forms import OrderForm, OrderFormSet, JoinRequestForm, GameMasterForm
 import re
 
 def games_list(request, page=1, paginate_by=30, state=None):
@@ -45,6 +45,30 @@ def games_join(request, slug):
         context.update(form=form, join=join)
     return direct_to_template(request, 'diplomacy/game_join.html',
                               extra_context=context)
+
+@login_required
+def games_master(request, slug):
+    game = get_object_or_404(Game, slug=slug)
+    if request.user != game.owner:
+        return HttpResponseForbidden("<h1>Permission denied</h1>")
+    form = GameMasterForm(request.POST or None)
+    if form.is_valid():
+        if request.POST.get('activate', False) and game.state == 'S':
+            game.state = 'A'
+            game.save()
+        if request.POST.get('generate', False) and game.state == 'A':
+            game.generate()
+        if request.POST.get('pause', False) and game.state == 'A':
+            game.state = 'P'
+            game.save()
+        if request.POST.get('close', False) and game.state == 'A':
+            game.state = 'F'
+            game.save()
+        if request.POST.get('unpause', False) and game.state == 'P':
+            game.state = 'A'
+            game.save()
+    return direct_to_template(request, 'diplomacy/game_master.html',
+                              extra_context={'game': game, 'form': form})
 
 def turns_detail(request, slug, season, year):
     game = get_object_or_404(Game, slug=slug)
