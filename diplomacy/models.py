@@ -89,7 +89,7 @@ class Game(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
     description = models.TextField(blank=True)
-    owner = models.ForeignKey(User)
+    owner = models.ForeignKey(User, related_name="diplomacy_games")
     created = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
     open_joins = models.BooleanField(default=True)
