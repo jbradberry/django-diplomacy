@@ -1,34 +1,12 @@
 {% extends "diplomacy/game_detail.html" %}
 
-{% block title %}Map | {% if turn %}{{ turn }} | {% endif %}{{ block.super }}{% endblock %}
+{% block title %}Map | {{ turn }} | {{ block.super }}{% endblock %}
 {% block extra_head %}
     <script type="text/javascript"
     src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js">
     </script>
-    <script type="text/javascript">
-      function colormap(lst) {
-        var map = $("#map")[0].getSVGDocument();
-        $.each(lst, function(i, v) {
-          var id = "#"+v[0];
-          var territory = $(map).find(id)[0];
-          territory.style.setProperty("fill", v[1], "");
-        });
-      }
-
-      $("#map").ready(function() {
-        $.getJSON({% if turn %}
-                    "{% url turn_state game.slug turn.season turn.year %}"
-                  {% else %}
-                    "{% url game_state game.slug %}"
-                  {% endif %}, {}, colormap);
-      });
-    </script>
 {% endblock %}
 
 {% block content %}
-    <div id="display">
-      <object type="image/svg+xml" data="{{ MEDIA_URL }}img/map.svg"
-	height="600" id="map">
-      </object>
-    </div>
+  {% include "diplomacy/map_card.html" %}
 {% endblock %}

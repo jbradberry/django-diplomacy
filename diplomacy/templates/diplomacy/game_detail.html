@@ -8,20 +8,6 @@
     <script type="text/javascript"
     src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js">
     </script>
-    <script type="text/javascript">
-      function colormap(lst) {
-        var map = $("#map")[0].getSVGDocument();
-        $.each(lst, function(i, v) {
-          var id = "#"+v[0];
-          var territory = $(map).find(id)[0];
-          territory.style.setProperty("fill", v[1], "");
-        });
-      }
-
-      $("#map").ready(function() {
-        $.getJSON("state/", {}, colormap);
-      });
-    </script>
 {% endblock %}
 
 {% block page_title %}{{ game.name }}{% endblock %}
@@ -35,12 +21,7 @@
 {% block content %}
     <h2>{{ turn }}</h2>
 
-    {% block map %}
-    <object type="image/svg+xml" data="{{ MEDIA_URL }}img/map.svg"
-      width=477 height=400 id="map">
-      Browser does not support SVG!
-    </object>
-    {% endblock %}
+    {% include "diplomacy/map_card.html" %}
 
     <table>
       <thead>
@@ -50,15 +31,13 @@
 	  <th>SC</th>
 	</tr>
       </thead>
-      {% with game.current_turn as cturn %}
       {% for government, sc in turn.governments %}
       <tr class="{{ government.power }}">
 	<td>{{ government }}</td>
-	<td>{% if turn.id == cturn.id %}<a href="{% url diplomacy.views.orders game.slug government.power.name %}">{% endif %}{{ government.power }}{% if turn.id == cturn.id %}</a>{% endif %}</td>
+	<td>{% if current_turn %}<a href="{% url diplomacy.views.orders game.slug government.power.name %}">{{ government.power }}</a>{% else %}{{ government.power }}{% endif %}</td>
 	<td>{{ sc }}</td>
       </tr>
       {% endfor %}
-      {% endwith %}
     </table>
 
     <table>

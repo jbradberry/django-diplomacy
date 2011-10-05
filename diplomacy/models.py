@@ -101,9 +101,7 @@ class Game(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        if self.state == 'S':
-            return ('diplomacy.views.games_join', (), {'slug': self.slug})
-        return ('diplomacy.views.games_detail', (), {'slug': self.slug})
+        return ('game_detail', (), {'slug': self.slug})
 
     def current_turn(self):
         if self.turn_set.exists():
@@ -462,7 +460,7 @@ class Turn(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('diplomacy.views.turns_detail', (), {
+        return ('turn_detail', (), {
             'game': self.game.slug,
             'turn': '%s%s' % (self.season, self.year)})
 

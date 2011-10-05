@@ -12,7 +12,24 @@ from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion
 from diplomacy.forms import OrderForm, OrderFormSet, JoinRequestForm, GameMasterForm
 import re
 
-def games_list(request, page=1, paginate_by=30, state=None):
+
+colors = {'Austria-Hungary': '#a41a10',
+          'England': '#1010a3',
+          'France': '#126dc0',
+          'Germany': '#5d5d5d',
+          'Italy': '#30a310',
+          'Russia': '#7110a2',
+          'Turkey': '#e6e617'}
+colors = simplejson.dumps(colors)
+
+def map_state(game, turn):
+    owns = [(re.sub('[ .]', '', T.name.lower()), G.power.name)
+            for G in game.government_set.all()
+            for T in Territory.objects.filter(ownership__turn=turn,
+                                              ownership__government=G)]
+    return {'state': simplejson.dumps(owns), 'colors': colors}
+
+def game_list(request, page=1, paginate_by=30, state=None):
     game_list = Game.objects.annotate(t=Max('turn__generated')).order_by('-t')
     if state:
         game_list = game_list.filter(state__iexact=state)
@@ -23,14 +40,21 @@ def games_list(request, page=1, paginate_by=30, state=None):
                        template_object_name="game",
                        extra_context={"state": state})
 
-def games_detail(request, slug):
+def game_detail(request, slug, season=None, year=None):
     game = get_object_or_404(Game, slug=slug)
-    t = game.current_turn()
+    if season is None and year is None:
+        t, current = game.current_turn(), True
+    else:
+        t = get_object_or_404(game.turn_set, season=season, year=year)
+        current = False
+    context = {'game': game, 'turn': t, 'current_turn': current,
+               'width': 477, 'height': 400}
+    context.update(**map_state(game, t))
     return direct_to_template(request, 'diplomacy/game_detail.html',
-                              extra_context={'game': game, 'turn': t})
+                              extra_context=context)
 
 @login_required
-def games_join(request, slug):
+def game_join(request, slug):
     game = get_object_or_404(Game, slug=slug)
     context = {'game': game}
     if game.open_joins:
@@ -47,7 +71,7 @@ def games_join(request, slug):
                               extra_context=context)
 
 @login_required
-def games_master(request, slug):
+def game_master(request, slug):
     game = get_object_or_404(Game, slug=slug)
     if request.user != game.owner:
         return HttpResponseForbidden("<h1>Permission denied</h1>")
@@ -70,12 +94,6 @@ def games_master(request, slug):
     return direct_to_template(request, 'diplomacy/game_master.html',
                               extra_context={'game': game, 'form': form})
 
-def turns_detail(request, slug, season, year):
-    game = get_object_or_404(Game, slug=slug)
-    t = get_object_or_404(Turn, game=game, season=season, year=year)
-    return direct_to_template(request, 'diplomacy/turn_detail.html',
-                              extra_context={'game': game, 'turn': t})
-
 @login_required
 def orders(request, slug, power):
     g = Game.objects.get(slug=slug)
@@ -96,8 +114,10 @@ def orders(request, slug, power):
         formset.save()
         return HttpResponseRedirect('../../')
 
+    context = {'formset': formset, 'game': g, 'width': 477, 'height': 400}
+    context.update(**map_state(g, turn))
     return direct_to_template(request, 'diplomacy/manage_orders.html',
-                              extra_context={'formset': formset, 'game': g})
+                              extra_context=context)
 
 # WISHLIST: dump directly to template instead?
 def select_filter(request, slug, power):
@@ -108,30 +128,12 @@ def select_filter(request, slug, power):
                                           'tree': gvt.filter_orders()}),
                         mimetype='application/json')
 
-# WISHLIST: dump directly to template instead?
-def game_state(request, slug, season=None, year=None):
-    colors = {'Austria-Hungary': '#a41a10',
-              'England': '#1010a3',
-              'France': '#126dc0',
-              'Germany': '#5d5d5d',
-              'Italy': '#30a310',
-              'Russia': '#7110a2',
-              'Turkey': '#e6e617'}
-    g = Game.objects.get(slug=slug)
-    t = g.turn_set.get(
-        season=season, year=year) if year else g.current_turn()
-    owns = [(re.sub('[ .]', '', T.name.lower()), colors[G.power.name])
-            for G in g.government_set.all()
-            for T in Territory.objects.filter(ownership__turn=t,
-                                              ownership__government=G)]
-    return HttpResponse(simplejson.dumps(owns),
-                        mimetype='application/json')
-
 def map_view(request, slug, season=None, year=None):
     game = get_object_or_404(Game, slug=slug)
     if year:
-        t = get_object_or_404(Turn, game=g, season=season, year=int(year))
+        t = get_object_or_404(Turn, game=g, season=season, year=year)
     else:
         t = game.current_turn()
-    return direct_to_template(request, 'diplomacy/map.html',
-                              {'game': game, 'turn': t})
+    context = {'game': game, 'turn': t, 'width': 715, 'height': 600}
+    context.update(**map_state(game, t))
+    return direct_to_template(request, 'diplomacy/map.html', context)

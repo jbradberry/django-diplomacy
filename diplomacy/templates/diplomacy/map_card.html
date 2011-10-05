@@ -1,0 +1,16 @@
+<script type="text/javascript" src="{{ MEDIA_URL }}js/map.js">
+</script>
+<script type="text/javascript">
+  colors = {{ colors|safe }};
+  state = {{ state|safe }};
+
+  $(window).load(function () {
+    colormap($("#map")[0]);
+  });
+</script>
+
+<div id="display">
+  <object type="image/svg+xml" data="{{ MEDIA_URL }}img/map.svg"
+	width={{ width }} height={{ height }} id="map">
+  </object>
+</div>
