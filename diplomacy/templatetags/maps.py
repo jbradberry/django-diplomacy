@@ -27,4 +27,7 @@ def map(context, width, height):
          for G in game.government_set.all()
          for T in Territory.objects.filter(ownership__turn=turn,
                                            ownership__government=G)])
+    data['units'] = simplejson.dumps(
+        [(unicode(u.subregion), u.u_type, u.government.power.name)
+         for u in turn.unit_set.filter(displaced_from__isnull=True)])
     return data
