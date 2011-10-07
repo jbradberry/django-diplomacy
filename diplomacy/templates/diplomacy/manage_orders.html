@@ -1,4 +1,5 @@
 {% extends "diplomacy/game_detail.html" %}
+{% load maps %}
 
 {% block title %}{{ formset.government.power }} | {{ block.super }}{% endblock %}
 
@@ -99,7 +100,7 @@
 {% endblock %}
     
 {% block content %}
-    {% include "diplomacy/map_card.html" %}
+    {% map 477 400  %}
 
     <form method="POST" action="">{% csrf_token %}
       {{ formset.management_form }}

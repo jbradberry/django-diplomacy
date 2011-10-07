@@ -1,11 +1,13 @@
 <script type="text/javascript" src="{{ MEDIA_URL }}js/map.js">
 </script>
 <script type="text/javascript">
-  colors = {{ colors|safe }};
-  state = {{ state|safe }};
+  var diplomacy_map = {};
+  diplomacy_map.colors = {{ colors|safe }};
+  diplomacy_map.owns = {{ owns|safe }};
 
   $(window).load(function () {
-    colormap($("#map")[0]);
+    $map = $($("#map")[0].getSVGDocument());
+    colormap($map);
   });
 </script>
 

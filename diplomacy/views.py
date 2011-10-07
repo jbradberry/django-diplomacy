@@ -10,24 +10,7 @@ from django.utils import simplejson
 from django.db.models import ForeignKey, Max
 from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion, Request
 from diplomacy.forms import OrderForm, OrderFormSet, JoinRequestForm, GameMasterForm
-import re
 
-
-colors = {'Austria-Hungary': '#a41a10',
-          'England': '#1010a3',
-          'France': '#126dc0',
-          'Germany': '#5d5d5d',
-          'Italy': '#30a310',
-          'Russia': '#7110a2',
-          'Turkey': '#e6e617'}
-colors = simplejson.dumps(colors)
-
-def map_state(game, turn):
-    owns = [(re.sub('[ .]', '', T.name.lower()), G.power.name)
-            for G in game.government_set.all()
-            for T in Territory.objects.filter(ownership__turn=turn,
-                                              ownership__government=G)]
-    return {'state': simplejson.dumps(owns), 'colors': colors}
 
 def game_list(request, page=1, paginate_by=30, state=None):
     game_list = Game.objects.annotate(t=Max('turn__generated')).order_by('-t')
@@ -47,9 +30,7 @@ def game_detail(request, slug, season=None, year=None):
     else:
         t = get_object_or_404(game.turn_set, season=season, year=year)
         current = False
-    context = {'game': game, 'turn': t, 'current_turn': current,
-               'width': 477, 'height': 400}
-    context.update(**map_state(game, t))
+    context = {'game': game, 'turn': t, 'current': current}
     return direct_to_template(request, 'diplomacy/game_detail.html',
                               extra_context=context)
 
@@ -114,8 +95,7 @@ def orders(request, slug, power):
         formset.save()
         return HttpResponseRedirect('../../')
 
-    context = {'formset': formset, 'game': g, 'width': 477, 'height': 400}
-    context.update(**map_state(g, turn))
+    context = {'formset': formset, 'game': g}
     return direct_to_template(request, 'diplomacy/manage_orders.html',
                               extra_context=context)
 
@@ -134,6 +114,5 @@ def map_view(request, slug, season=None, year=None):
         t = get_object_or_404(Turn, game=g, season=season, year=year)
     else:
         t = game.current_turn()
-    context = {'game': game, 'turn': t, 'width': 715, 'height': 600}
-    context.update(**map_state(game, t))
+    context = {'game': game, 'turn': t}
     return direct_to_template(request, 'diplomacy/map.html', context)

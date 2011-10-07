@@ -1,8 +1,7 @@
-function colormap(map) {
-  var mapsvg = map.getSVGDocument();
-  $.each(state, function(i, v) {
+function colormap($mapsvg) {
+  $.each(diplomacy_map.owns, function(i, v) {
     var id = "#"+v[0];
-    var territory = $(mapsvg).find(id)[0];
-    territory.style.setProperty("fill", colors[v[1]], "");
+    var $territory = $mapsvg.find(id);
+    $territory.attr('style', "fill: " + diplomacy_map.colors[v[1]]);
   });
 }
