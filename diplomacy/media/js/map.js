@@ -1,3 +1,8 @@
+function updatemap($mapsvg) {
+  colormap($mapsvg);
+  tokenizemap($mapsvg);
+}
+
 function colormap($mapsvg) {
   $.each(diplomacy_map.owns, function(i, v) {
     var id = "#"+v[0];
@@ -11,7 +16,6 @@ function tokenizemap($mapsvg) {
   var $army = $($mapsvg.find("#army_prototype")[0]);
   var $fleet = $($mapsvg.find("#fleet_prototype")[0]);
   $.each(diplomacy_map.units, function(i, v) {
-    console.log(v);
     if ( v[1] === 'A' ) { var $unit = $army.clone(); }
     else { var $unit = $fleet.clone(); }
 
@@ -20,5 +24,6 @@ function tokenizemap($mapsvg) {
 		'x': diplomacy_map.coordinates[v[0]][0],
 		'y': diplomacy_map.coordinates[v[0]][1]});
     $tokens.append($unit);
+    diplomacy_map.total_units += 1;
   });
 }

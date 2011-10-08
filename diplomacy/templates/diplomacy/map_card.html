@@ -86,13 +86,18 @@
     "Vienna": ['486', '476'],
     "Wales": ['222', '363'],
     "Warsaw": ['552', '403'],
-    "Yorkshire": ['278', '332'],
+    "Yorkshire": ['278', '332']
   };
+  diplomacy_map.total_units = 0;
 
   $(window).load(function () {
-    var $map = $($("#map")[0].getSVGDocument());
-    colormap($map);
-    tokenizemap($map);
+    var $mapobj = $("#map");
+    $mapobj.load(function () {
+      var $map = $($mapobj[0].getSVGDocument());
+      updatemap($map);
+    });
+    var $map = $($mapobj[0].getSVGDocument());
+    updatemap($map);
   });
 </script>
 
