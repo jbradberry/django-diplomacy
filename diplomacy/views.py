@@ -8,8 +8,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
 from django.utils import simplejson
 from django.db.models import ForeignKey, Max
-from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion, Request
-from diplomacy.forms import OrderForm, OrderFormSet, JoinRequestForm, GameMasterForm
+from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion
+from diplomacy.forms import OrderForm, OrderFormSet, GameMasterForm
 
 
 def game_list(request, page=None, paginate_by=30, state=None, **kwargs):
@@ -37,23 +37,6 @@ def game_detail(request, slug, season=None, year=None):
         current = False
     context = {'game': game, 'turn': t, 'current': current}
     return direct_to_template(request, 'diplomacy/game_detail.html',
-                              extra_context=context)
-
-@login_required
-def game_join(request, slug):
-    game = get_object_or_404(Game, slug=slug)
-    context = {'game': game}
-    if game.open_joins:
-        join = Request.objects.filter(game=game, user=request.user)
-        join = join.get() if join else Request(game=game, user=request.user)
-        form = JoinRequestForm(request.POST or None,
-                               initial={'text': join.text})
-        if form.is_valid():
-            join.text = form.cleaned_data['text']
-            join.active = request.POST.get('join', False)
-            join.save()
-        context.update(form=form, join=join)
-    return direct_to_template(request, 'diplomacy/game_join.html',
                               extra_context=context)
 
 @login_required

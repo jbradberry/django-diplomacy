@@ -96,9 +96,5 @@ class OrderFormSet(BaseFormSet):
                 raise ValidationError(msg)
 
 
-class JoinRequestForm(Form):
-    text = CharField(widget=Textarea)
-
-
 class GameMasterForm(Form):
     pass
