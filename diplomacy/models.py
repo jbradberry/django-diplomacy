@@ -3,6 +3,8 @@ from django.db.models import Count
 from django.db.models.signals import pre_save, post_save
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from random import shuffle
 from itertools import permutations
 from collections import defaultdict
@@ -102,6 +104,18 @@ class Game(models.Model):
     @models.permalink
     def get_absolute_url(self):
         return ('game_detail', (), {'slug': self.slug})
+
+    @property
+    def press(self):
+        if 'micropress' in settings.INSTALLED_APPS:
+            press = models.get_model('micropress', 'press')
+            ct = ContentType.objects.get(app_label="diplomacy",
+                                         model="game")
+            press = press.objects.filter(
+                content_type=ct,
+                object_id=self.id)
+            if press.exists():
+                return press.get()
 
     def current_turn(self):
         if self.turn_set.exists():

@@ -1,4 +1,6 @@
 from django.conf.urls.defaults import *
+from django.conf import settings
+
 
 urlpatterns = patterns('diplomacy.views',
     #(r'^$', 'game_list'),
@@ -18,3 +20,12 @@ urlpatterns = patterns('diplomacy.views',
     (r'^games/name/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/filter/$',
      'select_filter'),
 )
+
+if 'micropress' in settings.INSTALLED_APPS:
+    # optional django-micro-press
+    urlpatterns += patterns('',
+        (r'^games/name/(?P<realm_slug>[-\w]+)/news/',
+         include('micropress.urls', namespace="diplomacy",
+                 app_name="micropress"),
+         {'realm_content_type': 'diplomacy.Game'}),
+    )
