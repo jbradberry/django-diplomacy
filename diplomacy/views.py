@@ -12,16 +12,21 @@ from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion
 from diplomacy.forms import OrderForm, OrderFormSet, JoinRequestForm, GameMasterForm
 
 
-def game_list(request, page=1, paginate_by=30, state=None):
+def game_list(request, page=None, paginate_by=30, state=None, **kwargs):
     game_list = Game.objects.annotate(t=Max('turn__generated')).order_by('-t')
-    if state:
+
+    if state is None:
+        state = request.GET.get('state', None)
+
+    if state is not None:
         game_list = game_list.filter(state__iexact=state)
     return object_list(request,
                        queryset=game_list,
                        paginate_by=paginate_by,
                        page=page,
                        template_object_name="game",
-                       extra_context={"state": state})
+                       extra_context={"state": state},
+                       **kwargs)
 
 def game_detail(request, slug, season=None, year=None):
     game = get_object_or_404(Game, slug=slug)
