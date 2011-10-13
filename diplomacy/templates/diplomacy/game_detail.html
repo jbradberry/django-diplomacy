@@ -23,7 +23,7 @@
     <h2>{{ turn }}</h2>
 
   {% if game.press %}
-  <h3>Read <a href="{% url diplomacy:press_article_list realm_slug=game.slug %}">{{ game.press }}</a>!</h3>
+  <h3>Read <a href="{% url press_article_list realm_slug=game.slug %}">{{ game.press }}</a>!</h3>
   {% endif %}
 
     {% map 477 400 %}

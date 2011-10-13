@@ -1,7 +1,6 @@
 from django.views.generic.list_detail import object_list, object_detail
 from django.shortcuts import get_object_or_404
 from django.views.generic.simple import direct_to_template
-from django.forms.models import ModelChoiceField
 from django.forms.formsets import formset_factory
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
