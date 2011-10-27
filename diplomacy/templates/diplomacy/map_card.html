@@ -90,14 +90,12 @@
   };
   diplomacy_map.total_units = 0;
 
-  $(window).load(function () {
+  $(function () {
     var $mapobj = $("#map");
-    $mapobj.load(function () {
+    $mapobj.bind('load', function () {
       var $map = $($mapobj[0].getSVGDocument());
       updatemap($map);
     });
-    var $map = $($mapobj[0].getSVGDocument());
-    updatemap($map);
   });
 </script>
 
