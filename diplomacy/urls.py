@@ -3,18 +3,17 @@ from django.conf import settings
 
 
 urlpatterns = patterns('diplomacy.views',
-    #(r'^$', 'game_list'),
-    url(r'^games/$', 'game_list', name='game_list'),
-    url(r'^games/(?P<slug>[-\w]+)/$', 'game_detail', name='game_detail'),
-    (r'^games/(?P<slug>[-\w]+)/master/$', 'game_master'),
-    url(r'^games/(?P<slug>[-\w]+)/map/$', 'map_view', name='game_map'),
+    url(r'^games/$', 'game_list', name='diplomacy_game_list'),
+    url(r'^games/(?P<slug>[-\w]+)/$', 'game_detail', name='diplomacy_game_detail'),
+    url(r'^games/(?P<slug>[-\w]+)/master/$', 'game_master', name='diplomacy_game_master'),
+    url(r'^games/(?P<slug>[-\w]+)/map/$', 'map_view', name='diplomacy_game_map'),
     url(r'^games/(?P<slug>[-\w]+)/turn/(?P<season>[A-Z]+)(?P<year>\d+)/$',
-        'game_detail', name='turn_detail'),
+        'game_detail', name='diplomacy_turn_detail'),
     url(r'^games/(?P<slug>[-\w]+)/turn/(?P<season>[A-Z]+)(?P<year>\d+)/map/$',
-        'map_view', name='turn_map'),
-    (r'^games/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/$', 'orders'),
-    (r'^games/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/filter/$',
-     'select_filter'),
+        'map_view', name='diplomacy_turn_map'),
+    url(r'^games/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/$', 'orders', name='diplomacy_orders'),
+    url(r'^games/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/filter/$',
+     'select_filter', name='diplomacy_select_filter'),
 )
 
 if 'micropress' in settings.INSTALLED_APPS:

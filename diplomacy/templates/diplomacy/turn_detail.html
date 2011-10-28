@@ -5,5 +5,5 @@
 {% block breadcrumbs %}
 {{ block.super }}
 &rsaquo;
-<a href="{% url diplomacy.views.turns_detail game.slug turn.season turn.year %}">{{ turn }}</a>
+<a href="{% url diplomacy_turn_detail game.slug turn.season turn.year %}">{{ turn }}</a>
 {% endblock %}
