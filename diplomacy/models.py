@@ -101,7 +101,7 @@ class Game(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('game_detail', (), {'slug': self.slug})
+        return ('diplomacy_game_detail', (), {'slug': self.slug})
 
     @property
     def press(self):
@@ -465,9 +465,10 @@ class Turn(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('turn_detail', (), {
-            'game': self.game.slug,
-            'turn': '%s%s' % (self.season, self.year)})
+        return ('diplomacy_turn_detail', (), {
+            'slug': self.game.slug,
+            'season': self.season,
+            'year': str(self.year),})
 
     def previous(self):
         seasons = {'S': ['F', 'FR', 'FA'],
