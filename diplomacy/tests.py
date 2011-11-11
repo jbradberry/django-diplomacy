@@ -28,8 +28,7 @@ class CorrectnessHelperTest(TestCase):
         self.gvt = models.Government.objects.create(
             name="England", user=self.owner, game=self.game)
         self.turn = self.game.turn_set.create(number=0)
-        self.game.state = 'A'
-        self.game.save()
+        self.game.activate()
 
     def tearDown(self):
         self.owner.delete()

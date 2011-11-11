@@ -118,8 +118,6 @@ class Game(models.Model):
     def current_turn(self):
         if self.turn_set.exists():
             return self.turn_set.latest()
-        else:
-            return None
 
     def detect_civil_disorder(self, orders):
         return [gvt for gvt in self.government_set.all()
@@ -399,6 +397,32 @@ class Game(models.Model):
     def resolve_adjusts(self, orders):
         pass
 
+    def activate(self):
+        if self.state != 'S' or self.turn_set.exists():
+            return False
+        if self.government_set.count() != 7:
+            return False
+        turn = self.turn_set.create(number=0)
+        governments = list(self.government_set.all())
+        shuffle(governments)
+        for pwr, gvt in zip(Power.objects.all(), governments):
+            gvt.power = pwr
+            gvt.save()
+            for t in Territory.objects.filter(power=pwr):
+                Ownership(turn=turn, government=gvt, territory=t).save()
+
+            sr_set = Subregion.objects.filter(territory__power=pwr,
+                                              init_unit=True)
+            for sr in sr_set:
+                gvt.unit_set.create(turn=turn,
+                                    u_type=convert[sr.sr_type],
+                                    subregion=sr)
+        self.state = 'A'
+        self.save()
+        return True
+
+    activate.alters_data = True
+
     def generate(self):
         turn = self.current_turn()
 
@@ -426,27 +450,6 @@ class Game(models.Model):
         turn.consistency_check()
 
     generate.alters_data = True
-
-
-def game_changed(sender, **kwargs):
-    instance = kwargs['instance']
-    if instance.state == 'A' and not instance.turn_set.exists():
-        turn = instance.turn_set.create(number=0)
-        governments = list(instance.government_set.all())
-        shuffle(governments)
-        for pwr, gvt in zip(Power.objects.all(), governments):
-            gvt.power = pwr
-            gvt.save()
-            for t in Territory.objects.filter(power=pwr):
-                Ownership(turn=turn, government=gvt, territory=t).save()
-
-            sr_set = Subregion.objects.filter(territory__power=pwr,
-                                              init_unit=True)
-            for sr in sr_set:
-                gvt.unit_set.create(turn=turn,
-                                    u_type=convert[sr.sr_type],
-                                    subregion=sr)
-post_save.connect(game_changed, sender=Game)
 
 
 class Turn(models.Model):

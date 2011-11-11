@@ -133,7 +133,6 @@
       "created": "2011-05-07 16:24:45", 
       "state": "S", 
       "owner": 1, 
-      "requests": [], 
       "slug": "test"
     }
   }, 
@@ -156,7 +155,6 @@
       "created": "2011-05-07 16:24:45", 
       "state": "A", 
       "owner": 1, 
-      "requests": [], 
       "slug": "test"
     }
   }, 

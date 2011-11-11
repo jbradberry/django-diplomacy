@@ -46,8 +46,7 @@ def game_master(request, slug):
     form = GameMasterForm(request.POST or None)
     if form.is_valid():
         if request.POST.get('activate', False) and game.state == 'S':
-            game.state = 'A'
-            game.save()
+            game.activate()
         if request.POST.get('generate', False) and game.state == 'A':
             game.generate()
         if request.POST.get('pause', False) and game.state == 'A':
