@@ -937,7 +937,7 @@ class Government(models.Model):
     name = models.CharField(max_length=100)
     user = models.ForeignKey(User, null=True, blank=True)
     game = models.ForeignKey(Game)
-    power = models.ForeignKey(Power, null=True)
+    power = models.ForeignKey(Power, null=True, blank=True)
     owns = models.ManyToManyField(Territory, through='Ownership')
 
     def __unicode__(self):
