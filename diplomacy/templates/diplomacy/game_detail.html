@@ -46,15 +46,6 @@
     </table>
 
     <table>
-      {% for unit in turn.unit_set.all %}
-      <tr>
-	<td>{{ unit.government.power }}</td>
-	<td>{{ unit }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-
-    <table>
       {% for t in turn.previous %}
         {% for o in t.canonical_orders %}
         <tr>
