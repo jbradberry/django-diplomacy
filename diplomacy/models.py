@@ -482,8 +482,11 @@ class Turn(models.Model):
     def governments(self):
         gvts = Government.objects.filter(game=self.game)
         owns = Ownership.objects.filter(turn=self, territory__is_supply=True)
-        return sorted([(g, sum(1 for t in owns if t.government.id == g.id))
-                       for g in gvts], key=lambda x: (-x[1], x[0].power.name))
+        units = self.unit_set.all()
+        return sorted(
+            [(g, owns.filter(government=g).count(),
+              units.filter(government=g).count()) for g in gvts],
+            key=lambda x: (-x[1], -x[2], x[0].power.name))
 
     def find_convoys(self, fleets=None):
         """

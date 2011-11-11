@@ -34,13 +34,15 @@
 	  <th>Name</th>
 	  <th>Power</th>
 	  <th>SC</th>
+	  <th>Units</th>
 	</tr>
       </thead>
-      {% for government, sc in turn.governments %}
+      {% for government, sc, uc in turn.governments %}
       <tr class="{{ government.power }}">
 	<td>{{ government }}</td>
 	<td>{% if current %}<a href="{% url diplomacy_orders game.slug government.power.name %}">{{ government.power }}</a>{% else %}{{ government.power }}{% endif %}</td>
 	<td>{{ sc }}</td>
+	<td>{{ uc }}</td>
       </tr>
       {% endfor %}
     </table>
