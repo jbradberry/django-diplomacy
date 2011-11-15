@@ -20,7 +20,6 @@ def map(context, width, height):
     turn = context.get('turn', game.current_turn())
 
     data = {'width': width, 'height': height}
-    data['MEDIA_URL'] = context['MEDIA_URL']
     data['colors'] = simplejson.dumps(colors)
     data['owns'] = simplejson.dumps(
         [(re.sub('[ .]', '', T.name.lower()), G.power.name)
