@@ -1,0 +1,13 @@
+<div class="turn-paging">
+<div class="turn-prev">
+{% if turn.prev %}
+  <a href="{% url diplomacy_turn_detail game.slug turn.prev.season turn.prev.year %}">{{ turn.prev }}</a>
+{% endif %}
+</div>
+
+<div class="turn-next">
+{% if turn.next %}
+  <a href="{% url diplomacy_turn_detail game.slug turn.next.season turn.next.year %}">{{ turn.next }}</a>
+{% endif %}
+</div>
+</div>

@@ -1,9 +1,0 @@
-{% extends "diplomacy/game_detail.html" %}
-
-{% block title %}{{ turn }} | {{ block.super }}{% endblock %}
-
-{% block breadcrumbs %}
-{{ block.super }}
-&rsaquo;
-<a href="{% url diplomacy_turn_detail game.slug turn.season turn.year %}">{{ turn }}</a>
-{% endblock %}

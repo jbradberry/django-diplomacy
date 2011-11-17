@@ -1,8 +1,8 @@
 {% extends "diplomacy/game_list.html" %}
 {% load maps %}
 
-{% block title %}{{ game.name }} | {{ block.super }}{% endblock %}
-  
+{% block title %}{% if not current %}{{ turn }} | {% endif %}{{ game.name }} | {{ block.super }}{% endblock %}
+
 {% block extra_head %}
     <link rel="stylesheet" href="{{ STATIC_URL }}css/game.css"
       type="text/css">
@@ -16,11 +16,17 @@
 {% block breadcrumbs %}
 {{ block.super }}
 &rsaquo;
-<a href="{{ game.get_absolute_url }}">{{ game.name }}</a>
+<a href="{% url diplomacy_game_detail game.slug %}">{{ game.name }}</a>
+{% if not current %}
+&rsaquo;
+<a href="{% url diplomacy_turn_detail game.slug turn.season turn.year %}">{{ turn }}</a>
+{% endif %}
 {% endblock %}
 
 {% block content %}
-    <h2>{{ turn }}</h2>
+  <h2>{{ turn }}</h2>
+
+  {% include "diplomacy/turn_paging.html" %}
 
   {% if game.press %}
   <h3>Read <a href="{% url diplomacy:press_article_list realm_slug=game.slug %}">{{ game.press }}</a>!</h3>
@@ -48,7 +54,7 @@
     </table>
 
     <table>
-      {% for t in turn.previous %}
+      {% for t in turn.recent %}
         {% for o in t.canonical_orders %}
         <tr>
 	  <td>{{ o.government.power }}</td>

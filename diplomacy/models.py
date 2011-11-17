@@ -473,14 +473,27 @@ class Turn(models.Model):
             'season': self.season,
             'year': str(self.year),})
 
-    def previous(self):
+    @property
+    def prev(self):
+        earlier = self.game.turn_set.filter(number=self.number - 1)
+        if earlier:
+            return earlier.get()
+
+    @property
+    def next(self):
+        later = self.game.turn_set.filter(number=self.number + 1)
+        if later:
+            return later.get()
+
+    def recent(self):
         seasons = {'S': ['F', 'FR', 'FA'],
                    'SR': ['S'],
                    'F': ['S', 'SR'],
                    'FR': ['F'],
                    'FA': ['F', 'FR']}
         return self.game.turn_set.filter(season__in=seasons[self.season],
-                                         number__gt=self.number - 5)
+                                         number__gt=self.number - 5,
+                                         number__lt=self.number)
 
     def governments(self):
         gvts = Government.objects.filter(game=self.game)
@@ -851,8 +864,6 @@ class Turn(models.Model):
                         break
 
     def update_units(self, orders, decisions):
-        self.prev = self.game.turn_set.get(number=self.number-1)
-
         orders = dict(orders)
         units = dict(((territory(u.subregion), x),
                       {'turn': self, 'government': u.government,
