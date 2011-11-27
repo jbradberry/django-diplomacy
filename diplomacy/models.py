@@ -8,6 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from random import shuffle
 from itertools import permutations
 from collections import defaultdict
+from functools import partial
 import datetime
 
 
@@ -492,15 +493,25 @@ class Turn(models.Model):
         if later:
             return later.get()
 
-    def recent(self):
+    def recent_orders(self):
         seasons = {'S': ['F', 'FR', 'FA'],
                    'SR': ['S'],
                    'F': ['S', 'SR'],
                    'FR': ['F'],
                    'FA': ['F', 'FR']}
-        return self.game.turn_set.filter(season__in=seasons[self.season],
-                                         number__gt=self.number - 5,
-                                         number__lt=self.number)
+        c_orders = CanonicalOrder.objects.filter(
+            turn__season__in=seasons[self.season],
+            turn__number__gt=self.number - 5,
+            turn__number__lt=self.number).order_by('turn')
+
+        # dict of dicts of lists, keys=power, unit
+        orders = defaultdict(partial(defaultdict, list))
+
+        for o in c_orders:
+            p = unicode(o.government.power)
+            n = u"{0} {1}".format(convert[o.actor.sr_type], o.actor)
+            orders[p][n].append(o)
+        return orders
 
     def governments(self):
         gvts = Government.objects.filter(game=self.game)
@@ -783,6 +794,24 @@ class Turn(models.Model):
 
         return results
 
+    def create_canonical_orders(self, orders, decisions, turn):
+        decisions = dict(decisions)
+        keys = set(('government', 'actor', 'action',
+                    'assist', 'target', 'via_convoy'))
+
+        for T, o in orders.iteritems():
+            order = dict((k, v) for k, v in o.iteritems() if k in keys)
+            order['user_issued'] = o.get('id', None) is not None
+            if decisions[T]:
+                order['result'] = 'S'
+            elif any(T in db for db in turn.disbands.itervalues()):
+                order['result'] = 'D'
+            elif T in turn.displaced:
+                order['result'] = 'B'
+            else:
+                order['result'] = 'F'
+            self.canonicalorder_set.create(**order)
+
     def _update_units_changes(self, orders, decisions, units):
         self.disbands = defaultdict(set)
         self.displaced, self.failed = {}, defaultdict(list)
@@ -886,6 +915,8 @@ class Turn(models.Model):
 
         if self.prev.season == 'FA':
             self._update_units_autodisband(units)
+
+        self.prev.create_canonical_orders(orders, decisions, self)
 
         for k, u in units.iteritems():
             Unit.objects.create(**u)
@@ -1060,18 +1091,20 @@ class Unit(models.Model):
         return u'%s %s' % (self.u_type, self.subregion.territory)
 
 
+ACTION_CHOICES = (
+    ('H', 'Hold'),
+    ('M', 'Move'),
+    ('S', 'Support'),
+    ('C', 'Convoy'),
+    ('B', 'Build'),
+    ('D', 'Disband')
+)
+
+
 class Order(models.Model):
     class Meta:
         get_latest_by = "timestamp"
 
-    ACTION_CHOICES = (
-        ('H', 'Hold'),
-        ('M', 'Move'),
-        ('S', 'Support'),
-        ('C', 'Convoy'),
-        ('B', 'Build'),
-        ('D', 'Disband')
-    )
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -1095,3 +1128,27 @@ class Order(models.Model):
         if self.via_convoy:
             result += " via Convoy"
         return result
+
+
+class CanonicalOrder(models.Model):
+    RESULT_CHOICES = (
+        ('S', 'Succeeded'),
+        ('F', 'Failed'),
+        ('B', 'Bounced'),
+        ('D', 'Destroyed'),
+    )
+
+    turn = models.ForeignKey(Turn)
+    government = models.ForeignKey(Government)
+
+    actor = models.ForeignKey(Subregion, related_name='canonical_actor')
+    action = models.CharField(max_length=1, choices=ACTION_CHOICES,
+                              null=True, blank=True)
+    assist = models.ForeignKey(Subregion, null=True, blank=True,
+                               related_name='canonical_assist')
+    target = models.ForeignKey(Subregion, null=True, blank=True,
+                               related_name='canonical_target')
+    via_convoy = models.BooleanField()
+
+    user_issued = models.BooleanField()
+    result = models.CharField(max_length=1, choices=RESULT_CHOICES)
