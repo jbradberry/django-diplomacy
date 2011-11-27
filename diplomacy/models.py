@@ -177,9 +177,10 @@ class Game(models.Model):
             visit(node, orders, dep)
         return result
 
-    def consistent(self, state, orders, paradox):
+    def consistent(self, state, orders, fails, paradox):
         state = dict(state)
 
+        # REVIEW: make consistent() a method of Turn instead?
         turn = self.current_turn()
 
         hold_str = defaultdict(int)
@@ -188,17 +189,19 @@ class Game(models.Model):
         prevent_str = defaultdict(int)
         path, convoy = {}, defaultdict(lambda: False)
 
+        # determine if moves have a valid path
         for T, order in orders.iteritems():
             if order['action'] == 'M':
                 defend_str[T], path[T], P = 1, True, False
 
-                # determine if we have a valid convoy path
+                # matching successful convoy orders
                 matching = [orders[T2]['actor'].id
                             for T2, d2 in state.iteritems()
                             if d2 and orders[T2]['action'] == 'C' and
                             assist(T, order, T2, orders[T2]) and
                             (order['government'] == orders[T2]['government']
                              or order['convoy'])]
+                # matching successful and paradoxical convoy orders
                 p_matching = matching + [orders[T2]['actor'].id
                                          for T2 in paradox
                                          if assist(T, order, T2, orders[T2])
@@ -208,16 +211,24 @@ class Game(models.Model):
                 if not any(order['actor'].id in L and
                            order['target'].id in L
                            for F, L in turn.find_convoys(matching)):
+                    # we have no path if there isn't a chain of
+                    # successful convoys between our endpoints
                     path[T] = False
                     if any(order['actor'].id in L and
                            order['target'].id in L
                            for F, L in turn.find_convoys(p_matching)):
+                        # but if there is a path when paradoxical
+                        # convoys are included, we have a paradox
                         P = True
 
                 convoy[T] = path[T]
                 if order['target'] in order['actor'].borders.all():
-                    path[T] = not P # not constrained to a paradoxical convoy
+                    # if we are adjacent to the target, we can have a
+                    # path even without a successful convoy, but only
+                    # if we don't have a paradox
+                    path[T] = not P
 
+        # calculate base hold, attack, and prevent strengths
         for T, order in orders.iteritems():
             if order['action'] == 'M':
                 if path[T]:
@@ -250,6 +261,7 @@ class Game(models.Model):
             if order['action'] in ('H', 'S', 'C'):
                 hold_str[T] = 1
 
+        # calculate additions to strengths due to support orders
         for T, d in state.iteritems():
             order = orders[T]
 
@@ -278,6 +290,7 @@ class Game(models.Model):
                 if prevent_str[territory(order['assist'])]:
                     prevent_str[territory(order['assist'])] += 1
 
+        # determine if the strength calculations are consistent with the state
         for T, d in state.iteritems():
             order = orders[T]
 
@@ -298,26 +311,18 @@ class Game(models.Model):
                     move = False
                 if not path[T]:
                     move = False
+                if T in fails:
+                    move = False
 
                 if d ^ move:
                     return False
 
             if order['action'] == 'S':
-                o = orders.get(territory(order['assist']), None)
-                unmatched = False
-                if o is None:
-                    unmatched = True
-                elif o['action'] == 'M' and o['target'] != order['target']:
-                    unmatched = True
-                elif (o['action'] in ('H', 'S', 'C') and
-                      order['target'] is not None):
-                    unmatched = True
-
                 target = territory(order['target'])
                 attackers = set(T2 for T2, o2 in orders.iteritems()
                                 if o2['action'] == 'M' and
                                 territory(o2['target']) == T)
-                cut = (unmatched or
+                cut = (T in fails or
                        (target in attackers and
                         attack_str[target] > hold_str[T]) or
                        any(attack_str[T2] > 0 for T2 in attackers
@@ -327,33 +332,34 @@ class Game(models.Model):
 
             if order['action'] in ('H', 'C'):
                 hold = True
+                if T in fails:
+                    hold = False
+
                 attackers = set(T2 for T2, o2 in orders.iteritems()
                                 if o2['action'] == 'M' and
                                 territory(o2['target']) == T)
-                if not attackers:
-                    if not d:
-                        return False
-                    continue
-                S, P, A = max((attack_str[T2], prevent_str[T2], T2)
-                              for T2 in attackers)
-                if S > hold_str[T] and not any(prevent_str[T2] >= S
-                                               for T2 in attackers if T2 != A):
-                    hold = False
+                if attackers:
+                    S, P, A = max((attack_str[T2], prevent_str[T2], T2)
+                                  for T2 in attackers)
+                    if S > hold_str[T] and not any(prevent_str[T2] >= S
+                                                   for T2 in attackers
+                                                   if T2 != A):
+                        hold = False
 
                 if (d != False) ^ hold:
                     return False
 
         return True
 
-    def resolve(self, state, orders, dep, paradox):
+    def resolve(self, state, orders, dep, fails, paradox):
         _state = set(T for T, d in state)
 
         # Only bother calculating whether the hypothetical solution is
         # consistent if all orders within it have no remaining
         # unresolved dependencies.
         if all(all(o in _state for o in dep[T]) for T, d in state):
-            if not self.consistent(state, orders, paradox):
-                return ()
+            if not self.consistent(state, orders, fails, paradox):
+                return None
 
         # For those orders not already in 'state', sort from least to
         # most remaining dependencies.
@@ -370,11 +376,11 @@ class Game(models.Model):
         # for 'success'.
         resolutions = (None, False) if T in paradox else (True, False)
         for S in resolutions:
-            result = self.resolve(state+((T, S),), orders, dep, paradox)
+            result = self.resolve(state+((T, S),), orders, dep, fails, paradox)
             if result:
                 return result
 
-        return ()
+        return None
 
     def resolve_retreats(self, orders):
         decisions = []
@@ -429,19 +435,20 @@ class Game(models.Model):
         turn.consistency_check()
 
         orders = dict((territory(o['actor']), o)
-                      for o in turn.canonical_orders())
+                      for o in turn.normalize_orders())
         if turn.season in ('S', 'F'):
             # FIXME: do something with civil disorder
             disorder = self.detect_civil_disorder(orders)
             dependencies = self.construct_dependencies(orders)
             paradox_convoys = self.detect_paradox(orders, dependencies)
-            state = turn.immediate_fails(orders)
-            decisions = self.resolve(state, orders, dependencies,
-                                     paradox_convoys)
+            fails = turn.immediate_fails(orders)
+            decisions = self.resolve((), orders, dependencies,
+                                     fails, paradox_convoys)
         elif turn.season in ('SR', 'FR'):
             decisions = self.resolve_retreats(orders)
         else:
             decisions = self.resolve_adjusts(orders)
+        assert decisions
 
         turn = self.turn_set.create(number=turn.number+1)
         turn.update_units(orders, decisions)
@@ -699,7 +706,7 @@ class Turn(models.Model):
             return False
         return True
 
-    def canonical_orders(self, gvt=None):
+    def normalize_orders(self, gvt=None):
         gvts = (gvt,) if gvt else self.game.government_set.all()
 
         # fallback orders
@@ -747,7 +754,7 @@ class Turn(models.Model):
         return [v for k, v in sorted(orders.iteritems())]
 
     def immediate_fails(self, orders):
-        results = ()
+        results = set()
         for T, o in orders.iteritems():
             if o['action'] == 'M':
                 if o['target'] not in o['actor'].borders.all():
@@ -772,7 +779,7 @@ class Turn(models.Model):
                 else:
                     if assist['action'] in ('H', 'C', 'S'):
                         continue
-            results = results + ((T, False),)
+            results.add(T)
 
         return results
 
@@ -829,10 +836,10 @@ class Turn(models.Model):
             if len(self.failed[t.id]) > 1:
                 units[key]['standoff_from'] = t
 
-    def _update_units_autodisband(self):
+    def _update_units_autodisband(self, units):
         sr = Subregion.objects.all()
         for g in self.game.government_set.all():
-            builds = g.builds_available(prev) + len(self.disbands[g.id])
+            builds = g.builds_available(self.prev) + len(self.disbands[g.id])
             if builds >= 0:
                 continue
 
@@ -841,7 +848,7 @@ class Turn(models.Model):
             # For ties, disband fleets first then armies, and do
             # in alphabetical order from there, if necessary.
             g_names = dict((u.id, (u.sr_type, unicode(u))) for u in
-                           sr.filter(unit__government=g, unit__turn=prev))
+                           sr.filter(unit__government=g, unit__turn=self.prev))
             g_units = set(g_names.iterkeys())
             examined = set(sc.id for sc in
                            sr.filter(territory__power=g.power,
@@ -864,7 +871,6 @@ class Turn(models.Model):
                         break
 
     def update_units(self, orders, decisions):
-        orders = dict(orders)
         units = dict(((territory(u.subregion), x),
                       {'turn': self, 'government': u.government,
                        'u_type': u.u_type, 'subregion': u.subregion,
@@ -879,13 +885,12 @@ class Turn(models.Model):
             self._update_units_blocked(orders, decisions, units)
 
         if self.prev.season == 'FA':
-            self._update_units_autodisband()
+            self._update_units_autodisband(units)
 
         for k, u in units.iteritems():
             Unit.objects.create(**u)
 
     def update_ownership(self):
-        prev = self.game.turn_set.get(number=self.number-1)
         for t in Territory.objects.filter(subregion__sr_type='L'):
             u = self.unit_set.filter(subregion__territory=t)
 
@@ -893,7 +898,7 @@ class Turn(models.Model):
                 if self.season == 'FA' and u.exists():
                     gvt = u[0].government
                 else:
-                    gvt = prev.ownership_set.get(territory=t).government
+                    gvt = self.prev.ownership_set.get(territory=t).government
             except ObjectDoesNotExist:
                 continue
 

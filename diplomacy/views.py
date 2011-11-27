@@ -75,7 +75,7 @@ def orders(request, slug, power):
     turn = g.current_turn()
     order = gvt.order_set.filter(turn=turn)
     formset = OFormSet(gvt, not order.exists(), request.POST or None,
-                       initial=turn.canonical_orders(gvt))
+                       initial=turn.normalize_orders(gvt))
 
     if formset.is_valid():
         formset.save()
