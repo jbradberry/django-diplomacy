@@ -18,8 +18,10 @@ colors = {'Austria-Hungary': '#a41a10',
 def map(context, width, height):
     game = context['game']
     turn = context.get('turn', game.current_turn())
-
     data = {'width': width, 'height': height}
+    if turn is None:
+        return data
+
     data['colors'] = simplejson.dumps(colors)
     data['owns'] = simplejson.dumps(
         [(re.sub('[ .]', '', T.name.lower()), G.power.name)

@@ -81,7 +81,7 @@ def orders(request, slug, power):
         formset.save()
         return HttpResponseRedirect('../../')
 
-    context = {'formset': formset, 'game': g}
+    context = {'formset': formset, 'game': g, 'current': True}
     return direct_to_template(request, 'diplomacy/manage_orders.html',
                               extra_context=context)
 
