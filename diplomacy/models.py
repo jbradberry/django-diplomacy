@@ -449,7 +449,6 @@ class Game(models.Model):
             decisions = self.resolve_retreats(orders)
         else:
             decisions = self.resolve_adjusts(orders)
-        assert decisions
 
         turn = self.turn_set.create(number=turn.number+1)
         turn.update_units(orders, decisions)
@@ -499,19 +498,32 @@ class Turn(models.Model):
                    'F': ['S', 'SR'],
                    'FR': ['F'],
                    'FA': ['F', 'FR']}
-        c_orders = CanonicalOrder.objects.filter(
-            turn__season__in=seasons[self.season],
-            turn__number__gt=self.number - 5,
-            turn__number__lt=self.number).order_by('turn')
+        turns = self.game.turn_set.filter(
+            season__in=seasons[self.season],
+            number__gt=self.number - 5,
+            number__lt=self.number
+            ).select_related('unit', 'canonical_order').order_by('number')
 
-        # dict of dicts of lists, keys=power, unit
+        units = {}
+        for t in turns:
+            units.update((u.id, getattr(u.previous, 'id', None))
+                          for u in t.unit_set.all())
+
+        # dict of dicts of lists; keys=power, original unit id
         orders = defaultdict(partial(defaultdict, list))
 
-        for o in c_orders:
-            p = unicode(o.government.power)
-            n = u"{0} {1}".format(convert[o.actor.sr_type], o.actor)
-            orders[p][n].append(o)
-        return orders
+        for t in turns:
+            for o in t.canonicalorder_set.all():
+                u = t.unit_set.get(government=o.government, subregion=o.actor)
+                p = unicode(o.government.power)
+                u_id = u.id
+                while u_id in units:
+                    n = u_id
+                    u_id = units[u_id]
+                orders[p][n].append(o)
+
+        return sorted((power, sorted(adict.iteritems()))
+                      for power, adict in orders.iteritems())
 
     def governments(self):
         gvts = Government.objects.filter(game=self.game)
@@ -1119,14 +1131,16 @@ class Order(models.Model):
     via_convoy = models.BooleanField()
 
     def __unicode__(self):
-        result = "%s %s %s" % (convert[self.actor.sr_type], self.actor,
-                               self.action)
+        result = u"{0} {1} {2}".format(convert[self.actor.sr_type],
+                                       self.actor, self.action)
         if self.assist:
-            result += " %s %s" % (convert[self.assist.sr_type], self.assist)
+            result = u"{0} {1} {2}".format(result,
+                                           convert[self.assist.sr_type],
+                                           self.assist)
         if self.target:
-            result += " %s" % self.target
+            result = u"{0} {1}".format(result, self.target)
         if self.via_convoy:
-            result += " via Convoy"
+            result = u"{0} via Convoy".format(result)
         return result
 
 
@@ -1152,3 +1166,12 @@ class CanonicalOrder(models.Model):
 
     user_issued = models.BooleanField()
     result = models.CharField(max_length=1, choices=RESULT_CHOICES)
+
+    @property
+    def full_actor(self):
+        return u"{0} {1}".format(convert[self.actor.sr_type], self.actor)
+
+    @property
+    def full_assist(self):
+        if self.assist:
+            return u"{0} {1}".format(convert[self.assist.sr_type], self.assist)

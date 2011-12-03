@@ -53,15 +53,23 @@
       {% endfor %}
     </table>
 
-    <table>
-      {% for t in turn.recent %}
-        {% for o in t.canonical_orders %}
-        <tr>
-	  <td>{{ o.government.power }}</td>
-	  <td>{{ o }}</td>
-	</tr>
-        {% endfor %}
+    <div class="previous-orders">
+      {% for power, actorset in turn.recent_orders %}
+        <p class="power-orders">
+	<strong>{{ power }}:</strong><br />
+	  {% for actor, orders in actorset %}
+	    {% for o in orders %}
+	      {% if not forloop.first %}/{% endif %}
+	      {% if not o.user_issued %}(default){% endif %}
+	      {{ o.full_actor }} {{ o.get_action_display }}
+	      {{ o.full_assist|default:"" }}
+	      {{ o.target|default:"" }}
+	      {% if o.via_convoy %}via Convoy{% endif %}
+	      [{{ o.get_result_display }}]
+	    {% endfor %}<br />
+	  {% endfor %}
+	</p>
       {% endfor %}
-    </table>
+    </div>
 
 {% endblock %}
