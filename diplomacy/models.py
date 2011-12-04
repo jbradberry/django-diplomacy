@@ -514,8 +514,13 @@ class Turn(models.Model):
 
         for t in turns:
             for o in t.canonicalorder_set.all():
-                u = t.unit_set.get(government=o.government, subregion=o.actor)
                 p = unicode(o.government.power)
+                u = t.unit_set.filter(government=o.government,
+                                      subregion=o.actor)
+                u = u.get() if u else None
+                if u is None:
+                    orders[p]["b{0}".format(o.actor.id)].append(o)
+                    continue
                 u_id = u.id
                 while u_id in units:
                     n = u_id
