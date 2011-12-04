@@ -400,9 +400,9 @@ class Game(models.Model):
                 decisions.append((T, False))
         return decisions
 
-    # FIXME
     def resolve_adjusts(self, orders):
-        pass
+        return [(T, order.get('action') is not None)
+                for T, order in orders.iteritems()]
 
     def activate(self):
         if self.state != 'S' or self.turn_set.exists():
@@ -837,12 +837,12 @@ class Turn(models.Model):
 
         for a, d in decisions:
             # units that are displaced must retreat or be disbanded
-            if retreat and orders[a]['action'] == None:
+            if retreat and orders[a].get('action') is None:
                 del units[(a, retreat)]
                 self.disbands[orders[a]['government'].id].add(a)
                 continue
 
-            if orders[a]['action'] == 'M':
+            if orders[a].get('action') == 'M':
                 target = orders[a]['target']
                 T = orders[a]['actor'].territory
                 if d: # move succeeded
@@ -856,14 +856,14 @@ class Turn(models.Model):
                     self.failed[territory(target)].append(T)
 
             # successful build
-            if d and orders[a]['action'] == 'B':
+            if d and orders[a].get('action') == 'B':
                 units[(a, False)] = {'turn': self,
                                      'government': orders[a]['government'],
                                      'u_type':
                                          convert[orders[a]['actor'].sr_type],
                                      'subregion': orders[a]['actor']}
 
-            if orders[a]['action'] == 'D':
+            if orders[a].get('action') == 'D':
                 del units[(a, retreat)]
                 self.disbands[orders[a]['government'].id].add(a)
                 continue
@@ -875,7 +875,7 @@ class Turn(models.Model):
             # successful move and we failed to move, we are displaced.
             if not d and a in self.displaced:
                 units[key]['displaced_from'] = self.displaced[a]
-            if orders[a]['action'] != 'M':
+            if orders[a].get('action') != 'M':
                 continue
             t = orders[a]['target'].territory
             # if multiple moves to our target failed, we have a standoff.
