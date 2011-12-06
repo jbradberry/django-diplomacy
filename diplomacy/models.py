@@ -116,6 +116,15 @@ class Game(models.Model):
             if press.exists():
                 return press.get()
 
+    def governments(self, turn=None):
+        gvts = self.government_set.all()
+        owns = Ownership.objects.filter(turn=turn, territory__is_supply=True)
+        units = Unit.objects.filter(turn=turn)
+        return sorted(
+            [(g, owns.filter(government=g).count(),
+              units.filter(government=g).count()) for g in gvts],
+            key=lambda x: (-x[1], -x[2], getattr(x[0].power, 'name', None)))
+
     def current_turn(self):
         if self.turn_set.exists():
             return self.turn_set.latest()
@@ -529,15 +538,6 @@ class Turn(models.Model):
 
         return sorted((power, sorted(adict.iteritems()))
                       for power, adict in orders.iteritems())
-
-    def governments(self):
-        gvts = Government.objects.filter(game=self.game)
-        owns = Ownership.objects.filter(turn=self, territory__is_supply=True)
-        units = self.unit_set.all()
-        return sorted(
-            [(g, owns.filter(government=g).count(),
-              units.filter(government=g).count()) for g in gvts],
-            key=lambda x: (-x[1], -x[2], x[0].power.name))
 
     def find_convoys(self, fleets=None):
         """

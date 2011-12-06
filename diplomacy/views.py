@@ -30,11 +30,14 @@ def game_list(request, page=None, paginate_by=30, state=None, **kwargs):
 def game_detail(request, slug, season=None, year=None):
     game = get_object_or_404(Game, slug=slug)
     if season is None and year is None:
-        t, current = game.current_turn(), True
+        t = game.current_turn()
+        current = t is not None
+        setup = not current
     else:
         t = get_object_or_404(game.turn_set, season=season, year=year)
-        current = False
-    context = {'game': game, 'turn': t, 'current': current}
+        current, setup = False, False
+    context = {'game': game, 'turn': t, 'current': current,
+               'governments': game.governments(t), 'setup': setup}
     return direct_to_template(request, 'diplomacy/game_detail.html',
                               extra_context=context)
 
