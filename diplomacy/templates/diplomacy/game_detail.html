@@ -24,7 +24,7 @@
 {% endblock %}
 
 {% block content %}
-  <h2>{{ turn }}</h2>
+  <h2>{{ turn|default:"Setup" }}</h2>
 
   {% include "diplomacy/turn_paging.html" %}
 
