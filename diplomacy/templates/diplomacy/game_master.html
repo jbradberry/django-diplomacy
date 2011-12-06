@@ -11,6 +11,11 @@ Game Master
 {% endblock %}
 
 {% block content %}
+<dl>
+<dt>Turn:</dt><dd>{{ game.current_turn|default:"Setup" }}</dd>
+<dt>Actors:</dt><dd>{{ actors }}</dd>
+</dl>
+
 <form method="POST" action="">{% csrf_token %}
 {% if game.state == "S" %}
 <input type="submit" value="Activate" name="activate" />

@@ -1030,6 +1030,8 @@ class Government(models.Model):
     def actors(self, turn=None):
         if not turn:
             turn = self.game.current_turn()
+        if turn is None:
+            return Subregion.objects.none()
 
         if turn.season == 'FA':
             actors = Subregion.objects.filter(

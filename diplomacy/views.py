@@ -44,6 +44,7 @@ def game_detail(request, slug, season=None, year=None):
 @login_required
 def game_master(request, slug):
     game = get_object_or_404(Game, slug=slug)
+    actors = sum(g.actors().count() for g in game.government_set.all())
     if request.user != game.owner:
         return HttpResponseForbidden("<h1>Permission denied</h1>")
     form = GameMasterForm(request.POST or None)
@@ -62,7 +63,8 @@ def game_master(request, slug):
             game.state = 'A'
             game.save()
     return direct_to_template(request, 'diplomacy/game_master.html',
-                              extra_context={'game': game, 'form': form})
+                              extra_context={'game': game, 'form': form,
+                                             'actors': actors})
 
 @login_required
 def orders(request, slug, power):
