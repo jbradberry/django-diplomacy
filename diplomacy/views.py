@@ -1,5 +1,5 @@
 from django.views.generic.list_detail import object_list, object_detail
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.views.generic.simple import direct_to_template
 from django.forms.formsets import formset_factory
 from django.contrib.auth.decorators import login_required
@@ -62,6 +62,7 @@ def game_master(request, slug):
         if request.POST.get('unpause', False) and game.state == 'P':
             game.state = 'A'
             game.save()
+        return redirect('diplomacy_game_master', slug=slug)
     return direct_to_template(request, 'diplomacy/game_master.html',
                               extra_context={'game': game, 'form': form,
                                              'actors': actors})
