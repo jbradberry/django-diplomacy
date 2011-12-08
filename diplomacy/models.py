@@ -1130,7 +1130,7 @@ class Order(models.Model):
     slot = models.PositiveSmallIntegerField()
     actor = models.ForeignKey(Subregion, null=True, blank=True,
                               related_name='acts')
-    action = models.CharField(max_length=1, choices=ACTION_CHOICES)
+    action = models.CharField(max_length=1, choices=ACTION_CHOICES, blank=True)
     assist = models.ForeignKey(Subregion, null=True, blank=True,
                                related_name='assisted')
     target = models.ForeignKey(Subregion, null=True, blank=True,

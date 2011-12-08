@@ -31,10 +31,16 @@ class OrderForm(ModelForm):
             self.fields[w].widget.attrs['class'] = c
 
     def clean(self):
-        turn = self.initial['government'].game.current_turn()
+        gvt = self.initial['government']
+        turn = gvt.game.current_turn()
         actor = self.cleaned_data.get("actor")
-        if turn.season != 'FA' and actor != self.initial['actor']:
-            raise ValidationError("You may not change the acting unit.")
+        if turn.season == 'FA':
+            # Fall Adjustment builds are optional.
+            if gvt.builds_available() > 0 and actor is None:
+                return {}
+        else:
+            if actor != self.initial['actor']:
+                raise ValidationError("You may not change the acting unit.")
 
         order = self.initial.copy()
         order.update(self.cleaned_data)
@@ -62,7 +68,8 @@ class OrderFormSet(BaseFormSet):
 
     def save(self):
         for form in self.forms:
-            if self.first_submit or form.has_changed():
+            if (form.cleaned_data.get('actor') and
+                (self.first_submit or form.has_changed())):
                 form.save()
 
     def clean(self):
@@ -77,7 +84,7 @@ class OrderFormSet(BaseFormSet):
         actors = set()
         for i in xrange(self.total_form_count()):
             form = self.forms[i]
-            actor = form.cleaned_data["actor"].territory
+            actor = getattr(form.cleaned_data.get("actor"), 'territory', None)
             if not actor:
                 continue
             if actor in actors:
