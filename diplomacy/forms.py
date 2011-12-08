@@ -6,7 +6,7 @@ convert = {'L': 'A', 'S': 'F'}
 
 class UnitProxyChoiceField(ModelChoiceField):
     def label_from_instance(self, obj):
-        return "%s %s" % (convert[obj.sr_type], obj.territory.name)
+        return u"{0} {1}".format(convert[obj.sr_type], obj)
 
 
 class OrderForm(ModelForm):
