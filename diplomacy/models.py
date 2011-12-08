@@ -1033,7 +1033,7 @@ class Government(models.Model):
         if turn is None:
             return Subregion.objects.none()
 
-        if turn.season == 'FA':
+        if turn.season == 'FA' and self.builds_available() > 0:
             actors = Subregion.objects.filter(
                 territory__is_supply=True,
                 territory__power__government=self, # home supply center
