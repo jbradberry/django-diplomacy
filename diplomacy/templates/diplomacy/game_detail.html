@@ -32,28 +32,30 @@
   <h3>Read <a href="{% url diplomacy:press_article_list realm_slug=game.slug %}">{{ game.press }}</a>!</h3>
   {% endif %}
 
-    {% map 477 400 %}
+    {% map 800 670 %}
 
-    <table>
-      <thead>
-	<tr>
-	  <th>Name</th>
-	  <th>Power</th>
-	  <th>SC</th>
-	  <th>Units</th>
-	  <th>Ready</th>
+    <div class="player-list">
+      <table>
+	<thead>
+	  <tr>
+	    <th>Name</th>
+	    <th>Power</th>
+	    <th>SC</th>
+	    <th>Units</th>
+	    <th>Ready</th>
+	  </tr>
+	</thead>
+	{% for government, sc, uc, turnedin in governments %}
+	<tr class="{{ government.power }}">
+	  <td>{{ government }}</td>
+	  <td>{% if current %}<a href="{% url diplomacy_orders game.slug government.power.name %}">{{ government.power }}</a>{% else %}{{ government.power|default:"N/A" }}{% endif %}</td>
+	  <td>{{ sc }}</td>
+	  <td>{{ uc }}</td>
+	  <td>{{ turnedin|yesno:"Y,N" }}</td>
 	</tr>
-      </thead>
-      {% for government, sc, uc, turnedin in governments %}
-      <tr class="{{ government.power }}">
-	<td>{{ government }}</td>
-	<td>{% if current %}<a href="{% url diplomacy_orders game.slug government.power.name %}">{{ government.power }}</a>{% else %}{{ government.power|default:"N/A" }}{% endif %}</td>
-	<td>{{ sc }}</td>
-	<td>{{ uc }}</td>
-	<td>{{ turnedin|yesno:"Y,N" }}</td>
-      </tr>
-      {% endfor %}
-    </table>
+	{% endfor %}
+      </table>
+    </div>
 
     <div class="previous-orders">
       {% for power, actorset in turn.recent_orders %}
