@@ -120,9 +120,12 @@ class Game(models.Model):
         gvts = self.government_set.all()
         owns = Ownership.objects.filter(turn=turn, territory__is_supply=True)
         units = Unit.objects.filter(turn=turn)
+        orders = Order.objects.filter(turn=turn)
         return sorted(
             [(g, owns.filter(government=g).count(),
-              units.filter(government=g).count()) for g in gvts],
+              units.filter(government=g).count(),
+              bool(g.slots(turn)) == orders.filter(government=g).exists())
+             for g in gvts],
             key=lambda x: (-x[1], -x[2], getattr(x[0].power, 'name', None)))
 
     def current_turn(self):
@@ -741,7 +744,7 @@ class Turn(models.Model):
         if self.season == 'FA':
             orders = dict(((g, s), {'government': g, 'slot': s, 'turn': self})
                           for g in gvts
-                          for s in xrange(abs(g.builds_available())))
+                          for s in xrange(abs(g.builds_available(self))))
         else:
             action = 'H' if self.season in ('S', 'F') else None
             orders = dict(((g, s),
@@ -1051,6 +1054,11 @@ class Government(models.Model):
                                               **displaced)
 
         return actors
+
+    def slots(self, turn):
+        if turn.season == 'FA':
+            return abs(self.builds_available(turn))
+        return self.actors(turn).count()
 
     def filter_orders(self):
         turn = self.game.current_turn()
