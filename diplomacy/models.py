@@ -59,7 +59,8 @@ def head_to_head(T1, o1, T2, o2, c1=False, c2=False):
     return territory(o2['target']) == T1 and territory(o1['target']) == T2
 
 def hostile_assist_hold(T1, o1, T2, o2):
-    return o2['assist'] == o1['target'] and o2['target'] is None
+    return (territory(o2['assist']) == territory(o1['target'])
+            and o2['target'] is None)
 
 def hostile_assist_compete(T1, o1, T2, o2):
     return (territory(o2['assist']) != T1 and
@@ -461,12 +462,15 @@ class Game(models.Model):
             decisions = self.resolve_retreats(orders)
         else:
             decisions = self.resolve_adjusts(orders)
+        if decisions is None:
+            return False
 
         turn = self.turn_set.create(number=turn.number+1)
         turn.update_units(orders, decisions)
         turn.update_ownership()
 
         turn.consistency_check()
+        return True
 
     generate.alters_data = True
 
