@@ -87,18 +87,12 @@ def orders(request, slug, power):
         formset.save()
         return HttpResponseRedirect('../../')
 
-    context = {'formset': formset, 'game': g, 'current': True}
+    order_filter = {'unit_fixed': (g.current_turn().season != 'FA'),
+                    'tree': gvt.filter_orders()}
+    context = {'formset': formset, 'game': g, 'current': True,
+               'order_filter': simplejson.dumps(order_filter)}
     return direct_to_template(request, 'diplomacy/manage_orders.html',
                               extra_context=context)
-
-# WISHLIST: dump directly to template instead?
-def select_filter(request, slug, power):
-    g = Game.objects.get(slug=slug)
-    uf = (g.current_turn().season != 'FA')
-    gvt = get_object_or_404(Government, game=g, power__name__iexact=power)
-    return HttpResponse(simplejson.dumps({'unit_fixed': uf,
-                                          'tree': gvt.filter_orders()}),
-                        mimetype='application/json')
 
 def map_view(request, slug, season=None, year=None):
     game = get_object_or_404(Game, slug=slug)

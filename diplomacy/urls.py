@@ -12,8 +12,6 @@ urlpatterns = patterns('diplomacy.views',
     url(r'^games/(?P<slug>[-\w]+)/turn/(?P<season>[A-Z]+)(?P<year>\d+)/map/$',
         'map_view', name='diplomacy_turn_map'),
     url(r'^games/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/$', 'orders', name='diplomacy_orders'),
-    url(r'^games/(?P<slug>[-\w]+)/orders/(?P<power>[-\w]+)/filter/$',
-     'select_filter', name='diplomacy_select_filter'),
 )
 
 if 'micropress' in settings.INSTALLED_APPS:

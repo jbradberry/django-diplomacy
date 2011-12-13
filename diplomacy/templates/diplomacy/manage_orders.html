@@ -11,82 +11,80 @@
     </script>
     <script type="text/javascript">
       function objlen(obj) {
-	var len = 0;
-	$.each(obj, function() { len++; });
-	return len;
+        var len = 0;
+        $.each(obj, function() { len++; });
+        return len;
       }
 
       function in_obj(item, obj) {
-	if ( obj instanceof Array ) {
+        if ( obj instanceof Array ) {
           if ( item != "" ) { item = parseInt(item); }
-	  return ( $.inArray(item, obj) >= 0 );
-	}
-	return ( obj.hasOwnProperty(item) );
+          return ( $.inArray(item, obj) >= 0 );
+        }
+        return ( obj.hasOwnProperty(item) );
       }
-	
-      function filter(widget, data) {
-	if ( objlen(data) == 1 && in_obj("", data) ) {
-	  widget.val("");
-	  widget.fadeOut("def");
-	}
-	else {
-	  if ( widget.is(":hidden") ) { widget.fadeIn(); }
 
-	  widget.find("option").each(function() {
-	    if ( in_obj($(this).val(), data) ) { $(this).show(); }
-	    else { $(this).hide(); }
-	  });
+      function filter(widget, data) {
+        if ( objlen(data) == 1 && in_obj("", data) ) {
+          widget.val("");
+          widget.fadeOut("def");
+        }
+        else {
+          if ( widget.is(":hidden") ) { widget.fadeIn(); }
+
+          widget.find("option").each(function() {
+            if ( in_obj($(this).val(), data) ) { $(this).show(); }
+            else { $(this).hide(); }
+          });
 
           if ( widget.find("option:selected").is(":hidden") ) {
             widget.find("option:visible:first").attr("selected", "selected");
           }
-	}
+        }
         widget.trigger("change");
       }
 
       function readonly() {
-	$(this).hide();
-	$(this).parent().append( $(this).find(":selected").text() );
+        $(this).hide();
+        $(this).parent().append( $(this).find(":selected").text() );
       }
-	
+
       $(document).ready(function() {
-	$("col").each(function() { $(this).width( $(this).width() ); });
+        $("col").each(function() { $(this).width( $(this).width() ); });
 
-	$.getJSON("filter/", {}, function(data) {
-	  var unit_fixed = data.unit_fixed;
-	  var tree = data.tree;
+        var data = {{ order_filter|safe }};
+        var unit_fixed = data.unit_fixed;
+        var tree = data.tree;
 
-	  $("tr.form").each(function() {
-	    var form = $(this);
-	    var actor, action, assist;
+        $("tr.form").each(function() {
+          var form = $(this);
+          var actor, action, assist;
 
-            filter(form.find("select[name$=actor]"), tree);
-	
-	    if ( unit_fixed ) {
-	      actor = form.find("select[name$=actor]");
-	      actor.each(readonly);
-	      actor = actor.val();
-	    }
+          filter(form.find("select[name$=actor]"), tree);
 
-	    form.find("select[name$=actor]").change(function() {
-	      actor = $(this).val();
-	      filter(form.find("select[name$=action]"), tree[actor]);
-	    }).trigger("change");
+          if ( unit_fixed ) {
+            actor = form.find("select[name$=actor]");
+            actor.each(readonly);
+            actor = actor.val();
+          }
 
-	    form.find("select[name$=action]").change(function() {
-	      action = $(this).val();
-	      var current = tree[actor][action];
-	      filter(form.find("select[name$=assist]"), current);
-	    }).trigger("change");
+          form.find("select[name$=actor]").change(function() {
+            actor = $(this).val();
+            filter(form.find("select[name$=action]"), tree[actor]);
+          }).trigger("change");
 
-	    form.find("select[name$=assist]").change(function() {
-	      assist = $(this).val();
-	      var current = tree[actor][action][assist];
-	      filter(form.find("select[name$=target]"), current);
-	    }).trigger("change");
+          form.find("select[name$=action]").change(function() {
+            action = $(this).val();
+            var current = tree[actor][action];
+            filter(form.find("select[name$=assist]"), current);
+          }).trigger("change");
 
-	  });
-	});
+          form.find("select[name$=assist]").change(function() {
+            assist = $(this).val();
+            var current = tree[actor][action][assist];
+            filter(form.find("select[name$=target]"), current);
+          }).trigger("change");
+        });
       });
     </script>
 {% endblock %}
@@ -98,7 +96,7 @@
 &rsaquo;
 {{ formset.government.power }}
 {% endblock %}
-    
+
 {% block content %}
     {% map 800 670 %}
 
