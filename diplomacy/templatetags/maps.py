@@ -1,4 +1,4 @@
-from diplomacy.models import Territory
+from diplomacy.models import Territory, Power
 from django import template
 from django.utils import simplejson
 import re
@@ -19,16 +19,21 @@ def map(context, width, height):
     game = context['game']
     turn = context.get('turn', game.current_turn())
     data = {'width': width, 'height': height}
-    if turn is None:
-        return data
 
     data['colors'] = simplejson.dumps(colors)
-    data['owns'] = simplejson.dumps(
-        [(re.sub('[ .]', '', T.name.lower()), G.power.name)
-         for G in game.government_set.all()
-         for T in Territory.objects.filter(ownership__turn=turn,
-                                           ownership__government=G)])
-    data['units'] = simplejson.dumps(
-        [(unicode(u.subregion), u.u_type, u.government.power.name)
-         for u in turn.unit_set.filter(displaced_from__isnull=True)])
+    if turn:
+        data['owns'] = simplejson.dumps(
+            [(re.sub('[ .]', '', T.name.lower()), G.power.name)
+             for G in game.government_set.all()
+             for T in Territory.objects.filter(ownership__turn=turn,
+                                               ownership__government=G)])
+        data['units'] = simplejson.dumps(
+            [(unicode(u.subregion), u.u_type, u.government.power.name)
+             for u in turn.unit_set.filter(displaced_from__isnull=True)])
+    else:
+        data['owns'] = simplejson.dumps(
+            [(re.sub('[ .]', '', T.name.lower()), P.name)
+             for P in Power.objects.all()
+             for T in Territory.objects.filter(power=P)])
+        data['units'] = simplejson.dumps([])
     return data
