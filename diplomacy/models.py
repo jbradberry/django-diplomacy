@@ -1060,7 +1060,7 @@ class Government(models.Model):
         return actors
 
     def slots(self, turn):
-        if turn.season == 'FA':
+        if getattr(turn, 'season', '') == 'FA':
             return abs(self.builds_available(turn))
         return self.actors(turn).count()
 
