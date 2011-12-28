@@ -1,5 +1,14 @@
 table { border: solid 2px black; }
-td { border: solid 1px black; padding-left: 2em; padding-right: 2em; }
+td { border: solid 1px black; padding-left: 1.5em; padding-right: 1.5em; }
+div.legend { width: 2ex; height: 2ex; border: solid 1px black; float: left; margin-right: 0.75em; }
+div.austria-hungary { background-color: #a41a10; }
+div.england { background-color: #1010a3; }
+div.france { background-color: #126dc0; }
+div.germany { background-color: #5d5d5d; }
+div.italy { background-color: #30a310; }
+div.russia { background-color: #7110a2; }
+div.turkey { background-color: #e6e617; }
+
 /* In case I want to color the table with the traditional colors
 tr.Austria-Hungary { background-color: #f33; }
 tr.England { background-color: #22f; }
