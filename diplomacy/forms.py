@@ -23,9 +23,9 @@ class OrderForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
 
-        my_css = {'actor': 'subregion',
+        my_css = {'actor': 'unit',
                   'action': 'action',
-                  'assist': 'subregion',
+                  'assist': 'unit',
                   'target': 'subregion',}
         for w, c in my_css.iteritems():
             self.fields[w].widget.attrs['class'] = c

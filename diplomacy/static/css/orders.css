@@ -1,5 +1,6 @@
 select.u_type { width: 5em; }
 select.action { width: 7em; }
+select.unit { width: 15em; }
 select.subregion { width: 13em; }
 table.formset { border-collapse: collapse; }
 td { padding: 2px; }

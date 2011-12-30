@@ -25,21 +25,22 @@
       }
 
       function filter(widget, data) {
+        var selected = widget.val();
+        var w_class = widget.attr("class");
+        var sel = false;
+
+        widget.empty();
+        $.each(data, function(index, value) {
+          if ( index == selected ) { sel = true; }
+          widget.append("<option value='"+index+"'>"+options[w_class][index]+"</option>");
+        });
+
         if ( objlen(data) == 1 && in_obj("", data) ) {
           widget.val("");
           widget.fadeOut("def");
-        }
-        else {
+        } else {
           if ( widget.is(":hidden") ) { widget.fadeIn(); }
-
-          widget.find("option").each(function() {
-            if ( in_obj($(this).val(), data) ) { $(this).show(); }
-            else { $(this).hide(); }
-          });
-
-          if ( widget.find("option:selected").is(":hidden") ) {
-            widget.find("option:visible:first").attr("selected", "selected");
-          }
+          if ( sel ) { widget.val(selected); }
         }
         widget.trigger("change");
       }
@@ -51,6 +52,22 @@
 
       $(document).ready(function() {
         $("col").each(function() { $(this).width( $(this).width() ); });
+
+        options = {'unit': {}, 'action': {}, 'subregion': {}};
+        $("tr.form td select.unit:first option").each(function() {
+          var $opt = $(this);
+          options.unit[$opt.val()] = $opt.text();
+        });
+
+        $("tr.form td select.action:first option").each(function() {
+          var $opt = $(this);
+          options.action[$opt.val()] = $opt.text();
+        });
+
+        $("tr.form td select.subregion:first option").each(function() {
+          var $opt = $(this);
+          options.subregion[$opt.val()] = $opt.text();
+        });
 
         var data = {{ order_filter|safe }};
         var unit_fixed = data.unit_fixed;
