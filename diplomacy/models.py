@@ -577,7 +577,7 @@ class Turn(models.Model):
     def valid_hold(self, actor, empty=None):
         if self.season in ('S', 'F'):
             if self.unit_set.filter(subregion=actor).count() == 1:
-                return {empty: {empty: True}}
+                return {empty: {empty: False}}
         return {}
 
     def valid_move(self, actor, empty=None):
@@ -603,16 +603,20 @@ class Turn(models.Model):
             return {}
         target = [t.id for t in target]
 
+        convoyable = set()
         if self.season in ('S', 'F') and unit.get().u_type == 'A':
             target = set(target)
             for fset, lset in self.find_convoys():
                 if actor.id in lset:
                     target.update(lset)
+                    convoyable.update(lset)
             target.discard(actor.id)
 
         if not target:
             return {}
-        return {empty: dict((x, True) for x in target)}
+        return {empty: dict((x, x in convoyable and
+                             x in actor.borders.values_list('id', flat=True))
+                            for x in target)}
 
     def valid_support(self, actor, empty=None):
         if self.season not in ('S', 'F'):
@@ -624,7 +628,7 @@ class Turn(models.Model):
         adj = sr.filter(territory__subregion__borders=actor).distinct()
 
         # support to hold
-        results = dict((a.id, {empty: True})
+        results = dict((a.id, {empty: False})
                        for a in adj.filter(unit__turn=self))
 
         adj = set(a.id for a in adj)
@@ -635,7 +639,7 @@ class Turn(models.Model):
                               ).exclude(id=actor.id).distinct()
         for a in attackers:
             reachable = adj & set(t.id for t in a.borders.all())
-            results.setdefault(a.id, {}).update((x, True) for x in reachable)
+            results.setdefault(a.id, {}).update((x, False) for x in reachable)
 
         # support to convoyed attack
         attackers = sr.filter(unit__turn=self, sr_type='L'
@@ -652,7 +656,7 @@ class Turn(models.Model):
                     continue
                 if not (adj & lset - set([a.id])):
                     continue
-                results.setdefault(a.id, {}).update((x, True) for x in
+                results.setdefault(a.id, {}).update((x, False) for x in
                                                     adj & lset - set([a.id]))
 
         return results
@@ -670,7 +674,7 @@ class Turn(models.Model):
             if actor.id in fset:
                 attackers = sr.filter(unit__turn=self, sr_type='L',
                                       id__in=lset).distinct()
-                return dict((a.id, dict((x, True) for x in lset - set([a.id])))
+                return dict((a.id, dict((x, False) for x in lset - set([a.id])))
                             for a in attackers)
         return {}
 
@@ -685,7 +689,7 @@ class Turn(models.Model):
             return {}
         if T.ownership_set.filter(turn=self,
                                   government__power=T.power).exists():
-            return {empty: {empty: True}}
+            return {empty: {empty: False}}
         return {}
 
     def valid_disband(self, actor, empty=None):
@@ -698,7 +702,7 @@ class Turn(models.Model):
                 return {}
         elif unit.get().government.builds_available() >= 0:
             return {}
-        return {empty: {empty: True}}
+        return {empty: {empty: False}}
 
     # FIXME
     def consistency_check(self):

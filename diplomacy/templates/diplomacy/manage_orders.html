@@ -101,6 +101,14 @@
             var current = tree[actor][action][assist];
             filter(form.find("select[name$=target]"), current);
           }).trigger("change");
+
+          form.find("select[name$=target]").change(function() {
+            target = $(this).val();
+            var current = tree[actor][action][assist][target];
+            var $via_convoy = form.find(":checkbox")
+            if ( current ) { $via_convoy.show(); }
+            else { $via_convoy.hide(); }
+          }).trigger("change");
         });
       });
     </script>
