@@ -1,7 +1,6 @@
 {% load static %}
 {% get_static_prefix as STATIC_URL %}
-<script type="text/javascript" src="{{ STATIC_URL }}js/map.js">
-</script>
+<script type="text/javascript" src="{{ STATIC_URL }}js/map.js"></script>
 <script type="text/javascript">
   var diplomacy_map = {};
   diplomacy_map.colors = {{ colors|safe }};
@@ -92,12 +91,14 @@
   };
   diplomacy_map.total_units = 0;
 
-  $(function () {
+  function update() {
     var $mapobj = $("#map");
-    $mapobj.bind('load', function () {
-      var $map = $($mapobj[0].getSVGDocument());
-      updatemap($map);
-    });
+    var $map = $($mapobj[0].getSVGDocument());
+    updatemap($map);
+  }
+
+  $(window).load(function() {
+    setTimeout(update, 50); // give Chrome a chance to grab the SVG
   });
 </script>
 

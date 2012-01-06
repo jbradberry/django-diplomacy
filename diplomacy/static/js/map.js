@@ -12,7 +12,7 @@ function colormap($mapsvg) {
 }
 
 function tokenizemap($mapsvg) {
-  var $tokens = $($mapsvg.find("#layer5")[0]);
+  var $tokens = $($mapsvg.find("#prototypes")[0]);
   var $army = $($mapsvg.find("#army_prototype")[0]);
   var $fleet = $($mapsvg.find("#fleet_prototype")[0]);
   $.each(diplomacy_map.units, function(i, v) {
