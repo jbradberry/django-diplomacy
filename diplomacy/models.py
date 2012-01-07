@@ -478,7 +478,7 @@ class Game(models.Model):
 class Turn(models.Model):
     class Meta:
         get_latest_by = 'generated'
-        ordering = ['-generated']
+        ordering = ('-generated',)
 
     game = models.ForeignKey(Game)
     number = models.IntegerField()
@@ -1003,7 +1003,7 @@ class Territory(models.Model):
 
 class Subregion(models.Model):
     class Meta:
-        ordering = ['id']
+        ordering = ('id',)
 
     territory = models.ForeignKey(Territory)
     subname = models.CharField(max_length=10, blank=True)
@@ -1114,7 +1114,7 @@ class Ownership(models.Model):
 
 class Unit(models.Model):
     class Meta:
-        ordering = ['-turn', 'government', 'subregion']
+        ordering = ('-turn', 'government', 'subregion')
 
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
@@ -1142,6 +1142,7 @@ ACTION_CHOICES = (
 
 class Order(models.Model):
     class Meta:
+        ordering = ("timestamp",)
         get_latest_by = "timestamp"
 
     turn = models.ForeignKey(Turn)
