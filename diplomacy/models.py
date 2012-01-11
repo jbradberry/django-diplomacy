@@ -83,6 +83,17 @@ DEPENDENCIES = {('C', 'M'): (attack_us,),
                 ('M', 'M'): (move_away,),}
 
 
+class DiplomacyPrefs(models.Model):
+    class Meta:
+        verbose_name_plural = "diplomacyprefs"
+
+    user = models.OneToOneField("auth.User")
+    warnings = models.BooleanField(default=True)
+
+    def __unicode__(self):
+        return unicode(self.user)
+
+
 class Game(models.Model):
     STATE_CHOICES = (
         ('S', 'Setup'),
@@ -571,7 +582,7 @@ class Turn(models.Model):
                 sr_type='L', territory__subregion__borders__id__in=g
                 ).distinct()
             if coasts.filter(unit__turn=self).exists():
-                convoyable.append((g, set(sr.id for sr in coasts)))
+                convoyable.append((set(g), set(sr.id for sr in coasts)))
         return convoyable
 
     def valid_hold(self, actor, empty=None):

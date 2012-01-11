@@ -6,8 +6,10 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
 from django.utils import simplejson
+from django.contrib import messages
 from django.db.models import ForeignKey, Max
-from diplomacy.models import Game, Government, Turn, Order, Territory, Subregion
+from diplomacy.models import (Game, Government, Turn, Order, Territory,
+                              Subregion, DiplomacyPrefs)
 from diplomacy.forms import OrderForm, OrderFormSet, GameMasterForm
 
 
@@ -84,8 +86,14 @@ def orders(request, slug, power):
                        initial=turn.normalize_orders(gvt))
 
     if formset.is_valid():
+        messages.success(request, "Your orders have been submitted.",
+                         fail_silently=True)
+        prefs = DiplomacyPrefs.objects.filter(user=request.user)
+        if prefs and prefs.get().warnings:
+            for w in formset.irrational_orders():
+                messages.warning(request, w, fail_silently=True)
         formset.save()
-        return HttpResponseRedirect('../../')
+        return HttpResponseRedirect('')
 
     order_filter = {'unit_fixed': (g.current_turn().season != 'FA'),
                     'tree': gvt.filter_orders()}

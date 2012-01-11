@@ -1,3 +1,7 @@
+div.notifications { width: 90%; }
+div.notifications div { padding: 2px 12px; display: block; margin-bottom: 8px; }
+div.notifications div.success { background: #ccffcc; border: 1px solid green; }
+div.notifications div.warning { background: #ffff99; border: 1px solid yellow; }
 select.u_type { width: 5em; }
 select.action { width: 7em; }
 select.unit { width: 15em; }

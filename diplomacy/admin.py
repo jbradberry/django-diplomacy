@@ -1,4 +1,4 @@
-from diplomacy.models import Game, Turn, Government, Territory, Subregion
+from diplomacy.models import DiplomacyPrefs, Game, Turn, Government, Territory, Subregion
 from django.contrib import admin
 
 class GameAdmin(admin.ModelAdmin):
@@ -21,8 +21,12 @@ class TerritoryAdmin(admin.ModelAdmin):
 class SubregionAdmin(admin.ModelAdmin):
     list_display = ('__unicode__', 'sr_type', 'init_unit')
 
+class DiplomacyPrefsAdmin(admin.ModelAdmin):
+    list_display = ('user', 'warnings')
+
 admin.site.register(Game, GameAdmin)
 admin.site.register(Turn, TurnAdmin)
 admin.site.register(Government, GovernmentAdmin)
 admin.site.register(Territory, TerritoryAdmin)
 admin.site.register(Subregion, SubregionAdmin)
+admin.site.register(DiplomacyPrefs, DiplomacyPrefsAdmin)

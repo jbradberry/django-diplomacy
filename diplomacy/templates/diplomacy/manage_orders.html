@@ -123,6 +123,15 @@
 {% endblock %}
 
 {% block content %}
+
+  {% if messages %}
+  <div class="notifications">
+    {% for msg in messages %}
+    <div{% if msg.tags %} class="{{ msg.tags }}"{% endif %}>{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
     {% map 800 670 %}
 
     <form method="POST" action="">{% csrf_token %}
