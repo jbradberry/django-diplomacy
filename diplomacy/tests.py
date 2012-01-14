@@ -5,77 +5,112 @@ from django.core.management import call_command
 from django.contrib.auth.models import User
 
 options = {'commit': False, 'verbosity': 0}
-        
+u_convert = dict((v, k) for k,v in models.convert.iteritems())
 
-def create_units(units, turn, gvt):
-    for fname, fsub in units.get('F', []):
-        sr = models.Subregion.objects.get(
-            sr_type='S', territory__name=fname, subname=fsub)
-        models.Unit.objects.create(
-            u_type='F', subregion=sr, turn=turn, government=gvt)
-    for aname in units.get('A', []):
-        sr = models.Subregion.objects.get(
-            sr_type='L', territory__name=aname)
-        models.Unit.objects.create(
-            u_type='A', subregion=sr, turn=turn, government=gvt)
+unit_subs = dict(("{0} {1}{2}".format(models.convert[s.sr_type],
+                                      s.territory.name,
+                                      ' {0}'.format(s.subname) if s.subname
+                                      else ''),
+                  s)
+                  for s in models.Subregion.objects.select_related('territory'))
+subs_unit = dict((v.id, k) for k,v in unit_subs.iteritems())
+territory = dict((t.name, t.id) for t in models.Territory.objects.all())
+
+
+def create_unit(turn, gvt, unit, **kwargs):
+    sr = unit_subs[unit]
+    for field, val in kwargs.iteritems():
+        if val in territory:
+            kwargs[field] = territory[val]
+    return models.Unit.objects.create(u_type=models.convert[sr.sr_type],
+                                      subregion=sr, turn=turn, government=gvt,
+                                      **kwargs)
+
+def create_units(units, turn):
+    for gname, uset in units.iteritems():
+        gvt = models.Government.objects.get(power__name__startswith=gname)
+        for u_opts in uset:
+            create_unit(turn, gvt, u_opts[0],
+                        **({} if len(u_opts) == 1 else u_opts[1]))
+
+def fetch(desc, match=None):
+    if not desc:
+        return None
+    if match:
+        srs = dict((u_type, "{0} {1}".format(u_type, desc))
+                   for u_type in ('A', 'F'))
+        u_type = models.convert[unit_subs[match].sr_type]
+        if srs[u_type] not in unit_subs:
+            # It won't produce a legal order, but this will give a
+            # placeholder that isn't far removed from the intention.
+            del srs[u_type]
+            desc = srs.values()[0]
+        else:
+            desc = srs[u_type]
+    return unit_subs[desc]
+
+def create_order(turn, gvt, slot, actor, action, assist=None, target=None,
+                 via_convoy=False):
+    return models.Order.objects.create(
+        turn=turn, government=gvt, slot=slot,
+        actor=fetch(actor), action=action, assist=fetch(assist),
+        target=fetch(target, assist if assist else actor),
+        via_convoy=bool(via_convoy))
+
+def create_orders(orders, turn):
+    for gname, oset in orders.iteritems():
+        gvt = models.Government.objects.get(power__name__startswith=gname)
+        for o_opts in oset:
+            create_order(turn, gvt, *o_opts)
 
 
 class CorrectnessHelperTest(TestCase):
-    def setUp(self):
-        self.owner = User.objects.create(username="tester")
-        self.game = models.Game.objects.create(
-            name="Test1", slug="test1", owner=self.owner, state='S')
-        self.gvt = models.Government.objects.create(
-            name="England", user=self.owner, game=self.game)
-        self.turn = self.game.turn_set.create(number=0)
-        self.game.activate()
-
-    def tearDown(self):
-        self.owner.delete()
-        self.game.delete()
-        self.gvt.delete()
-        self.turn.delete()
+    fixtures = ['basic_game.json']
 
     def test_find_convoys(self):
-        units = {'F': (('Mid-Atlantic Ocean', ''),
-                       ('English Channel', ''),
-                       ('Western Mediterranean', ''),
-                       ('Spain', 'NC'),      # coastal, can't participate
-                       ('Ionian Sea', ''),   # fake group
-                       ('Adriatic Sea', ''), # fake group
-                       ('Baltic Sea', ''),
-                       ('Gulf of Bothnia', '')),
-                 'A': ('Gascony', 'Sweden')}
-        create_units(units, self.turn, self.gvt)
-        legal = self.turn.find_convoys()
+        units = {'England': (('F Mid-Atlantic Ocean',),
+                             ('F English Channel',),
+                             ('F Western Mediterranean',),
+                             ('F Spain NC',),     # coastal, can't participate
+                             ('F Ionian Sea',),   # fake group
+                             ('F Adriatic Sea',), # fake group
+                             ('F Baltic Sea',),
+                             ('F Gulf of Bothnia',),
+                             ('A Gascony',),
+                             ('A Sweden',))}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+        legal = T.find_convoys()
+
+        full_sr = models.Subregion.objects.select_related('territory')
 
         self.assertEqual(len(legal), 2)
-        for seas, lands in legal:
-            if len(seas) == 3:
-                self.assertEqual(
-                    set(sr.territory.name for sr in
-                        models.Subregion.objects.filter(id__in=seas)),
-                    set(n for n, s in units['F'][:3]))
-                self.assertEqual(len(lands), 10)
-                self.assertEqual(
-                    set(sr.territory.name for sr in
-                        models.Subregion.objects.filter(id__in=lands)),
-                    set(['Tunisia', 'North Africa', 'London', 'Wales',
-                         'Brest', 'Gascony', 'Picardy', 'Belgium', 'Portugal',
-                         'Spain']))
-            elif len(seas) == 2:
-                self.assertEqual(
-                    set(sr.territory.name for sr in
-                        models.Subregion.objects.filter(id__in=seas)),
-                    set(n for n, s in units['F'][6:]))
-                self.assertEqual(len(lands), 8)
-                self.assertEqual(
-                    set(sr.territory.name for sr in
-                        models.Subregion.objects.filter(id__in=lands)),
-                    set(['Prussia', 'Berlin', 'Kiel', 'Denmark', 'Sweden',
-                         'Finland', 'St. Petersburg', 'Livonia']))
-            else:
-                raise Exception("Didn't have the right number of seas.")
+        (seas1, lands1), (seas2, lands2) = legal
+        if len(seas1) == 2:
+            seas1, seas2 = seas2, seas1
+            lands1, lands2 = lands2, lands1
+
+        self.assertEqual(len(seas1), 3)
+        self.assertEqual(
+            set(subs_unit[sr.id] for sr in full_sr.filter(id__in=seas1)),
+            set(n[0] for n in units['England'][:3]))
+
+        self.assertEqual(len(lands1), 10)
+        self.assertEqual(
+            set(sr.territory.name for sr in full_sr.filter(id__in=lands1)),
+            set(['Tunisia', 'North Africa', 'London', 'Wales', 'Spain',
+                 'Brest', 'Gascony', 'Picardy', 'Belgium', 'Portugal']))
+
+        self.assertEqual(len(seas2), 2)
+        self.assertEqual(
+            set(subs_unit[sr.id] for sr in full_sr.filter(id__in=seas2)),
+            set(n[0] for n in units['England'][6:8]))
+
+        self.assertEqual(len(lands2), 8)
+        self.assertEqual(
+            set(sr.territory.name for sr in full_sr.filter(id__in=lands2)),
+            set(['Prussia', 'Berlin', 'Kiel', 'Denmark', 'Sweden',
+                 'Finland', 'St. Petersburg', 'Livonia']))
 
 
 class BasicChecks(TestCase):
@@ -91,45 +126,71 @@ class BasicChecks(TestCase):
 
     def test_non_adjacent_move(self):
         # DATC 6.A.1
-        call_command('loaddata', '6A01.json', **options)
-
+        units = {"England": (("F North Sea",),)}
         T = models.Turn.objects.get()
-        order = models.Order.objects.get()
+        create_units(units, T)
 
+        orders = {"England": ((0, "F North Sea", "M", None, "Picardy"),)}
+        create_orders(orders, T)
+
+        order = models.Order.objects.get()
         self.assertTrue(not T.is_legal(order))
 
     def test_move_army_to_sea(self):
         # DATC 6.A.2
-        call_command('loaddata', '6A02.json', **options)
-
+        units = {"England": (("A Liverpool",),)}
         T = models.Turn.objects.get()
-        order = models.Order.objects.get()
+        create_units(units, T)
 
+        orders = {"England": ((0, "A Liverpool", "M", None, "Irish Sea"),)}
+        create_orders(orders, T)
+
+        order = models.Order.objects.get()
         self.assertTrue(not T.is_legal(order))
 
     def test_move_fleet_to_land(self):
         # DATC 6.A.3
-        call_command('loaddata', '6A03.json', **options)
-
+        units = {"Germany": (("F Kiel",),)}
         T = models.Turn.objects.get()
-        order = models.Order.objects.get()
+        create_units(units, T)
 
+        orders = {"Germany": ((0, "F Kiel", "M", None, "Munich"),)}
+        create_orders(orders, T)
+
+        order = models.Order.objects.get()
         self.assertTrue(not T.is_legal(order))
 
     def test_move_to_own_sector(self):
         # DATC 6.A.4
-        call_command('loaddata', '6A04.json', **options)
-
+        units = {"Germany": (("F Kiel",),)}
         T = models.Turn.objects.get()
-        order = models.Order.objects.get()
+        create_units(units, T)
 
+        orders = {"Germany": ((0, "F Kiel", "M", None, "Kiel"),)}
+        create_orders(orders, T)
+
+        order = models.Order.objects.get()
         self.assertTrue(not T.is_legal(order))
 
     def test_move_to_own_sector_with_convoy(self):
         # DATC 6.A.5
-        call_command('loaddata', '6A05.json', **options)
-
+        units = {"England": (("F North Sea",),
+                             ("A Yorkshire",),
+                             ("A Liverpool",)),
+                 "Germany": (("F London",),
+                             ("A Wales",))}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England":
+                      ((0, "F North Sea", "C", "A Yorkshire", "Yorkshire"),
+                       (1, "A Yorkshire", "M", None, "Yorkshire"),
+                       (2, "A Liverpool", "S", "A Yorkshire", "Yorkshire")),
+                  "Germany":
+                      ((0, "F London", "M", None, "Yorkshire"),
+                       (1, "A Wales", "S", "F London", "Yorkshire"))}
+        create_orders(orders, T)
+
         orders = models.Order.objects.all()
 
         for o in orders.filter(government__power__name='England'):
@@ -147,18 +208,27 @@ class BasicChecks(TestCase):
 
     def test_ordering_unit_of_another_country(self):
         # DATC 6.A.6
-        call_command('loaddata', '6A06.json', **options)
-
+        units = {"England": (("F London",),)}
         T = models.Turn.objects.get()
-        order = models.Order.objects.get()
+        create_units(units, T)
 
+        orders = {"Germany": ((0, "F London", "M", None, "North Sea"),)}
+        create_orders(orders, T)
+
+        order = models.Order.objects.get()
         self.assertTrue(not T.is_legal(order))
 
     def test_only_armies_can_be_convoyed(self):
         # DATC 6.A.7
-        call_command('loaddata', '6A07.json', **options)
-
+        units = {"England": (("F London",),
+                             ("F North Sea",))}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ((0, "F London", "M", None, "Belgium"),
+                              (1, "F North Sea", "C", "F London", "Belgium"))}
+        create_orders(orders, T)
+
         orders = models.Order.objects.all()
 
         self.assertTrue(not T.is_legal(orders.get(slot=0)))
@@ -166,9 +236,17 @@ class BasicChecks(TestCase):
 
     def test_support_to_hold_yourself(self):
         # DATC 6.A.8
-        call_command('loaddata', '6A08.json', **options)
-
+        units = {"Italy": (("A Venice",),
+                           ("A Tyrolia",)),
+                 "Austria": (("F Trieste",),)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Italy": ((0, "A Venice", "M", None, "Trieste"),
+                            (1, "A Tyrolia", "S", "A Venice", "Trieste")),
+                  "Austria": ((0, "F Trieste", "S", "F Trieste"),)}
+        create_orders(orders, T)
+
         order = models.Order.objects.get(
             government__power__name="Austria-Hungary")
 
@@ -183,18 +261,29 @@ class BasicChecks(TestCase):
 
     def test_fleets_must_follow_coast(self):
         # DATC 6.A.9
-        call_command('loaddata', '6A09.json', **options)
-
+        units = {"Italy": (("F Rome",),)}
         T = models.Turn.objects.get()
-        order = models.Order.objects.get()
+        create_units(units, T)
 
+        orders = {"Italy": ((0, "F Rome", "M", None, "Venice"),)}
+        create_orders(orders, T)
+
+        order = models.Order.objects.get()
         self.assertTrue(not T.is_legal(order))
 
     def test_support_on_unreachable_destination(self):
         # DATC 6.A.10
-        call_command('loaddata', '6A10.json', **options)
-
+        units = {"Austria": (("A Venice",),),
+                 "Italy": (("F Rome",),
+                           ("A Apulia",))}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Austria": ((0, "A Venice", "H"),),
+                  "Italy": ((0, "F Rome", "S", "A Apulia", "Venice"),
+                            (1, "A Apulia", "M", None, "Venice"))}
+        create_orders(orders, T)
+
         order = models.Order.objects.get(
             actor__territory__name="Rome")
 
@@ -208,11 +297,20 @@ class BasicChecks(TestCase):
 
     def test_simple_bounce(self):
         # DATC 6.A.11
-        call_command('loaddata', '6A11.json', **options)
+        units = {"Austria": (("A Vienna",),),
+                 "Italy": (("A Venice",),)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
 
-        G = models.Game.objects.get()
-        G.generate()
-        T = G.current_turn()
+        orders = {"Austria": ((0, "A Vienna", "M", None, "Tyrolia"),),
+                  "Italy": ((0, "A Venice", "M", None, "Tyrolia"),)}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Vienna").exists())
@@ -223,11 +321,22 @@ class BasicChecks(TestCase):
 
     def test_bounce_of_three_units(self):
         # DATC 6.A.12
-        call_command('loaddata', '6A12.json', **options)
+        units = {"Austria": (("A Vienna",),),
+                 "Germany": (("A Munich",),),
+                 "Italy": (("A Venice",),)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
 
-        G = models.Game.objects.get()
-        G.generate()
-        T = G.current_turn()
+        orders = {"Austria": ((0, "A Vienna", "M", None, "Tyrolia"),),
+                  "Germany": ((0, "A Munich", "M", None, "Tyrolia"),),
+                  "Italy": ((0, "A Venice", "M", None, "Tyrolia"),)}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Vienna").exists())
