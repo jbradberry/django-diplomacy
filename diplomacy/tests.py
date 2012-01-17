@@ -4,80 +4,110 @@ from django.db.models import Count
 from django.core.management import call_command
 from django.contrib.auth.models import User
 
-options = {'commit': False, 'verbosity': 0}
-u_convert = dict((v, k) for k,v in models.convert.iteritems())
+import re
 
-unit_subs = dict(("{0} {1}{2}".format(models.convert[s.sr_type],
-                                      s.territory.name,
-                                      ' {0}'.format(s.subname) if s.subname
-                                      else ''),
-                  s)
-                  for s in models.Subregion.objects.select_related('territory'))
-subs_unit = dict((v.id, k) for k,v in unit_subs.iteritems())
+other = {'L': 'S', 'S': 'L', 'F': 'A', 'A': 'F'}
+location = (r"(?{territory}[-\w]{{2,}}(?: [-\w]{{2,}})*)"
+            r"(?: \((?{subname}\w+)\))?")
+unit = r"(?{u_type}F|A) " + location + r"(?: (\w+=\w+))*"
+locRE = re.compile(location.format(territory="P<territory>",
+                                   subname="P<subname>"))
+unitRE = re.compile(unit.format(u_type="P<u_type>", territory="P<territory>",
+                                subname="P<subname>"))
+opts = {'u_type': ':', 'territory': ':', 'subname': ':'}
+U, L = unit.format(**opts), location.format(**opts)
+order_patterns = {'H': re.compile(r"(?P<actor>{0}) H".format(U)),
+                  'M': re.compile(r"(?P<actor>{0}) M"
+                                  r" (?P<target>{1})"
+                                  r"(?: (?P<via_convoy>[*]))?".format(U, L)),
+                  'S': re.compile(r"(?P<actor>{0}) S (?P<assist>{0})"
+                                  r"(?: - (?P<target>{1}))?".format(U, L)),
+                  'C': re.compile(r"(?P<actor>{0}) C (?P<assist>{0})"
+                                  r" - (?P<target>{1})".format(U, L)),
+                  'B': re.compile(r"(?P<actor>{0}) B".format(U)),
+                  'D': re.compile(r"(?P<actor>{0}) D".format(U))}
+
+sr_desc = dict(((models.convert[s.sr_type], s.territory.name, s.subname), s)
+               for s in models.Subregion.objects.select_related('territory'))
 territory = dict((t.name, t.id) for t in models.Territory.objects.all())
 
-
-def create_unit(turn, gvt, unit, **kwargs):
-    sr = unit_subs[unit]
-    for field, val in kwargs.iteritems():
-        if val in territory:
-            kwargs[field] = territory[val]
-    return models.Unit.objects.create(u_type=models.convert[sr.sr_type],
-                                      subregion=sr, turn=turn, government=gvt,
+def create_unit(turn, gvt, unitstr):
+    u = unitRE.match(unitstr)
+    kwargs = (group.split('=') for group in u.groups('') if '=' in group)
+    kwargs = dict((g[0], territory[g[1]]) for g in kwargs)
+    opts = u.groupdict('')
+    return models.Unit.objects.create(u_type=opts['u_type'],
+                                      subregion=sr_desc[(opts['u_type'],
+                                                         opts['territory'],
+                                                         opts['subname'])],
+                                      turn=turn, government=gvt,
                                       **kwargs)
 
 def create_units(units, turn):
     for gname, uset in units.iteritems():
         gvt = models.Government.objects.get(power__name__startswith=gname)
-        for u_opts in uset:
-            create_unit(turn, gvt, u_opts[0],
-                        **({} if len(u_opts) == 1 else u_opts[1]))
+        for unit in uset:
+            create_unit(turn, gvt, unit)
 
 def fetch(desc, match=None):
     if not desc:
         return None
     if match:
-        srs = dict((u_type, "{0} {1}".format(u_type, desc))
-                   for u_type in ('A', 'F'))
-        u_type = models.convert[unit_subs[match].sr_type]
-        if srs[u_type] not in unit_subs:
-            # It won't produce a legal order, but this will give a
-            # placeholder that isn't far removed from the intention.
-            del srs[u_type]
-            desc = srs.values()[0]
-        else:
-            desc = srs[u_type]
-    return unit_subs[desc]
+        sr = locRE.match(desc).groupdict('')
+        helper = unitRE.match(match).groupdict('')
 
-def create_order(turn, gvt, slot, actor, action, assist=None, target=None,
-                 via_convoy=False):
+        ident = [helper.get('u_type'), sr.get('territory'), sr.get('subname')]
+        if tuple(ident) not in sr_desc:
+            ident[0] = other[ident[0]]
+        return sr_desc[tuple(ident)]
+
+    sr = unitRE.match(desc)
+    return sr_desc[sr.groups('')[:3]]
+
+def create_order(turn, gvt, slot, orderstr):
+    for action, regexp in order_patterns.iteritems():
+        o = regexp.match(orderstr)
+        if o is not None:
+            break
+    o_dict = o.groupdict('')
+    kwargs = {'actor': fetch(o_dict.get('actor')),
+              'action': action,
+              'assist': fetch(o_dict.get('assist')),
+              'target': fetch(o_dict.get('target'),
+                              o_dict.get('assist', o_dict.get('actor'))),
+              'via_convoy': bool(o_dict.get('via_convoy'))}
+
     return models.Order.objects.create(
-        turn=turn, government=gvt, slot=slot,
-        actor=fetch(actor), action=action, assist=fetch(assist),
-        target=fetch(target, assist if assist else actor),
-        via_convoy=bool(via_convoy))
+        turn=turn, government=gvt, slot=slot, **kwargs)
 
 def create_orders(orders, turn):
     for gname, oset in orders.iteritems():
         gvt = models.Government.objects.get(power__name__startswith=gname)
-        for o_opts in oset:
-            create_order(turn, gvt, *o_opts)
+        for i, order in enumerate(oset):
+            create_order(turn, gvt, i, order)
+
+
+options = {'commit': False, 'verbosity': 0}
+
+unit_subs = dict(("{0} {1}".format(models.convert[s.sr_type], unicode(s)), s)
+                  for s in models.Subregion.objects.select_related('territory'))
+subs_unit = dict((v.id, k) for k,v in unit_subs.iteritems())
 
 
 class CorrectnessHelperTest(TestCase):
     fixtures = ['basic_game.json']
 
     def test_find_convoys(self):
-        units = {'England': (('F Mid-Atlantic Ocean',),
-                             ('F English Channel',),
-                             ('F Western Mediterranean',),
-                             ('F Spain NC',),     # coastal, can't participate
-                             ('F Ionian Sea',),   # fake group
-                             ('F Adriatic Sea',), # fake group
-                             ('F Baltic Sea',),
-                             ('F Gulf of Bothnia',),
-                             ('A Gascony',),
-                             ('A Sweden',))}
+        units = {'England': ('F Mid-Atlantic Ocean',
+                             'F English Channel',
+                             'F Western Mediterranean',
+                             'F Spain (NC)',   # coastal, can't participate
+                             'F Ionian Sea',   # fake group
+                             'F Adriatic Sea', # fake group
+                             'F Baltic Sea',
+                             'F Gulf of Bothnia',
+                             'A Gascony',
+                             'A Sweden')}
         T = models.Turn.objects.get()
         create_units(units, T)
         legal = T.find_convoys()
@@ -93,7 +123,7 @@ class CorrectnessHelperTest(TestCase):
         self.assertEqual(len(seas1), 3)
         self.assertEqual(
             set(subs_unit[sr.id] for sr in full_sr.filter(id__in=seas1)),
-            set(n[0] for n in units['England'][:3]))
+            set(n for n in units['England'][:3]))
 
         self.assertEqual(len(lands1), 10)
         self.assertEqual(
@@ -104,7 +134,7 @@ class CorrectnessHelperTest(TestCase):
         self.assertEqual(len(seas2), 2)
         self.assertEqual(
             set(subs_unit[sr.id] for sr in full_sr.filter(id__in=seas2)),
-            set(n[0] for n in units['England'][6:8]))
+            set(n for n in units['England'][6:8]))
 
         self.assertEqual(len(lands2), 8)
         self.assertEqual(
@@ -126,11 +156,11 @@ class BasicChecks(TestCase):
 
     def test_non_adjacent_move(self):
         # DATC 6.A.1
-        units = {"England": (("F North Sea",),)}
+        units = {"England": ("F North Sea",)}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"England": ((0, "F North Sea", "M", None, "Picardy"),)}
+        orders = {"England": ("F North Sea M Picardy",)}
         create_orders(orders, T)
 
         order = models.Order.objects.get()
@@ -138,11 +168,11 @@ class BasicChecks(TestCase):
 
     def test_move_army_to_sea(self):
         # DATC 6.A.2
-        units = {"England": (("A Liverpool",),)}
+        units = {"England": ("A Liverpool",)}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"England": ((0, "A Liverpool", "M", None, "Irish Sea"),)}
+        orders = {"England": ("A Liverpool M Irish Sea",)}
         create_orders(orders, T)
 
         order = models.Order.objects.get()
@@ -150,11 +180,11 @@ class BasicChecks(TestCase):
 
     def test_move_fleet_to_land(self):
         # DATC 6.A.3
-        units = {"Germany": (("F Kiel",),)}
+        units = {"Germany": ("F Kiel",)}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"Germany": ((0, "F Kiel", "M", None, "Munich"),)}
+        orders = {"Germany": ("F Kiel M Munich",)}
         create_orders(orders, T)
 
         order = models.Order.objects.get()
@@ -162,11 +192,11 @@ class BasicChecks(TestCase):
 
     def test_move_to_own_sector(self):
         # DATC 6.A.4
-        units = {"Germany": (("F Kiel",),)}
+        units = {"Germany": ("F Kiel",)}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"Germany": ((0, "F Kiel", "M", None, "Kiel"),)}
+        orders = {"Germany": ("F Kiel M Kiel",)}
         create_orders(orders, T)
 
         order = models.Order.objects.get()
@@ -174,21 +204,19 @@ class BasicChecks(TestCase):
 
     def test_move_to_own_sector_with_convoy(self):
         # DATC 6.A.5
-        units = {"England": (("F North Sea",),
-                             ("A Yorkshire",),
-                             ("A Liverpool",)),
-                 "Germany": (("F London",),
-                             ("A Wales",))}
+        units = {"England": ("F North Sea",
+                             "A Yorkshire",
+                             "A Liverpool"),
+                 "Germany": ("F London",
+                             "A Wales")}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"England":
-                      ((0, "F North Sea", "C", "A Yorkshire", "Yorkshire"),
-                       (1, "A Yorkshire", "M", None, "Yorkshire"),
-                       (2, "A Liverpool", "S", "A Yorkshire", "Yorkshire")),
-                  "Germany":
-                      ((0, "F London", "M", None, "Yorkshire"),
-                       (1, "A Wales", "S", "F London", "Yorkshire"))}
+        orders = {"England": ("F North Sea C A Yorkshire - Yorkshire",
+                              "A Yorkshire M Yorkshire",
+                              "A Liverpool S A Yorkshire - Yorkshire"),
+                  "Germany": ("F London M Yorkshire",
+                              "A Wales S F London - Yorkshire")}
         create_orders(orders, T)
 
         orders = models.Order.objects.all()
@@ -208,11 +236,11 @@ class BasicChecks(TestCase):
 
     def test_ordering_unit_of_another_country(self):
         # DATC 6.A.6
-        units = {"England": (("F London",),)}
+        units = {"England": ("F London",)}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"Germany": ((0, "F London", "M", None, "North Sea"),)}
+        orders = {"Germany": ("F London M North Sea",)}
         create_orders(orders, T)
 
         order = models.Order.objects.get()
@@ -220,13 +248,13 @@ class BasicChecks(TestCase):
 
     def test_only_armies_can_be_convoyed(self):
         # DATC 6.A.7
-        units = {"England": (("F London",),
-                             ("F North Sea",))}
+        units = {"England": ("F London",
+                             "F North Sea")}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"England": ((0, "F London", "M", None, "Belgium"),
-                              (1, "F North Sea", "C", "F London", "Belgium"))}
+        orders = {"England": ("F London M Belgium",
+                              "F North Sea C F London - Belgium")}
         create_orders(orders, T)
 
         orders = models.Order.objects.all()
@@ -236,15 +264,15 @@ class BasicChecks(TestCase):
 
     def test_support_to_hold_yourself(self):
         # DATC 6.A.8
-        units = {"Italy": (("A Venice",),
-                           ("A Tyrolia",)),
-                 "Austria": (("F Trieste",),)}
+        units = {"Italy": ("A Venice",
+                           "A Tyrolia"),
+                 "Austria": ("F Trieste",)}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"Italy": ((0, "A Venice", "M", None, "Trieste"),
-                            (1, "A Tyrolia", "S", "A Venice", "Trieste")),
-                  "Austria": ((0, "F Trieste", "S", "F Trieste"),)}
+        orders = {"Italy": ("A Venice M Trieste",
+                            "A Tyrolia S A Venice - Trieste"),
+                  "Austria": ("F Trieste S F Trieste",)}
         create_orders(orders, T)
 
         order = models.Order.objects.get(
@@ -261,11 +289,11 @@ class BasicChecks(TestCase):
 
     def test_fleets_must_follow_coast(self):
         # DATC 6.A.9
-        units = {"Italy": (("F Rome",),)}
+        units = {"Italy": ("F Rome",)}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"Italy": ((0, "F Rome", "M", None, "Venice"),)}
+        orders = {"Italy": ("F Rome M Venice",)}
         create_orders(orders, T)
 
         order = models.Order.objects.get()
@@ -273,15 +301,15 @@ class BasicChecks(TestCase):
 
     def test_support_on_unreachable_destination(self):
         # DATC 6.A.10
-        units = {"Austria": (("A Venice",),),
-                 "Italy": (("F Rome",),
-                           ("A Apulia",))}
+        units = {"Austria": ("A Venice",),
+                 "Italy": ("F Rome",
+                           "A Apulia")}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"Austria": ((0, "A Venice", "H"),),
-                  "Italy": ((0, "F Rome", "S", "A Apulia", "Venice"),
-                            (1, "A Apulia", "M", None, "Venice"))}
+        orders = {"Austria": ("A Venice H",),
+                  "Italy": ("F Rome S A Apulia - Venice",
+                            "A Apulia M Venice")}
         create_orders(orders, T)
 
         order = models.Order.objects.get(
@@ -297,13 +325,13 @@ class BasicChecks(TestCase):
 
     def test_simple_bounce(self):
         # DATC 6.A.11
-        units = {"Austria": (("A Vienna",),),
-                 "Italy": (("A Venice",),)}
+        units = {"Austria": ("A Vienna",),
+                 "Italy": ("A Venice",)}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"Austria": ((0, "A Vienna", "M", None, "Tyrolia"),),
-                  "Italy": ((0, "A Venice", "M", None, "Tyrolia"),)}
+        orders = {"Austria": ("A Vienna M Tyrolia",),
+                  "Italy": ("A Venice M Tyrolia",)}
         create_orders(orders, T)
 
         for o in models.Order.objects.all():
@@ -321,15 +349,15 @@ class BasicChecks(TestCase):
 
     def test_bounce_of_three_units(self):
         # DATC 6.A.12
-        units = {"Austria": (("A Vienna",),),
-                 "Germany": (("A Munich",),),
-                 "Italy": (("A Venice",),)}
+        units = {"Austria": ("A Vienna",),
+                 "Germany": ("A Munich",),
+                 "Italy": ("A Venice",)}
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        orders = {"Austria": ((0, "A Vienna", "M", None, "Tyrolia"),),
-                  "Germany": ((0, "A Munich", "M", None, "Tyrolia"),),
-                  "Italy": ((0, "A Venice", "M", None, "Tyrolia"),)}
+        orders = {"Austria": ("A Vienna M Tyrolia",),
+                  "Germany": ("A Munich M Tyrolia",),
+                  "Italy": ("A Venice M Tyrolia",)}
         create_orders(orders, T)
 
         for o in models.Order.objects.all():
