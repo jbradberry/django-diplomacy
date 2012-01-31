@@ -170,7 +170,8 @@ class OrderFormSet(BaseFormSet):
                     for f2 in self.forms:
                         if f2.instance.actor.sr_type != 'S':
                             continue
-                        if f2.instance.action != 'C':
+                        if not (f2.instance.action == 'C' and
+                                f2.instance.assist.id == actor.id):
                             F.discard(f2.instance.actor.id)
                     F = Subregion.objects.filter(id__in=F)
                     if not any(actor.id in A and target.id in A
