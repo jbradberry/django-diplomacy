@@ -145,9 +145,11 @@ class Game(models.Model):
             return self.turn_set.latest()
 
     def detect_civil_disorder(self, orders):
-        return [gvt for gvt in self.government_set.all()
-                if not any('id' in o for u, o in orders.iteritems()
-                           if o['government'] == gvt)]
+        user_issued = set(o['government'] for o in orders.itervalues()
+                          if 'id' in o)
+        automated = set(o['government'] for o in orders.itervalues()
+                        if 'id' not in o)
+        return automated - user_issued
 
     def construct_dependencies(self, orders):
         dep = defaultdict(list)
@@ -459,8 +461,9 @@ class Game(models.Model):
 
         turn.consistency_check()
 
-        orders = dict((territory(o['actor']), o)
-                      for o in turn.normalize_orders())
+        orders = dict((territory(o['actor']), o) for o in
+                      turn.normalize_orders() if o['actor'] is not None)
+
         if turn.season in ('S', 'F'):
             # FIXME: do something with civil disorder
             disorder = self.detect_civil_disorder(orders)
@@ -724,7 +727,16 @@ class Turn(models.Model):
             order = {'government': order.government, 'turn': order.turn,
                      'actor': order.actor, 'action': order.action,
                      'assist': order.assist, 'target': order.target}
-        units = order['actor'].unit_set.filter(turn=self)
+        if order['actor'] is None:
+            if self.season != 'FA':
+                return False
+            units = Unit.objects.none()
+        else:
+            units = order['actor'].unit_set.filter(turn=self)
+
+        if order['actor'] is None or order['action'] is None:
+            return (self.season == 'FA' and
+                    order['government'].builds_available() > 0)
         if order['action'] != 'B' and not units.exists():
             return False
 
@@ -738,7 +750,7 @@ class Turn(models.Model):
             if units.get().government != order['government']:
                 return False
         elif order['action'] == 'D':
-            if units.get().government != order['government']:
+            if units and units.get().government != order['government']:
                 return False
         elif order['action'] == 'B':
             if not self.ownership_set.filter(
@@ -765,7 +777,11 @@ class Turn(models.Model):
 
         # fallback orders
         if self.season == 'FA':
-            orders = dict(((g, s), {'government': g, 'slot': s, 'turn': self})
+            orders = dict(((g, s),
+                           {'government': g, 'slot': s, 'turn': self,
+                            'actor': None, 'action': None,
+                            'assist': None, 'target': None,
+                            'via_convoy': False, 'convoy': False})
                           for g in gvts
                           for s in xrange(abs(g.builds_available(self))))
         else:
@@ -783,6 +799,8 @@ class Turn(models.Model):
             orderset = orderset.filter(government=gvt)
         for o in orderset:
             if self.is_legal(o):
+                # FIXME: We shouldn't assume that the order matches up
+                # with the slot.
                 orders[(o.government, o.slot)] = {
                     'id': o.id, 'government': o.government, 'slot': o.slot,
                     'turn': o.turn, 'actor': o.actor, 'action': o.action,
@@ -844,8 +862,8 @@ class Turn(models.Model):
 
         for T, o in orders.iteritems():
             order = dict((k, v) for k, v in o.iteritems() if k in keys)
-            order['user_issued'] = o.get('id', None) is not None
-            if decisions[T]:
+            order['user_issued'] = o.get('id') is not None
+            if decisions.get(T):
                 order['result'] = 'S'
             elif any(T in db for db in turn.disbands.itervalues()):
                 order['result'] = 'D'
@@ -862,13 +880,15 @@ class Turn(models.Model):
         retreat = self.prev.season in ('SR', 'FR')
 
         for a, d in decisions:
+            action = orders[a].get('action')
             # units that are displaced must retreat or be disbanded
-            if retreat and orders[a].get('action') is None:
+            if retreat and action is None:
                 del units[(a, retreat)]
                 self.disbands[orders[a]['government'].id].add(a)
+                orders[a]['action'] = 'D'
                 continue
 
-            if orders[a].get('action') == 'M':
+            if action == 'M':
                 target = orders[a]['target']
                 T = orders[a]['actor'].territory
                 if d: # move succeeded
@@ -882,14 +902,14 @@ class Turn(models.Model):
                     self.failed[territory(target)].append(T)
 
             # successful build
-            if d and orders[a].get('action') == 'B':
+            if d and action == 'B':
                 units[(a, False)] = {'turn': self,
                                      'government': orders[a]['government'],
                                      'u_type':
                                          convert[orders[a]['actor'].sr_type],
                                      'subregion': orders[a]['actor']}
 
-            if orders[a].get('action') == 'D':
+            if action == 'D':
                 del units[(a, retreat)]
                 self.disbands[orders[a]['government'].id].add(a)
                 continue
@@ -908,8 +928,9 @@ class Turn(models.Model):
             if len(self.failed[t.id]) > 1:
                 units[key]['standoff_from'] = t
 
-    def _update_units_autodisband(self, units):
+    def _update_units_autodisband(self, orders, units):
         sr = Subregion.objects.all()
+        t_id = dict((s.id, s.territory.id) for s in sr)
         for g in self.game.government_set.all():
             builds = g.builds_available(self.prev) + len(self.disbands[g.id])
             if builds >= 0:
@@ -933,11 +954,17 @@ class Turn(models.Model):
                 u_distance.append(list(adj))
                 examined |= adj
 
-            while builds < 0:
-                current = sorted(u_distance.pop(),
+            while builds < 0 and u_distance:
+                current = sorted((u for u in u_distance.pop() if u in g_names),
                                  key=lambda x: g_names[x])
                 for x in current:
-                    del units[(a, False)]
+                    if t_id[x] in self.disbands[g.id]: continue
+                    orders[t_id[x]] = {'government': g, 'actor': sr.get(id=x),
+                                       'action': 'D', 'assist': None,
+                                       'target': None, 'via_convoy': False}
+
+                    del units[(t_id[x], False)]
+                    self.disbands[g.id].add(t_id[x])
                     builds += 1
                     if builds == 0:
                         break
@@ -957,7 +984,7 @@ class Turn(models.Model):
             self._update_units_blocked(orders, decisions, units)
 
         if self.prev.season == 'FA':
-            self._update_units_autodisband(units)
+            self._update_units_autodisband(orders, units)
 
         self.prev.create_canonical_orders(orders, decisions, self)
 
@@ -1109,7 +1136,7 @@ class Government(models.Model):
                 tree.setdefault(a.id, {})[x] = result
 
         if season == 'FA' and builds > 0:
-            tree[u''] = {u'': {u'': {u'': True}}}
+            tree[u''] = {u'': {u'': {u'': False}}}
 
         return tree
 
@@ -1162,7 +1189,8 @@ class Order(models.Model):
     slot = models.PositiveSmallIntegerField()
     actor = models.ForeignKey(Subregion, null=True, blank=True,
                               related_name='acts')
-    action = models.CharField(max_length=1, choices=ACTION_CHOICES, blank=True)
+    action = models.CharField(max_length=1, choices=ACTION_CHOICES,
+                              null=True, blank=True)
     assist = models.ForeignKey(Subregion, null=True, blank=True,
                                related_name='assisted')
     target = models.ForeignKey(Subregion, null=True, blank=True,
@@ -1170,8 +1198,9 @@ class Order(models.Model):
     via_convoy = models.BooleanField()
 
     def __unicode__(self):
-        result = u"{0} {1} {2}".format(convert[self.actor.sr_type],
-                                       self.actor, self.action)
+        result = u"{0} {1} {2}".format(
+            convert.get(getattr(self.actor, 'sr_type', None)),
+            self.actor, self.action)
         if self.assist:
             result = u"{0} {1} {2}".format(result,
                                            convert[self.assist.sr_type],
