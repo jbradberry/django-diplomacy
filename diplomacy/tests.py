@@ -5,15 +5,24 @@ from django.core.management import call_command
 from django.contrib.auth.models import User
 
 import re
+from collections import defaultdict
 
+convert = {'F': 'S', 'A': 'L'}
 other = {'L': 'S', 'S': 'L', 'F': 'A', 'A': 'F'}
-location = (r"(?{territory}[-\w]{{2,}}(?: [-\w]{{2,}})*)"
+
+location = (r"(?{territory}[-\w.]{{2,}}(?: [-\w.]{{2,}})*)"
             r"(?: \((?{subname}\w+)\))?")
-unit = r"(?{u_type}F|A) " + location + r"(?: (\w+=\w+))*"
+unit = r"(?{u_type}F|A) " + location
 locRE = re.compile(location.format(territory="P<territory>",
                                    subname="P<subname>"))
-unitRE = re.compile(unit.format(u_type="P<u_type>", territory="P<territory>",
+unitRE = re.compile(unit.format(u_type="P<u_type>",
+                                territory="P<territory>",
                                 subname="P<subname>"))
+unit_enhRE = re.compile(unit.format(u_type="P<u_type>",
+                                    territory="P<territory>",
+                                    subname="P<subname>") +
+                        r"(?:, (displaced_from=[-\w.]+(?: [-\w.]+)*))?" +
+                        r"(?:, (standoff_from=[-\w.]+(?: [-\w.]+)*))?")
 opts = {'u_type': ':', 'territory': ':', 'subname': ':'}
 U, L = unit.format(**opts), location.format(**opts)
 order_patterns = {'H': re.compile(r"(?P<actor>{0}) H".format(U)),
@@ -27,19 +36,42 @@ order_patterns = {'H': re.compile(r"(?P<actor>{0}) H".format(U)),
                   'B': re.compile(r"(?P<actor>{0}) B".format(U)),
                   'D': re.compile(r"(?P<actor>{0}) D".format(U))}
 
-sr_desc = dict(((models.convert[s.sr_type], s.territory.name, s.subname), s)
-               for s in models.Subregion.objects.select_related('territory'))
-territory = dict((t.name, t.id) for t in models.Territory.objects.all())
+lookup = defaultdict(list)
+for t in models.Territory.objects.all():
+    for sr in t.subregion_set.all():
+        lookup[(t.name,)].append(sr)
+        lookup[(t.name, sr.subname or '')].append(sr)
+        lookup[(t.name, sr.subname or '', sr.sr_type)].append(sr)
+
+t_dict = dict((t.name, t.id) for t in models.Territory.objects.all())
+
+
+def fetch(sr_type, territory, subname, strict=False):
+    if sr_type in ('F', 'A'):
+        sr_type = convert[sr_type]
+    if subname is None:
+        subname = ''
+    if not lookup[(territory,)]:
+        return
+    if subname != '':
+        if not lookup[(territory, subname)]:
+            subname = ''
+
+    result = lookup[(territory, subname, sr_type)]
+    if not result and not strict:
+        result = lookup[(territory, subname, other[sr_type])]
+    if len(result) == 1:
+        return result[0]
 
 def create_unit(turn, gvt, unitstr):
-    u = unitRE.match(unitstr)
+    u = unit_enhRE.match(unitstr)
     kwargs = (group.split('=') for group in u.groups('') if '=' in group)
     kwargs = dict((g[0], territory[g[1]]) for g in kwargs)
     opts = u.groupdict('')
     return models.Unit.objects.create(u_type=opts['u_type'],
-                                      subregion=sr_desc[(opts['u_type'],
-                                                         opts['territory'],
-                                                         opts['subname'])],
+                                      subregion=fetch(opts['u_type'],
+                                                      opts['territory'],
+                                                      opts['subname']),
                                       turn=turn, government=gvt,
                                       **kwargs)
 
@@ -49,42 +81,39 @@ def create_units(units, turn):
         for unit in uset:
             create_unit(turn, gvt, unit)
 
-def fetch(desc, match=None):
-    if not desc:
-        return None
-    if match:
-        sr = locRE.match(desc).groupdict('')
-        helper = unitRE.match(match).groupdict('')
+def split_unit(ustr, regexp=None):
+    if regexp is None:
+        regexp = unitRE
+    u = regexp.match(ustr)
+    if not u:
+        return ('', '', '')
+    return u.groups('')
 
-        ident = [helper.get('u_type'), sr.get('territory'), sr.get('subname')]
-        if tuple(ident) not in sr_desc:
-            ident[0] = other[ident[0]]
-        return sr_desc[tuple(ident)]
-
-    sr = unitRE.match(desc)
-    return sr_desc[sr.groups('')[:3]]
-
-def create_order(turn, gvt, slot, orderstr):
+def create_order(turn, gvt, orderstr):
     for action, regexp in order_patterns.iteritems():
         o = regexp.match(orderstr)
         if o is not None:
             break
     o_dict = o.groupdict('')
-    kwargs = {'actor': fetch(o_dict.get('actor')),
-              'action': action,
-              'assist': fetch(o_dict.get('assist')),
-              'target': fetch(o_dict.get('target'),
-                              o_dict.get('assist', o_dict.get('actor'))),
+    actor = fetch(*split_unit(o_dict.get('actor', '')),
+                   strict=(turn.season == 'FA'))
+    assist = fetch(*split_unit(o_dict.get('assist', '')))
+    sr_type = assist.sr_type if assist else (actor.sr_type if actor else '')
+    target = fetch(sr_type, *split_unit(o_dict.get('target', ''), locRE)[:2])
+
+    kwargs = {'actor': actor, 'action': action,
+              'assist': assist, 'target': target,
               'via_convoy': bool(o_dict.get('via_convoy'))}
 
-    return models.Order.objects.create(
-        turn=turn, government=gvt, slot=slot, **kwargs)
+    return models.Order(turn=turn, government=gvt, **kwargs)
 
 def create_orders(orders, turn):
     for gname, oset in orders.iteritems():
         gvt = models.Government.objects.get(power__name__startswith=gname)
-        for i, order in enumerate(oset):
-            create_order(turn, gvt, i, order)
+        new_orders = [create_order(turn, gvt, order) for order in oset]
+        for i, o in enumerate(sorted(new_orders, key=lambda x: x.actor_id)):
+            o.slot = i
+            o.save()
 
 
 options = {'commit': False, 'verbosity': 0}
@@ -385,47 +414,62 @@ class CoastalIssues(TestCase):
 
     http://web.inter.nl.net/users/L.B.Kruijswijk/#6.B
 
+    Several of these tests are inverted, since the engine is stricter
+    than specified by the DATC.
+
     """
 
     fixtures = ['basic_game.json']
 
     def test_move_to_unspecified_coast_when_necessary(self):
         # DATC 6.B.1
-
-        # Note: this test is somewhat against the original intent,
-        # since this implementation of Diplomacy uses entity selection
-        # instead of string parsing for orders.
-        call_command('loaddata', '6B01.json', **options)
-
+        units = {"France": ("F Portugal",)}
         T = models.Turn.objects.get()
-        order = models.Order.objects.get()
+        create_units(units, T)
 
+        orders = {"France": ("F Portugal M Spain",)}
+        create_orders(orders, T)
+
+        order = models.Order.objects.get()
         self.assertTrue(not T.is_legal(order))
 
-    #def test_move_to_unspecified_coast_when_unnecessary(self):
+    # expected fail
+    def test_move_to_unspecified_coast_when_unnecessary(self):
         # DATC 6.B.2
+        units = {"France": ("F Gascony",)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
 
-        # Note: this test would be entirely pointless as-is.  However,
-        # if a text-parsing interface is ever implemented, it will be
-        # necessary to test that.
+        orders = {"France": ("F Gascony M Spain",)}
+        create_orders(orders, T)
+
+        order = models.Order.objects.get()
+        # self.assertTrue(T.is_legal(order))
+        self.assertTrue(not T.is_legal(order))
 
     def test_moving_to_wrong_but_unnecessary_coast(self):
         # DATC 6.B.3
-
-        # Note: this is another test which is checking something that
-        # isn't a real problem.
-        call_command('loaddata', '6B03.json', **options)
-
+        units = {"France": ("F Gascony",)}
         T = models.Turn.objects.get()
-        order = models.Order.objects.get()
+        create_units(units, T)
 
+        orders = {"France": ("F Gascony M Spain (SC)",)}
+        create_orders(orders, T)
+
+        order = models.Order.objects.get()
         self.assertTrue(not T.is_legal(order))
 
     def test_support_to_unreachable_coast_allowed(self):
         # DATC 6.B.4
-        call_command('loaddata', '6B04.json', **options)
-
+        units = {"France": ("F Gascony", "F Marseilles"),
+                 "Italy": ("F Western Mediterranean",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("F Gascony M Spain (NC)",
+                             "F Marseilles S F Gascony - Spain (NC)"),
+                  "Italy": ("F Western Mediterranean M Spain (SC)",)}
+        create_orders(orders, T)
 
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
@@ -445,9 +489,15 @@ class CoastalIssues(TestCase):
 
     def test_support_from_unreachable_coast_not_allowed(self):
         # DATC 6.B.5
-        call_command('loaddata', '6B05.json', **options)
-
+        units = {"France": ("F Marseilles", "F Spain (NC)"),
+                 "Italy": ("F Gulf of Lyon",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("F Marseilles M Gulf of Lyon",
+                             "F Spain (NC) S F Marseilles - Gulf of Lyon"),
+                  "Italy": ("F Gulf of Lyon H",)}
+        create_orders(orders, T)
 
         self.assertEqual(models.Order.objects.exclude(action='S').count(), 2)
         for o in models.Order.objects.exclude(action='S'):
@@ -471,9 +521,20 @@ class CoastalIssues(TestCase):
 
     def test_support_can_be_cut_from_other_coast(self):
         # DATC 6.B.6
-        call_command('loaddata', '6B06.json', **options)
-
+        units = {"England": ("F Irish Sea", "F North Atlantic Ocean"),
+                 "France": ("F Spain (NC)", "F Mid-Atlantic Ocean"),
+                 "Italy": ("F Gulf of Lyon",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F Irish Sea S F North Atlantic Ocean - "
+                              "Mid-Atlantic Ocean",
+                              "F North Atlantic Ocean M Mid-Atlantic Ocean"),
+                  "France": ("F Spain (NC) S F Mid-Atlantic Ocean",
+                             "F Mid-Atlantic Ocean H"),
+                  "Italy": ("F Gulf of Lyon M Spain (SC)",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -485,11 +546,177 @@ class CoastalIssues(TestCase):
                               displaced_from__name="North Atlantic Ocean"
                               ).exists())
 
+    # expected fail
+    def test_supporting_with_unspecified_coast(self):
+        # DATC 6.B.7
+        units = {"France": ("F Portugal", "F Mid-Atlantic Ocean"),
+                 "Italy": ("F Gulf of Lyon", "F Western Mediterranean")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("F Portugal S F Mid-Atlantic Ocean - Spain",
+                             "F Mid-Atlantic Ocean M Spain (NC)"),
+                  "Italy": ("F Gulf of Lyon S F Western Mediterranean - "
+                            "Spain (SC)",
+                            "F Western Mediterranean M Spain (SC)")}
+        create_orders(orders, T)
+
+        # for o in models.Order.objects.all():
+        #     self.assertTrue(T.is_legal(o))
+        for o in models.Order.objects.exclude(actor__territory__name=
+                                              "Portugal"):
+            self.assertTrue(T.is_legal(o))
+
+        self.assertTrue(not T.is_legal(
+                models.Order.objects.get(actor__territory__name="Portugal")))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        # self.assertTrue(
+        #     T.unit_set.filter(subregion__territory__name=
+        #                       "Mid-Atlantic Ocean").exists())
+
+        # self.assertTrue(
+        #     T.unit_set.filter(subregion__territory__name=
+        #                       "Western Mediterranean").exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Spain",
+                              government__power__name="Italy").exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name=
+                              "Mid-Atlantic Ocean").exists())
+
+    # expected fail
+    def test_supporting_with_unspecified_coast_when_only_one_possible(self):
+        # DATC 6.B.8
+        units = {"France": ("F Portugal", "F Gascony"),
+                 "Italy": ("F Gulf of Lyon", "F Western Mediterranean")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("F Portugal S F Gascony - Spain",
+                             "F Gascony M Spain (NC)"),
+                  "Italy": ("F Gulf of Lyon S F Western Mediterranean - "
+                            "Spain (SC)",
+                            "F Western Mediterranean M Spain (SC)")}
+        create_orders(orders, T)
+
+        # for o in models.Order.objects.all():
+        #     self.assertTrue(T.is_legal(o))
+        for o in models.Order.objects.exclude(actor__territory__name=
+                                              "Portugal"):
+            self.assertTrue(T.is_legal(o))
+
+        self.assertTrue(not T.is_legal(
+                models.Order.objects.get(actor__territory__name="Portugal")))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        # self.assertTrue(
+        #     T.unit_set.filter(subregion__territory__name="Gascony").exists())
+
+        # self.assertTrue(
+        #     T.unit_set.filter(subregion__territory__name=
+        #                       "Western Mediterranean").exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Spain",
+                              government__power__name="Italy").exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Gascony").exists())
+
+    # expected fail
+    def test_supporting_with_wrong_coast(self):
+        # DATC 6.B.9
+        units = {"France": ("F Portugal", "F Mid-Atlantic Ocean"),
+                 "Italy": ("F Gulf of Lyon", "F Western Mediterranean")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("F Portugal S F Mid-Atlantic Ocean - Spain (NC)",
+                             "F Mid-Atlantic Ocean M Spain (SC)"),
+                  "Italy": ("F Gulf of Lyon S F Western Mediterranean - "
+                            "Spain (SC)",
+                            "F Western Mediterranean M Spain (SC)")}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        # self.assertTrue(
+        #     T.unit_set.filter(subregion__territory__name=
+        #                       "Mid-Atlantic Ocean").exists())
+
+        # self.assertTrue(
+        #     T.unit_set.filter(subregion__territory__name=
+        #                       "Western Mediterranean").exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name=
+                              "Mid-Atlantic Ocean").exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Spain",
+                              government__power__name="Italy").exists())
+
+    # expected fail
+    def test_unit_ordered_with_wrong_coast(self):
+        # DATC 6.B.10
+        units = {"France": ("F Spain (SC)",)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("F Spain (NC) M Gulf of Lyon",)}
+        create_orders(orders, T)
+
+        o = models.Order.objects.get()
+        # self.assertTrue(T.is_legal(o))
+        self.assertTrue(not T.is_legal(o))
+
+    def test_coast_cannot_be_ordered_to_change(self):
+        # DATC 6.B.11
+        units = {"France": ("F Spain (NC)",)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("F Spain (SC) M Gulf of Lyon",)}
+        create_orders(orders, T)
+
+        o = models.Order.objects.get()
+        self.assertTrue(not T.is_legal(o))
+
+    # expected fail
+    def test_army_movement_with_coastal_specification(self):
+        # DATC 6.B.12
+        units = {"France": ("A Gascony",)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("A Gascony M Spain (NC)",)}
+        create_orders(orders, T)
+
+        o = models.Order.objects.get()
+        # self.assertTrue(T.is_legal(o))
+        self.assertTrue(not T.is_legal(o))
+
     def test_coastal_crawl_not_allowed(self):
         # DATC 6.B.13
-        call_command('loaddata', '6B13.json', **options)
-
+        units = {"Turkey": ("F Bulgaria (SC)", "F Constantinople")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Turkey": ("F Bulgaria (SC) M Constantinople",
+                             "F Constantinople M Bulgaria (EC)")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -503,8 +730,32 @@ class CoastalIssues(TestCase):
             not T.unit_set.filter(subregion__territory__name="Bulgaria",
                                   subregion__subname='EC').exists())
 
-    #def test_build_with_unspecified_coast(self):
+    def test_build_with_unspecified_coast(self):
         # DATC 6.B.14
+        T = models.Turn.objects.get()
+
+        T.game.generate() # SR 1900
+        T = T.game.current_turn()
+        T.game.generate() # F 1900
+        T = T.game.current_turn()
+        T.game.generate() # FR 1900
+        T = T.game.current_turn()
+        T.game.generate() # FA 1900
+        T = T.game.current_turn()
+
+        orders = {"Russia": ("F St. Petersburg B",)}
+        create_orders(orders, T)
+
+        gvt = models.Government.objects.get(power__name="Russia")
+        self.assertEqual(gvt.builds_available(), 4)
+        o = models.Order.objects.get()
+        self.assertIsNone(o.actor)
+        self.assertTrue(T.is_legal(o))
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertTrue(not T.unit_set.exists())
 
 
 class CircularMovement(TestCase):
@@ -2974,6 +3225,7 @@ class Retreating(TestCase):
         T.game.generate()
         T = T.game.current_turn()
 
+        # Germany's armies have stood themselves off.
         self.assertEqual(
             2, T.unit_set.filter(standoff_from__isnull=False).count())
 
