@@ -771,9 +771,15 @@ class CircularMovement(TestCase):
 
     def test_three_unit_circular_move(self):
         # DATC 6.C.1
-        call_command('loaddata', '6C01.json', **options)
-
+        units = {"Turkey": ("F Ankara", "A Constantinople", "A Smyrna")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Turkey": ("F Ankara M Constantinople",
+                             "A Constantinople M Smyrna",
+                             "A Smyrna M Ankara")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -782,21 +788,32 @@ class CircularMovement(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Constantinople",
+                              previous__subregion__territory__name="Ankara",
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Smyrna",
-                              u_type='A').exists())
+                              previous__subregion__territory__name=
+                              "Constantinople", u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ankara",
+                              previous__subregion__territory__name="Smyrna",
                               u_type='A').exists())
 
     def test_three_unit_circular_move_with_support(self):
         # DATC 6.C.2
-        call_command('loaddata', '6C02.json', **options)
-
+        units = {"Turkey": ("F Ankara", "A Constantinople",
+                            "A Smyrna", "A Bulgaria")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Turkey": ("F Ankara M Constantinople",
+                             "A Constantinople M Smyrna",
+                             "A Smyrna M Ankara",
+                             "A Bulgaria S F Ankara - Constantinople")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -805,21 +822,32 @@ class CircularMovement(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Constantinople",
+                              previous__subregion__territory__name="Ankara",
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Smyrna",
-                              u_type='A').exists())
+                              previous__subregion__territory__name=
+                              "Constantinople", u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ankara",
+                              previous__subregion__territory__name="Smyrna",
                               u_type='A').exists())
 
     def test_disrupted_three_unit_circular_move(self):
         # DATC 6.C.3
-        call_command('loaddata', '6C03.json', **options)
-
+        units = {"Turkey": ("F Ankara", "A Constantinople",
+                            "A Smyrna", "A Bulgaria")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Turkey": ("F Ankara M Constantinople",
+                             "A Constantinople M Smyrna",
+                             "A Smyrna M Ankara",
+                             "A Bulgaria M Constantinople")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -828,25 +856,42 @@ class CircularMovement(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ankara",
+                              previous__subregion__territory__name="Ankara",
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Constantinople",
-                              u_type='A').exists())
+                              previous__subregion__territory__name=
+                              "Constantinople", u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Smyrna",
+                              previous__subregion__territory__name="Smyrna",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Bulgaria",
+                              previous__subregion__territory__name="Bulgaria",
                               u_type='A').exists())
 
     def test_circular_move_with_attacked_convoy(self):
         # DATC 6.C.4
-        call_command('loaddata', '6C04.json', **options)
-
+        units = {"Austria": ("A Trieste", "A Serbia"),
+                 "Turkey": ("A Bulgaria", "F Aegean Sea",
+                            "F Ionian Sea", "F Adriatic Sea"),
+                 "Italy": ("F Naples",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Austria": ("A Trieste M Serbia",
+                              "A Serbia M Bulgaria"),
+                  "Turkey": ("A Bulgaria M Trieste",
+                             "F Aegean Sea C A Bulgaria - Trieste",
+                             "F Ionian Sea C A Bulgaria - Trieste",
+                             "F Adriatic Sea C A Bulgaria - Trieste"),
+                  "Italy": ("F Naples M Ionian Sea",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -865,6 +910,7 @@ class CircularMovement(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Serbia",
+                              previous__subregion__territory__name="Trieste",
                               government__power__name="Austria-Hungary",
                               u_type='A').exists())
 
@@ -875,9 +921,23 @@ class CircularMovement(TestCase):
 
     def test_circular_move_with_disrupted_convoy(self):
         # DATC 6.C.5
-        call_command('loaddata', '6C05.json', **options)
-
+        units = {"Austria": ("A Trieste", "A Serbia"),
+                 "Turkey": ("A Bulgaria", "F Aegean Sea",
+                            "F Ionian Sea", "F Adriatic Sea"),
+                 "Italy": ("F Naples", "F Tunisia")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Austria": ("A Trieste M Serbia",
+                              "A Serbia M Bulgaria"),
+                  "Turkey": ("A Bulgaria M Trieste",
+                             "F Aegean Sea C A Bulgaria - Trieste",
+                             "F Ionian Sea C A Bulgaria - Trieste",
+                             "F Adriatic Sea C A Bulgaria - Trieste"),
+                  "Italy": ("F Naples M Ionian Sea",
+                            "F Tunisia S F Naples - Ionian Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -891,24 +951,35 @@ class CircularMovement(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
+                              previous__subregion__territory__name="Trieste",
                               government__power__name="Austria-Hungary",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Serbia",
+                              previous__subregion__territory__name="Serbia",
                               government__power__name="Austria-Hungary",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Bulgaria",
+                              previous__subregion__territory__name="Bulgaria",
                               government__power__name="Turkey",
                               u_type='A').exists())
 
     def test_two_armies_with_two_convoys(self):
         # DATC 6.C.6
-        call_command('loaddata', '6C06.json', **options)
-
+        units = {"England": ("F North Sea", "A London"),
+                 "France": ("F English Channel", "A Belgium")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Belgium",
+                              "A London M Belgium"),
+                  "France": ("F English Channel C A Belgium - London",
+                             "A Belgium M London")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -927,9 +998,18 @@ class CircularMovement(TestCase):
 
     def test_bounced_unit_swap(self):
         # DATC 6.C.7
-        call_command('loaddata', '6C07.json', **options)
-
+        units = {"England": ("F North Sea", "A London"),
+                 "France": ("F English Channel", "A Belgium", "A Burgundy")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Belgium",
+                              "A London M Belgium"),
+                  "France": ("F English Channel C A Belgium - London",
+                             "A Belgium M London",
+                             "A Burgundy M Belgium")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
