@@ -7,6 +7,13 @@ from django.contrib.auth.models import User
 import re
 from collections import defaultdict
 
+        # units = {}
+        # T = models.Turn.objects.get()
+        # create_units(units, T)
+
+        # orders = {}
+        # create_orders(orders, T)
+
 convert = {'F': 'S', 'A': 'L'}
 other = {'L': 'S', 'S': 'L', 'F': 'A', 'A': 'F'}
 
@@ -2195,9 +2202,17 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_dislodged_unit_has_no_effect_on_attackers_area(self):
         # DATC 6.E.1
-        call_command('loaddata', '6E01.json', **options)
-
+        units = {"Germany": ("A Berlin", "F Kiel", "A Silesia"),
+                 "Russia": ("A Prussia",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Germany": ("A Berlin M Prussia",
+                              "F Kiel M Berlin",
+                              "A Silesia S A Berlin - Prussia"),
+                  "Russia": ("A Prussia M Berlin",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2206,8 +2221,15 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
+                              previous__subregion__territory__name="Kiel",
                               government__power__name="Germany",
                               u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Prussia",
+                              previous__subregion__territory__name="Berlin",
+                              government__power__name="Germany",
+                              u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Prussia",
@@ -2217,9 +2239,15 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_no_self_dislodgement_in_head_to_head_battle(self):
         # DATC 6.E.2
-        call_command('loaddata', '6E02.json', **options)
-
+        units = {"Germany": ("A Berlin", "F Kiel", "A Munich")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Germany": ("A Berlin M Kiel",
+                              "F Kiel M Berlin",
+                              "A Munich S A Berlin - Kiel")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2239,9 +2267,16 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_no_help_dislodging_own_unit(self):
         # DATC 6.E.3
-        call_command('loaddata', '6E03.json', **options)
-
+        units = {"Germany": ("A Berlin", "A Munich"),
+                 "England": ("F Kiel",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Germany": ("A Berlin M Kiel",
+                              "A Munich S F Kiel - Berlin"),
+                  "England": ("F Kiel M Berlin",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2261,9 +2296,25 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_non_dislodged_loser_still_has_effect(self):
         # DATC 6.E.4
-        call_command('loaddata', '6E04.json', **options)
-
+        units = {"Germany": ("F Holland", "F Helgoland Bight", "F Skagerrak"),
+                 "France": ("F North Sea", "F Belgium"),
+                 "England": ("F Edinburgh", "F Yorkshire", "F Norwegian Sea"),
+                 "Austria": ("A Kiel", "A Ruhr")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Germany": ("F Holland M North Sea",
+                              "F Helgoland Bight S F Holland - North Sea",
+                              "F Skagerrak S F Holland - North Sea"),
+                  "France": ("F North Sea M Holland",
+                             "F Belgium S F North Sea - Holland"),
+                  "England": ("F Edinburgh S F Norwegian Sea - North Sea",
+                              "F Yorkshire S F Norwegian Sea - North Sea",
+                              "F Norwegian Sea M North Sea"),
+                  "Austria": ("A Kiel S A Ruhr - Holland",
+                              "A Ruhr M Holland")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2271,9 +2322,20 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         T = T.game.current_turn()
 
         self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Holland",
+                              government__power__name="Germany",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="France",
                               displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norwegian Sea",
+                              government__power__name="England",
                               u_type='F').exists())
 
         self.assertTrue(
@@ -2283,14 +2345,38 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_loser_dislodged_by_another_army_still_has_effect(self):
         # DATC 6.E.5
-        call_command('loaddata', '6E05.json', **options)
-
+        units = {"Germany": ("F Holland", "F Helgoland Bight", "F Skagerrak"),
+                 "France": ("F North Sea", "F Belgium"),
+                 "England": ("F Edinburgh", "F Yorkshire",
+                             "F Norwegian Sea", "F London"),
+                 "Austria": ("A Kiel", "A Ruhr")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Germany": ("F Holland M North Sea",
+                              "F Helgoland Bight S F Holland - North Sea",
+                              "F Skagerrak S F Holland - North Sea"),
+                  "France": ("F North Sea M Holland",
+                             "F Belgium S F North Sea - Holland"),
+                  "England": ("F Edinburgh S F Norwegian Sea - North Sea",
+                              "F Yorkshire S F Norwegian Sea - North Sea",
+                              "F Norwegian Sea M North Sea",
+                              "F London S F Norwegian Sea - North Sea"),
+                  "Austria": ("A Kiel S A Ruhr - Holland",
+                              "A Ruhr M Holland")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
         T.game.generate()
         T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Holland",
+                              government__power__name="Germany",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
@@ -2299,25 +2385,43 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
                               u_type='F').exists())
 
         self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              government__power__name="England",
+                              u_type='F').exists())
+
+        self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ruhr",
                               government__power__name="Austria-Hungary",
                               u_type='A').exists())
 
-        self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Holland",
-                              government__power__name="Germany",
-                              displaced_from__isnull=True).exists())
-
     def test_not_dislodged_because_own_support_still_has_effect(self):
         # DATC 6.E.6
-        call_command('loaddata', '6E06.json', **options)
-
+        units = {"Germany": ("F Holland", "F Helgoland Bight"),
+                 "France": ("F North Sea", "F Belgium", "F English Channel"),
+                 "Austria": ("A Kiel", "A Ruhr")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Germany": ("F Holland M North Sea",
+                              "F Helgoland Bight S F Holland - North Sea"),
+                  "France": ("F North Sea M Holland",
+                             "F Belgium S F North Sea - Holland",
+                             "F English Channel S F Holland - North Sea"),
+                  "Austria": ("A Kiel S A Ruhr - Holland",
+                              "A Ruhr M Holland")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
         T.game.generate()
         T = T.game.current_turn()
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Holland",
+                              government__power__name="Germany",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
@@ -2332,9 +2436,20 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_no_self_dislodgement_with_beleaguered_garrison(self):
         # DATC 6.E.7
-        call_command('loaddata', '6E07.json', **options)
-
+        units = {"England": ("F North Sea", "F Yorkshire"),
+                 "Germany": ("F Holland", "F Helgoland Bight"),
+                 "Russia": ("F Skagerrak", "F Norway")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea H",
+                              "F Yorkshire S F Norway - North Sea"),
+                  "Germany": ("F Holland S F Helgoland Bight - North Sea",
+                              "F Helgoland Bight M North Sea"),
+                  "Russia": ("F Skagerrak S F Norway - North Sea",
+                             "F Norway M North Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2359,9 +2474,20 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_no_self_dislodgement_with_beleaguered_and_head_to_head(self):
         # DATC 6.E.8
-        call_command('loaddata', '6E08.json', **options)
-
+        units = {"England": ("F North Sea", "F Yorkshire"),
+                 "Germany": ("F Holland", "F Helgoland Bight"),
+                 "Russia": ("F Skagerrak", "F Norway")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea M Norway",
+                              "F Yorkshire S F Norway - North Sea"),
+                  "Germany": ("F Holland S F Helgoland Bight - North Sea",
+                              "F Helgoland Bight M North Sea"),
+                  "Russia": ("F Skagerrak S F Norway - North Sea",
+                             "F Norway M North Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2377,6 +2503,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Norway",
                               government__power__name="Russia",
+                              displaced_from__isnull=True,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -2386,9 +2513,20 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_almost_self_dislodgement_with_beleaguered_garrison(self):
         # DATC 6.E.9
-        call_command('loaddata', '6E09.json', **options)
-
+        units = {"England": ("F North Sea", "F Yorkshire"),
+                 "Germany": ("F Holland", "F Helgoland Bight"),
+                 "Russia": ("F Skagerrak", "F Norway")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea M Norwegian Sea",
+                              "F Yorkshire S F Norway - North Sea"),
+                  "Germany": ("F Holland S F Helgoland Bight - North Sea",
+                              "F Helgoland Bight M North Sea"),
+                  "Russia": ("F Skagerrak S F Norway - North Sea",
+                             "F Norway M North Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2412,9 +2550,21 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_almost_circular_move_self_dislodgement_beleaguered_garrison(self):
         # DATC 6.E.10
-        call_command('loaddata', '6E10.json', **options)
-
+        units = {"England": ("F North Sea", "F Yorkshire"),
+                 "Germany": ("F Holland", "F Helgoland Bight", "F Denmark"),
+                 "Russia": ("F Skagerrak", "F Norway")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea M Denmark",
+                              "F Yorkshire S F Norway - North Sea"),
+                  "Germany": ("F Holland S F Helgoland Bight - North Sea",
+                              "F Helgoland Bight M North Sea",
+                              "F Denmark M Helgoland Bight"),
+                  "Russia": ("F Skagerrak S F Norway - North Sea",
+                             "F Norway M North Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2444,9 +2594,23 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_no_self_dislodgement_garrison_unit_swap(self):
         # DATC 6.E.11
-        call_command('loaddata', '6E11.json', **options)
-
+        units = {"France": ("A Spain", "F Mid-Atlantic Ocean",
+                            "F Gulf of Lyon"),
+                 "Germany": ("A Marseilles", "A Gascony"),
+                 "Italy": ("F Portugal", "F Western Mediterranean")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("A Spain M Portugal *", # * = via Convoy
+                             "F Mid-Atlantic Ocean C A Spain - Portugal",
+                             "F Gulf of Lyon S F Portugal - Spain (NC)"),
+                  "Germany": ("A Marseilles S A Gascony - Spain",
+                              "A Gascony M Spain"),
+                  "Italy":
+                      ("F Portugal M Spain (NC)",
+                       "F Western Mediterranean S F Portugal - Spain (NC)")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2455,6 +2619,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Portugal",
+                              previous__subregion__territory__name="Spain",
                               government__power__name="France",
                               u_type='A').exists())
 
@@ -2471,9 +2636,19 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_support_attack_on_own_unit_can_be_used_for_other_means(self):
         # DATC 6.E.12
-        call_command('loaddata', '6E12.json', **options)
-
+        units = {"Austria": ("A Budapest", "A Serbia"),
+                 "Italy": ("A Vienna",),
+                 "Russia": ("A Galicia", "A Rumania")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Austria": ("A Budapest M Rumania",
+                              "A Serbia S A Vienna - Budapest"),
+                  "Italy": ("A Vienna M Budapest",),
+                  "Russia": ("A Galicia M Budapest",
+                             "A Rumania S A Galicia - Budapest")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2498,9 +2673,22 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_three_way_beleaguered_garrison(self):
         # DATC 6.E.13
-        call_command('loaddata', '6E13.json', **options)
-
+        units = {"England": ("F Edinburgh", "F Yorkshire"),
+                 "France": ("F Belgium", "F English Channel"),
+                 "Germany": ("F North Sea",),
+                 "Russia": ("F Norwegian Sea", "F Norway")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F Edinburgh S F Yorkshire - North Sea",
+                              "F Yorkshire M North Sea"),
+                  "France": ("F Belgium M North Sea",
+                             "F English Channel S F Belgium - North Sea"),
+                  "Germany": ("F North Sea H",),
+                  "Russia": ("F Norwegian Sea M North Sea",
+                             "F Norway S F Norwegian Sea - North Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2530,9 +2718,15 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_illegal_head_to_head_battle_can_still_defend(self):
         # DATC 6.E.14
-        call_command('loaddata', '6E14.json', **options)
-
+        units = {"England": ("A Liverpool",),
+                 "Russia": ("F Edinburgh",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Liverpool M Edinburgh",),
+                  "Russia": ("F Edinburgh M Liverpool",)}
+        create_orders(orders, T)
+
         self.assertTrue(T.is_legal(
                 models.Order.objects.get(government__power__name="England")))
         self.assertTrue(not T.is_legal(
@@ -2554,9 +2748,25 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
     def test_friendly_head_to_head_battle(self):
         # DATC 6.E.15
-        call_command('loaddata', '6E15.json', **options)
-
+        units = {"England": ("F Holland", "A Ruhr"),
+                 "France": ("A Kiel", "A Munich", "A Silesia"),
+                 "Germany": ("A Berlin", "F Denmark", "F Helgoland Bight"),
+                 "Russia": ("F Baltic Sea", "A Prussia")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F Holland S A Ruhr - Kiel",
+                              "A Ruhr M Kiel"),
+                  "France": ("A Kiel M Berlin",
+                             "A Munich S A Kiel - Berlin",
+                             "A Silesia S A Kiel - Berlin"),
+                  "Germany": ("A Berlin M Kiel",
+                              "F Denmark S A Berlin - Kiel",
+                              "F Helgoland Bight S A Berlin - Kiel"),
+                  "Russia": ("F Baltic Sea S A Prussia - Berlin",
+                             "A Prussia M Berlin")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
