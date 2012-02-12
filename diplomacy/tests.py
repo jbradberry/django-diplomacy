@@ -2809,9 +2809,17 @@ class Convoys(TestCase):
 
     def test_no_convoy_in_coastal_areas(self):
         # DATC 6.F.1
-        call_command('loaddata', '6F01.json', **options)
-
+        units = {"Turkey": ("A Greece", "F Aegean Sea",
+                            "F Constantinople", "F Black Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Turkey": ("A Greece M Sevastopol",
+                             "F Aegean Sea C A Greece - Sevastopol",
+                             "F Constantinople C A Greece - Sevastopol",
+                             "F Black Sea C A Greece - Sevastopol")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(not T.is_legal(o))
 
@@ -2825,9 +2833,16 @@ class Convoys(TestCase):
 
     def test_convoyed_army_can_bounce(self):
         # DATC 6.F.2
-        call_command('loaddata', '6F02.json', **options)
-
+        units = {"England": ("F English Channel", "A London"),
+                 "France": ("A Paris",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F English Channel C A London - Brest",
+                              "A London M Brest"),
+                  "France": ("A Paris M Brest",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2846,9 +2861,18 @@ class Convoys(TestCase):
 
     def test_convoyed_army_can_receive_support(self):
         # DATC 6.F.3
-        call_command('loaddata', '6F03.json', **options)
-
+        units = {"England": ("F English Channel", "A London",
+                             "F Mid-Atlantic Ocean"),
+                 "France": ("A Paris",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F English Channel C A London - Brest",
+                              "A London M Brest",
+                              "F Mid-Atlantic Ocean S A London - Brest"),
+                  "France": ("A Paris M Brest",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2857,6 +2881,7 @@ class Convoys(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Brest",
+                              previous__subregion__territory__name="London",
                               government__power__name="England",
                               u_type='A').exists())
 
@@ -2867,9 +2892,16 @@ class Convoys(TestCase):
 
     def test_attacked_convoy_is_not_disrupted(self):
         # DATC 6.F.4
-        call_command('loaddata', '6F04.json', **options)
-
+        units = {"England": ("F North Sea", "A London"),
+                 "Germany": ("F Skagerrak",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Holland",
+                              "A London M Holland"),
+                  "Germany": ("F Skagerrak M North Sea",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2884,14 +2916,31 @@ class Convoys(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Holland",
+                              previous__subregion__territory__name="London",
                               government__power__name="England",
                               u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Skagerrak",
+                              government__power__name="Germany",
+                              u_type='F').exists())
 
     def test_beleaguered_convoy_is_not_disrupted(self):
         # DATC 6.F.5
-        call_command('loaddata', '6F05.json', **options)
-
+        units = {"England": ("F North Sea", "A London"),
+                 "France": ("F English Channel", "F Belgium"),
+                 "Germany": ("F Skagerrak", "F Denmark")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Holland",
+                              "A London M Holland"),
+                  "France": ("F English Channel M North Sea",
+                             "F Belgium S F English Channel - North Sea"),
+                  "Germany": ("F Skagerrak M North Sea",
+                              "F Denmark S F Skagerrak - North Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2906,14 +2955,39 @@ class Convoys(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Holland",
+                              previous__subregion__territory__name="London",
                               government__power__name="England",
                               u_type='A').exists())
 
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="France",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Skagerrak",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
     def test_dislodged_convoy_does_not_cut_support(self):
         # DATC 6.F.6
-        call_command('loaddata', '6F06.json', **options)
-
+        units = {"England": ("F North Sea", "A London"),
+                 "Germany": ("A Holland", "A Belgium",
+                             "F Helgoland Bight", "F Skagerrak"),
+                 "France": ("A Picardy", "A Burgundy")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Holland",
+                              "A London M Holland"),
+                  "Germany": ("A Holland S A Belgium",
+                              "A Belgium S A Holland",
+                              "F Helgoland Bight S F Skagerrak - North Sea",
+                              "F Skagerrak M North Sea"),
+                  "France": ("A Picardy M Belgium",
+                             "A Burgundy S A Picardy - Belgium")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2925,6 +2999,22 @@ class Convoys(TestCase):
                               government__power__name="England",
                               displaced_from__name="Skagerrak",
                               u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              previous__subregion__territory__name="Skagerrak",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Holland",
+                              government__power__name="Germany",
+                              u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
@@ -2933,9 +3023,17 @@ class Convoys(TestCase):
 
     def test_dislodged_convoy_does_not_cause_contested_area(self):
         # DATC 6.F.7
-        call_command('loaddata', '6F07.json', **options)
-
+        units = {"England": ("F North Sea", "A London"),
+                 "Germany": ("F Helgoland Bight", "F Skagerrak")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Holland",
+                              "A London M Holland"),
+                  "Germany": ("F Helgoland Bight S F Skagerrak - North Sea",
+                              "F Skagerrak M North Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2948,23 +3046,36 @@ class Convoys(TestCase):
                               displaced_from__name="Skagerrak",
                               u_type='F').exists())
 
-        u = T.unit_set.get(subregion__territory__name="North Sea",
-                           government__power__name="England",
-                           displaced_from__name="Skagerrak",
-                           u_type='F')
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              previous__subregion__territory__name="Skagerrak",
+                              government__power__name="Germany",
+                              u_type='F').exists())
 
-        order = {'government': u.government, 'turn': T,
-                 'actor': u.subregion, 'action': 'M', 'assist': None,
-                 'target': models.Subregion.objects.get(territory__name=
-                                                        "Holland",
-                                                        sr_type='S')}
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+        orders = {"England": ("F North Sea M Holland",)}
+        create_orders(orders, T)
+        order = T.order_set.get()
         self.assertTrue(T.is_legal(order))
 
     def test_dislodged_convoy_does_not_cause_a_bounce(self):
         # DATC 6.F.8
-        call_command('loaddata', '6F08.json', **options)
-
+        units = {"England": ("F North Sea", "A London"),
+                 "Germany": ("F Helgoland Bight", "F Skagerrak", "A Belgium")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Holland",
+                              "A London M Holland"),
+                  "Germany": ("F Helgoland Bight S F Skagerrak - North Sea",
+                              "F Skagerrak M North Sea",
+                              "A Belgium M Holland")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2976,6 +3087,17 @@ class Convoys(TestCase):
                               government__power__name="England",
                               displaced_from__name="Skagerrak",
                               u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              previous__subregion__territory__name="Skagerrak",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__power__name="England",
+                              u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Holland",
@@ -2984,9 +3106,19 @@ class Convoys(TestCase):
 
     def test_dislodge_of_multi_route_convoy(self):
         # DATC 6.F.9
-        call_command('loaddata', '6F09.json', **options)
-
+        units = {"England": ("F English Channel", "F North Sea", "A London"),
+                 "France": ("F Brest", "F Mid-Atlantic Ocean")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F English Channel C A London - Belgium",
+                              "F North Sea C A London - Belgium",
+                              "A London M Belgium"),
+                  "France":
+                      ("F Brest S F Mid-Atlantic Ocean - English Channel",
+                       "F Mid-Atlantic Ocean M English Channel")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -2997,6 +3129,13 @@ class Convoys(TestCase):
             T.unit_set.filter(subregion__territory__name="English Channel",
                               government__power__name="England",
                               displaced_from__name="Mid-Atlantic Ocean",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              previous__subregion__territory__name=
+                              "Mid-Atlantic Ocean",
+                              government__power__name="France",
                               u_type='F').exists())
 
         self.assertTrue(
@@ -3006,9 +3145,20 @@ class Convoys(TestCase):
 
     def test_dislodge_of_multi_route_convoy_with_foreign_fleet(self):
         # DATC 6.F.10
-        call_command('loaddata', '6F10.json', **options)
-
+        units = {"England": ("F North Sea", "A London"),
+                 "Germany": ("F English Channel",),
+                 "France": ("F Brest", "F Mid-Atlantic Ocean")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Belgium",
+                              "A London M Belgium"),
+                  "Germany": ("F English Channel C A London - Belgium",),
+                  "France":
+                      ("F Brest S F Mid-Atlantic Ocean - English Channel",
+                       "F Mid-Atlantic Ocean M English Channel")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3019,6 +3169,13 @@ class Convoys(TestCase):
             T.unit_set.filter(subregion__territory__name="English Channel",
                               government__power__name="Germany",
                               displaced_from__name="Mid-Atlantic Ocean",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              previous__subregion__territory__name=
+                              "Mid-Atlantic Ocean",
+                              government__power__name="France",
                               u_type='F').exists())
 
         self.assertTrue(
@@ -3028,9 +3185,21 @@ class Convoys(TestCase):
 
     def test_dislodge_of_multi_route_convoy_with_only_foreign_fleets(self):
         # DATC 6.F.11
-        call_command('loaddata', '6F11.json', **options)
-
+        units = {"England": ("A London",),
+                 "Germany": ("F English Channel",),
+                 "Russia": ("F North Sea",),
+                 "France": ("F Brest", "F Mid-Atlantic Ocean")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A London M Belgium",),
+                  "Germany": ("F English Channel C A London - Belgium",),
+                  "Russia": ("F North Sea C A London - Belgium",),
+                  "France":
+                      ("F Brest S F Mid-Atlantic Ocean - English Channel",
+                       "F Mid-Atlantic Ocean M English Channel")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3044,15 +3213,32 @@ class Convoys(TestCase):
                               u_type='F').exists())
 
         self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              previous__subregion__territory__name=
+                              "Mid-Atlantic Ocean",
+                              government__power__name="France",
+                              u_type='F').exists())
+
+        self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
                               government__power__name="England",
                               u_type='A').exists())
 
     def test_dislodged_convoying_fleet_not_on_route(self):
         # DATC 6.F.12
-        call_command('loaddata', '6F12.json', **options)
-
+        units = {"England": ("F English Channel", "A London", "F Irish Sea"),
+                 "France": ("F North Atlantic Ocean", "F Mid-Atlantic Ocean")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F English Channel C A London - Belgium",
+                              "A London M Belgium",
+                              "F Irish Sea C A London - Belgium"),
+                  "France": ("F North Atlantic Ocean S F Mid-Atlantic Ocean"
+                             " - Irish Sea",
+                             "F Mid-Atlantic Ocean M Irish Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3066,15 +3252,32 @@ class Convoys(TestCase):
                               u_type='F').exists())
 
         self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Irish Sea",
+                              previous__subregion__territory__name=
+                              "Mid-Atlantic Ocean",
+                              government__power__name="France",
+                              u_type='F').exists())
+
+        self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
                               government__power__name="England",
                               u_type='A').exists())
 
     def test_the_unwanted_alternative(self):
         # DATC 6.F.13
-        call_command('loaddata', '6F13.json', **options)
-
+        units = {"England": ("A London", "F North Sea"),
+                 "France": ("F English Channel",),
+                 "Germany": ("F Holland", "F Denmark")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A London M Belgium",
+                              "F North Sea C A London - Belgium"),
+                  "France": ("F English Channel C A London - Belgium",),
+                  "Germany": ("F Holland S F Denmark - North Sea",
+                              "F Denmark M North Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3092,11 +3295,25 @@ class Convoys(TestCase):
                               displaced_from__name="Denmark",
                               u_type='F').exists())
 
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              previous__subregion__territory__name="Denmark",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
     def test_simple_convoy_paradox(self):
         # DATC 6.F.14
-        call_command('loaddata', '6F14.json', **options)
-
+        units = {"England": ("F London", "F Wales"),
+                 "France": ("A Brest", "F English Channel")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F London S F Wales - English Channel",
+                              "F Wales M English Channel"),
+                  "France": ("A Brest M London",
+                             "F English Channel C A Brest - London")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3114,11 +3331,30 @@ class Convoys(TestCase):
                               displaced_from__name="Wales",
                               u_type='F').exists())
 
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              previous__subregion__territory__name="Wales",
+                              government__power__name="England",
+                              u_type='F').exists())
+
     def test_simple_convoy_paradox_with_additional_convoy(self):
         # DATC 6.F.15
-        call_command('loaddata', '6F15.json', **options)
-
+        units = {"England": ("F London", "F Wales"),
+                 "France": ("A Brest", "F English Channel"),
+                 "Italy": ("F Irish Sea", "F Mid-Atlantic Ocean",
+                           "A North Africa")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F London S F Wales - English Channel",
+                              "F Wales M English Channel"),
+                  "France": ("A Brest M London",
+                             "F English Channel C A Brest - London"),
+                  "Italy": ("F Irish Sea C A North Africa - Wales",
+                            "F Mid-Atlantic Ocean C A North Africa - Wales",
+                            "A North Africa M Wales")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3134,6 +3370,12 @@ class Convoys(TestCase):
             T.unit_set.filter(subregion__territory__name="English Channel",
                               government__power__name="France",
                               displaced_from__name="Wales",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              previous__subregion__territory__name="Wales",
+                              government__power__name="England",
                               u_type='F').exists())
 
         self.assertTrue(
@@ -3143,9 +3385,20 @@ class Convoys(TestCase):
 
     def test_pandins_paradox(self):
         # DATC 6.F.16
-        call_command('loaddata', '6F16.json', **options)
-
+        units = {"England": ("F London", "F Wales"),
+                 "France": ("A Brest", "F English Channel"),
+                 "Germany": ("F North Sea", "F Belgium")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F London S F Wales - English Channel",
+                              "F Wales M English Channel"),
+                  "France": ("A Brest M London",
+                             "F English Channel C A Brest - London"),
+                  "Germany": ("F North Sea S F Belgium - English Channel",
+                              "F Belgium M English Channel")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3155,6 +3408,17 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
                               government__power__name="Germany",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Wales",
+                              government__power__name="England",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__power__name="England",
+                              displaced_from__isnull=True,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -3170,9 +3434,21 @@ class Convoys(TestCase):
 
     def test_pandins_extended_paradox(self):
         # DATC 6.F.17
-        call_command('loaddata', '6F17.json', **options)
-
+        units = {"England": ("F London", "F Wales"),
+                 "France": ("A Brest", "F English Channel", "F Yorkshire"),
+                 "Germany": ("F North Sea", "F Belgium")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F London S F Wales - English Channel",
+                              "F Wales M English Channel"),
+                  "France": ("A Brest M London",
+                             "F English Channel C A Brest - London",
+                             "F Yorkshire S A Brest - London"),
+                  "Germany": ("F North Sea S F Belgium - English Channel",
+                              "F Belgium M English Channel")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3182,6 +3458,17 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
                               government__power__name="Germany",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Wales",
+                              government__power__name="England",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="London",
+                              government__power__name="England",
+                              displaced_from__isnull=True,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -3197,9 +3484,20 @@ class Convoys(TestCase):
 
     def test_betrayal_paradox(self):
         # DATC 6.F.18
-        call_command('loaddata', '6F18.json', **options)
-
+        units = {"England": ("F North Sea", "A London", "F English Channel"),
+                 "France": ("F Belgium",),
+                 "Germany": ("F Helgoland Bight", "F Skagerrak")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Belgium",
+                              "A London M Belgium",
+                              "F English Channel S A London - Belgium"),
+                  "France": ("F Belgium S F North Sea",),
+                  "Germany": ("F Helgoland Bight S F Skagerrak - North Sea",
+                              "F Skagerrak M North Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3212,16 +3510,35 @@ class Convoys(TestCase):
                               u_type='A').exists())
 
         self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              government__power__name="France",
+                              u_type='F').exists())
+
+        self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="England",
                               displaced_from__isnull=True,
                               u_type='F').exists())
 
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Skagerrak",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
     def test_multi_route_convoy_disruption_paradox(self):
         # DATC 6.F.19
-        call_command('loaddata', '6F19.json', **options)
-
+        units = {"France": ("A Tunisia", "F Tyrrhenian Sea", "F Ionian Sea"),
+                 "Italy": ("F Naples", "F Rome")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("A Tunisia M Naples",
+                             "F Tyrrhenian Sea C A Tunisia - Naples",
+                             "F Ionian Sea C A Tunisia - Naples"),
+                  "Italy": ("F Naples S F Rome - Tyrrhenian Sea",
+                            "F Rome M Tyrrhenian Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3235,15 +3552,38 @@ class Convoys(TestCase):
                               u_type='F').exists())
 
         self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Naples",
+                              government__power__name="Italy",
+                              displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Rome",
                               government__power__name="Italy",
                               u_type='F').exists())
 
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Tunisia",
+                              government__power__name="France",
+                              u_type='A').exists())
+
     def test_unwanted_multi_route_convoy_paradox(self):
         # DATC 6.F.20
-        call_command('loaddata', '6F20.json', **options)
-
+        units = {"France": ("A Tunisia", "F Tyrrhenian Sea"),
+                 "Italy": ("F Naples", "F Ionian Sea"),
+                 "Turkey": ("F Aegean Sea", "F Eastern Mediterranean")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("A Tunisia M Naples",
+                             "F Tyrrhenian Sea C A Tunisia - Naples"),
+                  "Italy": ("F Naples S F Ionian Sea",
+                            "F Ionian Sea C A Tunisia - Naples"),
+                  "Turkey":
+                      ("F Aegean Sea S F Eastern Mediterranean - Ionian Sea",
+                       "F Eastern Mediterranean M Ionian Sea")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3256,11 +3596,38 @@ class Convoys(TestCase):
                               displaced_from__name="Eastern Mediterranean",
                               u_type='F').exists())
 
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ionian Sea",
+                              previous__subregion__territory__name=
+                              "Eastern Mediterranean",
+                              government__power__name="Turkey",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Tunisia",
+                              government__power__name="France",
+                              u_type='A').exists())
+
     def test_dads_army(self):
         # DATC 6.F.21
-        call_command('loaddata', '6F21.json', **options)
-
+        units = {"Russia": ("A Edinburgh", "F Norwegian Sea", "A Norway"),
+                 "France": ("F Irish Sea", "F Mid-Atlantic Ocean"),
+                 "England": ("A Liverpool", "F North Atlantic Ocean",
+                             "F Clyde")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Russia": ("A Edinburgh S A Norway - Clyde",
+                             "F Norwegian Sea C A Norway - Clyde",
+                             "A Norway M Clyde"),
+                  "France": ("F Irish Sea S F Mid-Atlantic Ocean"
+                             " - North Atlantic Ocean",
+                             "F Mid-Atlantic Ocean M North Atlantic Ocean"),
+                  "England": ("A Liverpool M Clyde *", # via convoy
+                              "F North Atlantic Ocean C A Liverpool - Clyde",
+                              "F Clyde S F North Atlantic Ocean")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3273,11 +3640,44 @@ class Convoys(TestCase):
                               displaced_from__name="Mid-Atlantic Ocean",
                               u_type='F').exists())
 
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Atlantic Ocean",
+                              previous__subregion__territory__name=
+                              "Mid-Atlantic Ocean",
+                              government__power__name="France",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Clyde",
+                              government__power__name="England",
+                              displaced_from__name="Norway",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Clyde",
+                              previous__subregion__territory__name="Norway",
+                              government__power__name="Russia",
+                              u_type='A').exists())
+
     def test_second_order_paradox_with_two_solutions(self):
         # DATC 6.F.22
-        call_command('loaddata', '6F22.json', **options)
-
+        units = {"England": ("F Edinburgh", "F London"),
+                 "France": ("A Brest", "F English Channel"),
+                 "Germany": ("F Belgium", "F Picardy"),
+                 "Russia": ("A Norway", "F North Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F Edinburgh M North Sea",
+                              "F London S F Edinburgh - North Sea"),
+                  "France": ("A Brest M London",
+                             "F English Channel C A Brest - London"),
+                  "Germany": ("F Belgium S F Picardy - English Channel",
+                              "F Picardy M English Channel"),
+                  "Russia": ("A Norway M Belgium",
+                             "F North Sea C A Norway - Belgium")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3291,16 +3691,56 @@ class Convoys(TestCase):
                               u_type='F').exists())
 
         self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              previous__subregion__territory__name="Picardy",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+        self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="Russia",
                               displaced_from__name="Edinburgh",
                               u_type='F').exists())
 
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              previous__subregion__territory__name="Edinburgh",
+                              government__power__name="England",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Brest",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Norway",
+                              government__power__name="Russia",
+                              u_type='A').exists())
+
     def test_second_order_paradox_with_two_exclusive_convoys(self):
         # DATC 6.F.23
-        call_command('loaddata', '6F23.json', **options)
-
+        units = {"England": ("F Edinburgh", "F Yorkshire"),
+                 "France": ("A Brest", "F English Channel"),
+                 "Germany": ("F Belgium", "F London"),
+                 "Italy": ("F Mid-Atlantic Ocean", "F Irish Sea"),
+                 "Russia": ("A Norway", "F North Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F Edinburgh M North Sea",
+                              "F Yorkshire S F Edinburgh - North Sea"),
+                  "France": ("A Brest M London",
+                             "F English Channel C A Brest - London"),
+                  "Germany": ("F Belgium S F English Channel",
+                              "F London S F North Sea"),
+                  "Italy":
+                      ("F Mid-Atlantic Ocean M English Channel",
+                       "F Irish Sea S F Mid-Atlantic Ocean - English Channel"),
+                  "Russia": ("A Norway M Belgium",
+                             "F North Sea C A Norway - Belgium")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3324,16 +3764,42 @@ class Convoys(TestCase):
                               u_type='F').exists())
 
         self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Mid-Atlantic Ocean",
+                              government__power__name="Italy",
+                              u_type='F').exists())
+
+        self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="Russia",
                               displaced_from__isnull=True,
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Edinburgh",
+                              government__power__name="England",
                               u_type='F').exists())
 
     def test_second_order_paradox_with_no_resolution(self):
         # DATC 6.F.24
-        call_command('loaddata', '6F24.json', **options)
-
+        units = {"England": ("F Edinburgh", "F London", "F Irish Sea",
+                             "F Mid-Atlantic Ocean"),
+                 "France": ("A Brest", "F English Channel", "F Belgium"),
+                 "Russia": ("A Norway", "F North Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England":
+                      ("F Edinburgh M North Sea",
+                       "F London S F Edinburgh - North Sea",
+                       "F Irish Sea M English Channel",
+                       "F Mid-Atlantic Ocean S F Irish Sea - English Channel"),
+                  "France": ("A Brest M London",
+                             "F English Channel C A Brest - London",
+                             "F Belgium S F English Channel"),
+                  "Russia": ("A Norway M Belgium",
+                             "F North Sea C A Norway - Belgium")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3357,9 +3823,20 @@ class Convoys(TestCase):
                               u_type='F').exists())
 
         self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Irish Sea",
+                              government__power__name="England",
+                              u_type='F').exists())
+
+        self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="Russia",
                               displaced_from__name="Edinburgh",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="North Sea",
+                              previous__subregion__territory__name="Edinburgh",
+                              government__power__name="England",
                               u_type='F').exists())
 
 
