@@ -3853,9 +3853,16 @@ class ConvoyingToAdjacent(TestCase):
 
     def test_two_units_can_swap_by_convoy(self):
         # DATC 6.G.1
-        call_command('loaddata', '6G01.json', **options)
-
+        units = {"England": ("A Norway", "F Skagerrak"),
+                 "Russia": ("A Sweden",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Norway M Sweden",
+                              "F Skagerrak C A Norway - Sweden"),
+                  "Russia": ("A Sweden M Norway",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3864,19 +3871,29 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Sweden",
+                              previous__subregion__territory__name="Norway",
                               government__power__name="England",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Norway",
+                              previous__subregion__territory__name="Sweden",
                               government__power__name="Russia",
                               u_type='A').exists())
 
     def test_kidnapping_an_army(self):
         # DATC 6.G.2
-        call_command('loaddata', '6G02.json', **options)
-
+        units = {"England": ("A Norway",),
+                 "Russia": ("F Sweden",),
+                 "Germany": ("F Skagerrak",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Norway M Sweden",),
+                  "Russia": ("F Sweden M Norway",),
+                  "Germany": ("F Skagerrak C A Norway - Sweden",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3895,9 +3912,20 @@ class ConvoyingToAdjacent(TestCase):
 
     def test_kidnapping_with_disrupted_convoy(self):
         # DATC 6.G.3
-        call_command('loaddata', '6G03.json', **options)
-
+        units = {"France": ("F Brest", "A Picardy", "A Burgundy",
+                            "F Mid-Atlantic Ocean"),
+                 "England": ("F English Channel",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France":
+                      ("F Brest M English Channel",
+                       "A Picardy M Belgium",
+                       "A Burgundy S A Picardy - Belgium",
+                       "F Mid-Atlantic Ocean S F Brest - English Channel"),
+                  "England": ("F English Channel C A Picardy - Belgium",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3906,6 +3934,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
+                              previous__subregion__territory__name="Picardy",
                               government__power__name="France",
                               u_type='A').exists())
 
@@ -3915,11 +3944,29 @@ class ConvoyingToAdjacent(TestCase):
                               displaced_from__name="Brest",
                               u_type='F').exists())
 
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              previous__subregion__territory__name="Brest",
+                              government__power__name="France",
+                              u_type='F').exists())
+
     def test_kidnapping_with_disrupted_convoy_and_opposite_move(self):
         # DATC 6.G.4
-        call_command('loaddata', '6G04.json', **options)
-
+        units = {"France": ("F Brest", "A Picardy", "A Burgundy",
+                            "F Mid-Atlantic Ocean"),
+                 "England": ("F English Channel", "A Belgium")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France":
+                      ("F Brest M English Channel",
+                       "A Picardy M Belgium",
+                       "A Burgundy S A Picardy - Belgium",
+                       "F Mid-Atlantic Ocean S F Brest - English Channel"),
+                 "England": ("F English Channel C A Picardy - Belgium",
+                             "A Belgium M Picardy")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3928,6 +3975,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
+                              previous__subregion__territory__name="Picardy",
                               government__power__name="France",
                               u_type='A').exists())
 
@@ -3935,6 +3983,12 @@ class ConvoyingToAdjacent(TestCase):
             T.unit_set.filter(subregion__territory__name="English Channel",
                               government__power__name="England",
                               displaced_from__name="Brest",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              previous__subregion__territory__name="Brest",
+                              government__power__name="France",
                               u_type='F').exists())
 
         self.assertTrue(
@@ -3943,11 +3997,25 @@ class ConvoyingToAdjacent(TestCase):
                               displaced_from__name="Picardy",
                               u_type='A').exists())
 
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Belgium",
+                              previous__subregion__territory__name="Picardy",
+                              government__power__name="France",
+                              u_type='A').exists())
+
     def test_swapping_with_intent(self):
         # DATC 6.G.5
-        call_command('loaddata', '6G05.json', **options)
-
+        units = {"Italy": ("A Rome", "F Tyrrhenian Sea"),
+                 "Turkey": ("A Apulia", "F Ionian Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Italy": ("A Rome M Apulia",
+                            "F Tyrrhenian Sea C A Apulia - Rome"),
+                  "Turkey": ("A Apulia M Rome",
+                             "F Ionian Sea C A Apulia - Rome")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3956,19 +4024,35 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Apulia",
+                              previous__subregion__territory__name="Rome",
                               government__power__name="Italy",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Rome",
+                              previous__subregion__territory__name="Apulia",
                               government__power__name="Turkey",
                               u_type='A').exists())
 
     def test_swapping_with_unintended_intent(self):
         # DATC 6.G.6
-        call_command('loaddata', '6G06.json', **options)
-
+        units = {"England": ("A Liverpool", "F English Channel"),
+                 "Germany": ("A Edinburgh",),
+                 "France": ("F Irish Sea", "F North Sea"),
+                 "Russia": ("F Norwegian Sea", "F North Atlantic Ocean")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Liverpool M Edinburgh",
+                              "F English Channel C A Liverpool - Edinburgh"),
+                  "Germany": ("A Edinburgh M Liverpool",),
+                  "France": ("F Irish Sea H",
+                             "F North Sea H"),
+                  "Russia":
+                      ("F Norwegian Sea C A Liverpool - Edinburgh",
+                       "F North Atlantic Ocean C A Liverpool - Edinburgh")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -3977,19 +4061,29 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Edinburgh",
+                              previous__subregion__territory__name="Liverpool",
                               government__power__name="England",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Liverpool",
+                              previous__subregion__territory__name="Edinburgh",
                               government__power__name="Germany",
                               u_type='A').exists())
 
     def test_swapping_with_illegal_intent(self):
         # DATC 6.G.7
-        call_command('loaddata', '6G07.json', **options)
-
+        units = {"England": ("F Skagerrak", "F Norway"),
+                 "Russia": ("A Sweden", "F Gulf of Bothnia")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F Skagerrak C A Sweden - Norway",
+                              "F Norway M Sweden"),
+                  "Russia": ("A Sweden M Norway",
+                             "F Gulf of Bothnia C A Sweden - Norway")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.exclude(actor__territory__name=
                                               "Gulf of Bothnia"):
             self.assertTrue(T.is_legal(o))
@@ -4011,9 +4105,16 @@ class ConvoyingToAdjacent(TestCase):
 
     def test_explicit_convoy_that_isnt_there(self):
         # DATC 6.G.8
-        call_command('loaddata', '6G08.json', **options)
-
+        units = {"France": ("A Belgium",),
+                 "England": ("F North Sea", "A Holland")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("A Belgium M Holland *",), # via convoy
+                  "England": ("F North Sea M Helgoland Bight",
+                              "A Holland M Kiel")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4022,14 +4123,29 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Holland",
+                              previous__subregion__territory__name="Belgium",
                               government__power__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Kiel",
+                              previous__subregion__territory__name="Holland",
+                              government__power__name="England",
                               u_type='A').exists())
 
     def test_swapped_or_dislodged(self):
         # DATC 6.G.9
-        call_command('loaddata', '6G09.json', **options)
-
+        units = {"England": ("A Norway", "F Skagerrak", "F Finland"),
+                 "Russia": ("A Sweden",)}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Norway M Sweden",
+                              "F Skagerrak C A Norway - Sweden",
+                              "F Finland S A Norway - Sweden"),
+                  "Russia": ("A Sweden M Norway",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4038,20 +4154,36 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Sweden",
+                              previous__subregion__territory__name="Norway",
                               government__power__name="England",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Norway",
+                              previous__subregion__territory__name="Sweden",
                               government__power__name="Russia",
                               displaced_from__isnull=True,
                               u_type='A').exists())
 
     def test_swapped_or_head_to_head(self):
         # DATC 6.G.10
-        call_command('loaddata', '6G10.json', **options)
-
+        units = {"England": ("A Norway", "F Denmark", "F Finland"),
+                 "Germany": ("F Skagerrak",),
+                 "Russia": ("A Sweden", "F Barents Sea"),
+                 "France": ("F Norwegian Sea", "F North Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Norway M Sweden *", # via convoy
+                              "F Denmark S A Norway - Sweden",
+                              "F Finland S A Norway - Sweden"),
+                  "Germany": ("F Skagerrak C A Norway - Sweden",),
+                  "Russia": ("A Sweden M Norway",
+                             "F Barents Sea S A Sweden - Norway"),
+                  "France": ("F Norwegian Sea M Norway",
+                             "F North Sea S F Norwegian Sea - Norway")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4060,6 +4192,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Sweden",
+                              previous__subregion__territory__name="Norway",
                               government__power__name="England",
                               u_type='A').exists())
 
@@ -4076,9 +4209,18 @@ class ConvoyingToAdjacent(TestCase):
 
     def test_convoy_to_adjacent_place_with_paradox(self):
         # DATC 6.G.11
-        call_command('loaddata', '6G11.json', **options)
-
+        units = {"England": ("F Norway", "F North Sea"),
+                 "Russia": ("A Sweden", "F Skagerrak", "F Barents Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F Norway S F North Sea - Skagerrak",
+                              "F North Sea M Skagerrak"),
+                  "Russia": ("A Sweden M Norway",
+                             "F Skagerrak C A Sweden - Norway",
+                             "F Barents Sea S A Sweden - Norway")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4087,6 +4229,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Skagerrak",
+                              previous__subregion__territory__name="North Sea",
                               government__power__name="England",
                               u_type='F').exists())
 
@@ -4103,9 +4246,23 @@ class ConvoyingToAdjacent(TestCase):
 
     def test_swapping_two_units_with_two_convoys(self):
         # DATC 6.G.12
-        call_command('loaddata', '6G12.json', **options)
-
+        units = {"England": ("A Liverpool", "F North Atlantic Ocean",
+                             "F Norwegian Sea"),
+                 "Germany": ("A Edinburgh", "F North Sea",
+                             "F English Channel", "F Irish Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England":
+                      ("A Liverpool M Edinburgh *", # via convoy
+                       "F North Atlantic Ocean C A Liverpool - Edinburgh",
+                       "F Norwegian Sea C A Liverpool - Edinburgh"),
+                  "Germany": ("A Edinburgh M Liverpool *", # via convoy
+                              "F North Sea C A Edinburgh - Liverpool",
+                              "F English Channel C A Edinburgh - Liverpool",
+                              "F Irish Sea C A Edinburgh - Liverpool")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4114,19 +4271,29 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Edinburgh",
+                              previous__subregion__territory__name="Liverpool",
                               government__power__name="England",
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Liverpool",
+                              previous__subregion__territory__name="Edinburgh",
                               government__power__name="Germany",
                               u_type='A').exists())
 
     def test_support_cut_on_attack_on_itself_via_convoy(self):
         # DATC 6.G.13
-        call_command('loaddata', '6G13.json', **options)
-
+        units = {"Austria": ("F Adriatic Sea", "A Trieste"),
+                 "Italy": ("A Venice", "F Albania")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Austria": ("F Adriatic Sea C A Trieste - Venice",
+                              "A Trieste M Venice *"), # via convoy
+                  "Italy": ("A Venice S F Albania - Trieste",
+                            "F Albania M Trieste")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4141,14 +4308,30 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
+                              previous__subregion__territory__name="Albania",
                               government__power__name="Italy",
                               u_type='F').exists())
 
     def test_bounce_by_convoy_to_adjacent_place(self):
         # DATC 6.G.14
-        call_command('loaddata', '6G14.json', **options)
-
+        units = {"England": ("A Norway", "F Denmark", "F Finland"),
+                 "France": ("F Norwegian Sea", "F North Sea"),
+                 "Germany": ("F Skagerrak",),
+                 "Russia": ("A Sweden", "F Barents Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Norway M Sweden",
+                              "F Denmark S A Norway - Sweden",
+                              "F Finland S A Norway - Sweden"),
+                  "France": ("F Norwegian Sea M Norway",
+                             "F North Sea S F Norwegian Sea - Norway"),
+                  "Germany": ("F Skagerrak C A Sweden - Norway",),
+                  "Russia": ("A Sweden M Norway *", # via convoy
+                             "F Barents Sea S A Sweden - Norway"),
+                  }
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4163,6 +4346,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Sweden",
+                              previous__subregion__territory__name="Norway",
                               government__power__name="England",
                               u_type='A').exists())
 
@@ -4173,9 +4357,20 @@ class ConvoyingToAdjacent(TestCase):
 
     def test_bounce_and_dislodge_with_double_convoy(self):
         # DATC 6.G.15
-        call_command('loaddata', '6G15.json', **options)
-
+        units = {"England": ("F North Sea", "A Holland",
+                             "A Yorkshire", "A London"),
+                 "France": ("F English Channel", "A Belgium")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Belgium",
+                              "A Holland S A London - Belgium",
+                              "A Yorkshire M London",
+                              "A London M Belgium *"), # via convoy
+                  "France": ("F English Channel C A Belgium - London",
+                             "A Belgium M London *")} # via convoy
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4184,6 +4379,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
+                              previous__subregion__territory__name="London",
                               government__power__name="England",
                               u_type='A').exists())
 
@@ -4200,9 +4396,21 @@ class ConvoyingToAdjacent(TestCase):
 
     def test_two_units_in_one_area_bug_by_convoy(self):
         # DATC 6.G.16
-        call_command('loaddata', '6G16.json', **options)
-
+        units = {"England": ("A Norway", "A Denmark",
+                             "F Baltic Sea", "F North Sea"),
+                 "Russia": ("A Sweden", "F Skagerrak", "F Norwegian Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Norway M Sweden",
+                              "A Denmark S A Norway - Sweden",
+                              "F Baltic Sea S A Norway - Sweden",
+                              "F North Sea M Norway"),
+                  "Russia": ("A Sweden M Norway *", # via convoy
+                             "F Skagerrak C A Sweden - Norway",
+                             "F Norwegian Sea S A Sweden - Norway")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4211,6 +4419,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Sweden",
+                              previous__subregion__territory__name="Norway",
                               government__power__name="England",
                               u_type='A').exists())
 
@@ -4219,6 +4428,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Norway",
+                              previous__subregion__territory__name="Sweden",
                               government__power__name="Russia",
                               u_type='A').exists())
 
@@ -4229,9 +4439,21 @@ class ConvoyingToAdjacent(TestCase):
 
     def test_two_units_in_one_area_bug_moving_over_land(self):
         # DATC 6.G.17
-        call_command('loaddata', '6G17.json', **options)
-
+        units = {"England": ("A Norway", "A Denmark", "F Baltic Sea",
+                             "F Skagerrak", "F North Sea"),
+                 "Russia": ("A Sweden", "F Norwegian Sea")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Norway M Sweden *", # via convoy
+                              "A Denmark S A Norway - Sweden",
+                              "F Baltic Sea S A Norway - Sweden",
+                              "F Skagerrak C A Norway - Sweden",
+                              "F North Sea M Norway"),
+                  "Russia": ("A Sweden M Norway",
+                             "F Norwegian Sea S A Sweden - Norway")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4240,6 +4462,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Sweden",
+                              previous__subregion__territory__name="Norway",
                               government__power__name="England",
                               u_type='A').exists())
 
@@ -4248,6 +4471,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Norway",
+                              previous__subregion__territory__name="Sweden",
                               government__power__name="Russia",
                               u_type='A').exists())
 
@@ -4258,9 +4482,22 @@ class ConvoyingToAdjacent(TestCase):
 
     def test_two_units_in_one_area_bug_with_double_convoy(self):
         # DATC 6.G.18
-        call_command('loaddata', '6G18.json', **options)
-
+        units = {"England": ("F North Sea", "A Holland", "A Yorkshire",
+                             "A London", "A Ruhr"),
+                 "France": ("F English Channel", "A Belgium", "A Wales")}
         T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F North Sea C A London - Belgium",
+                              "A Holland S A London - Belgium",
+                              "A Yorkshire M London",
+                              "A London M Belgium",
+                              "A Ruhr S A London - Belgium"),
+                  "France": ("F English Channel C A Belgium - London",
+                             "A Belgium M London",
+                             "A Wales S A Belgium - London")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
@@ -4269,6 +4506,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
+                              previous__subregion__territory__name="London",
                               government__power__name="England",
                               u_type='A').exists())
 
@@ -4277,6 +4515,7 @@ class ConvoyingToAdjacent(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="London",
+                              previous__subregion__territory__name="Belgium",
                               government__power__name="France",
                               u_type='A').exists())
 
