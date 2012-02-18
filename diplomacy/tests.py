@@ -7,13 +7,6 @@ from django.contrib.auth.models import User
 import re
 from collections import defaultdict
 
-        # units = {}
-        # T = models.Turn.objects.get()
-        # create_units(units, T)
-
-        # orders = {}
-        # create_orders(orders, T)
-
 convert = {'F': 'S', 'A': 'L'}
 other = {'L': 'S', 'S': 'L', 'F': 'A', 'A': 'F'}
 
@@ -4538,14 +4531,36 @@ class Retreating(TestCase):
 
     def test_no_supports_during_retreat(self):
         # DATC 6.H.1
-        call_command('loaddata', '6H01.json', **options)
+        units = {"Austria": ("F Trieste", "A Serbia"),
+                 "Turkey": ("F Greece",),
+                 "Italy": ("A Venice", "A Tyrolia",
+                           "F Ionian Sea", "F Aegean Sea")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
 
-        T = models.Turn.objects.latest()
+        orders = {"Austria": ("F Trieste H",
+                              "A Serbia H"),
+                  "Turkey": ("F Greece H",),
+                  "Italy": ("A Venice S A Tyrolia - Trieste",
+                            "A Tyrolia M Trieste",
+                            "F Ionian Sea M Greece",
+                            "F Aegean Sea S F Ionian Sea - Greece")}
+        create_orders(orders, T)
 
-        o1, o2, o3 = models.Order.objects.all()
-        self.assertTrue(T.is_legal(o1))
-        self.assertTrue(not T.is_legal(o2))
-        self.assertTrue(T.is_legal(o3))
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        orders = {"Austria": ("F Trieste M Albania",
+                              "A Serbia S F Trieste - Albania"),
+                  "Turkey": ("F Greece M Albania",)}
+        create_orders(orders, T)
+
+        for o in T.order_set.filter(action='M'):
+            self.assertTrue(T.is_legal(o))
+        self.assertTrue(not T.is_legal(T.order_set.get(action='S')))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -4555,26 +4570,48 @@ class Retreating(TestCase):
                               ).annotate(count=Count('subregion__territory')
                                          ).filter(count__gt=1).exists())
 
-        self.assertTrue(
-            not T.unit_set.filter(
-                government__power__name="Austria-Hungary",
-                previous__subregion__territory__name="Trieste").exists())
+        austria = T.unit_set.filter(government__power__name="Austria-Hungary")
+        self.assertEqual(austria.count(), 1)
+        self.assertTrue(austria.filter(subregion__territory__name="Serbia",
+                                       u_type='A').exists())
 
-        self.assertTrue(
-            not T.unit_set.filter(
-                government__power__name="Turkey",
-                previous__subregion__territory__name="Greece").exists())
+        turkey = T.unit_set.filter(government__power__name="Turkey")
+        self.assertEqual(turkey.count(), 0)
 
     def test_no_supports_from_retreating_unit(self):
         # DATC 6.H.2
-        call_command('loaddata', '6H02.json', **options)
+        units = {"England": ("A Liverpool", "F Yorkshire", "F Norway"),
+                 "Germany": ("A Kiel", "A Ruhr"),
+                 "Russia": ("F Edinburgh", "A Sweden",
+                            "A Finland", "F Holland")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
 
-        T = models.Turn.objects.latest()
+        orders = {"England": ("A Liverpool M Edinburgh",
+                              "F Yorkshire S A Liverpool - Edinburgh",
+                              "F Norway H"),
+                  "Germany": ("A Kiel S A Ruhr - Holland",
+                              "A Ruhr M Holland"),
+                  "Russia": ("F Edinburgh H",
+                             "A Sweden S A Finland - Norway",
+                             "A Finland M Norway",
+                             "F Holland H")}
+        create_orders(orders, T)
 
-        o1, o2, o3 = models.Order.objects.all()
-        self.assertTrue(T.is_legal(o1))
-        self.assertTrue(T.is_legal(o2))
-        self.assertTrue(not T.is_legal(o3))
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        orders = {"England": ("F Norway M North Sea",),
+                  "Russia": ("F Edinburgh M North Sea",
+                             "F Holland S F Edinburgh - North Sea")}
+        create_orders(orders, T)
+
+        for o in T.order_set.filter(action='M'):
+            self.assertTrue(T.is_legal(o))
+        self.assertTrue(not T.is_legal(T.order_set.get(action='S')))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -4583,11 +4620,17 @@ class Retreating(TestCase):
             T.unit_set.values('subregion__territory'
                               ).annotate(count=Count('subregion__territory')
                                          ).filter(count__gt=1).exists())
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="England").count(), 2)
 
         self.assertTrue(
             not T.unit_set.filter(
                 government__power__name="England",
                 previous__subregion__territory__name="Norway").exists())
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 2)
 
         self.assertTrue(
             not T.unit_set.filter(
@@ -4601,10 +4644,28 @@ class Retreating(TestCase):
 
     def test_no_convoy_during_retreat(self):
         # DATC 6.H.3
-        call_command('loaddata', '6H03.json', **options)
+        units = {"England": ("F North Sea", "A Holland"),
+                 "Germany": ("F Kiel", "A Ruhr")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
 
-        T = models.Turn.objects.latest()
+        orders = {"England": ("F North Sea H",
+                              "A Holland H"),
+                  "Germany": ("F Kiel S A Ruhr - Holland",
+                              "A Ruhr M Holland")}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        orders = {"England": ("A Holland M Yorkshire",
+                              "F North Sea C A Holland - Yorkshire")}
+        create_orders(orders, T)
+
+        for o in T.order_set.all():
             self.assertTrue(not T.is_legal(o))
 
         T.game.generate()
@@ -4615,6 +4676,9 @@ class Retreating(TestCase):
                               ).annotate(count=Count('subregion__territory')
                                          ).filter(count__gt=1).exists())
 
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="England").count(), 1)
+
         self.assertTrue(
             not T.unit_set.filter(
                 government__power__name="England",
@@ -4622,12 +4686,31 @@ class Retreating(TestCase):
 
     def test_no_other_moves_during_retreat(self):
         # DATC 6.H.4
-        call_command('loaddata', '6H04.json', **options)
+        units = {"England": ("F North Sea", "A Holland"),
+                 "Germany": ("F Kiel", "A Ruhr")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
 
-        T = models.Turn.objects.latest()
-        o1, o2 = models.Order.objects.all()
-        self.assertTrue(T.is_legal(o1))
-        self.assertTrue(not T.is_legal(o2))
+        orders = {"England": ("F North Sea H",
+                              "A Holland H"),
+                  "Germany": ("F Kiel S A Ruhr - Holland",
+                              "A Ruhr M Holland")}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        orders = {"England": ("A Holland M Belgium",
+                              "F North Sea M Norwegian Sea")}
+        create_orders(orders, T)
+
+        o = T.order_set.get(actor__territory__name="Holland")
+        self.assertTrue(T.is_legal(o))
+        o = T.order_set.get(actor__territory__name="North Sea")
+        self.assertTrue(not T.is_legal(o))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -4650,10 +4733,26 @@ class Retreating(TestCase):
 
     def test_unit_may_not_retreat_to_area_it_was_attacked_from(self):
         # DATC 6.H.5
-        call_command('loaddata', '6H05.json', **options)
+        units = {"Russia": ("F Constantinople", "F Black Sea"),
+                 "Turkey": ("F Ankara",)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
 
-        T = models.Turn.objects.latest()
+        orders = {"Russia": ("F Constantinople S F Black Sea - Ankara",
+                             "F Black Sea M Ankara"),
+                  "Turkey": ("F Ankara H",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        orders = {"Turkey": ("F Ankara M Black Sea",)}
+        create_orders(orders, T)
+
+        for o in T.order_set.all():
             self.assertTrue(not T.is_legal(o))
 
         T.game.generate()
@@ -4669,32 +4768,507 @@ class Retreating(TestCase):
 
     def test_unit_may_not_retreat_to_contested_area(self):
         # DATC 6.H.6
-        call_command('loaddata', '6H06.json', **options)
+        units = {"Austria": ("A Budapest", "A Trieste"),
+                 "Germany": ("A Munich", "A Silesia"),
+                 "Italy": ("A Vienna",)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
 
-        T = models.Turn.objects.latest()
+        orders = {"Austria": ("A Budapest S A Trieste - Vienna",
+                              "A Trieste M Vienna"),
+                  "Germany": ("A Munich M Bohemia",
+                              "A Silesia M Bohemia"),
+                  "Italy": ("A Vienna H",)}
+        create_orders(orders, T)
+
         for o in models.Order.objects.all():
             self.assertTrue(T.is_legal(o))
 
         T.game.generate()
         T = T.game.current_turn()
 
-        # Germany's armies have stood themselves off.
-        self.assertEqual(
-            2, T.unit_set.filter(standoff_from__isnull=False).count())
+        orders = {"Italy": ("A Vienna M Bohemia",)}
+        create_orders(orders, T)
+
+        self.assertTrue(not T.is_legal(T.order_set.get()))
+
+        T.game.generate()
+        T = T.game.current_turn()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Vienna",
-                              government__power__name="Italy",
-                              displaced_from__name="Trieste",
+            not T.unit_set.filter(government__power__name="Italy").exists())
+
+    def test_two_retreats_to_same_area_disbands_units(self):
+        # DATC 6.H.7
+        units = {"Austria": ("A Budapest", "A Trieste"),
+                 "Germany": ("A Munich", "A Silesia"),
+                 "Italy": ("A Vienna", "A Bohemia")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Austria": ("A Budapest S A Trieste - Vienna",
+                              "A Trieste M Vienna"),
+                  "Germany": ("A Munich S A Silesia - Bohemia",
+                              "A Silesia M Bohemia"),
+                  "Italy": ("A Vienna H",
+                            "A Bohemia H")}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        orders = {"Italy": ("A Bohemia M Tyrolia",
+                            "A Vienna M Tyrolia")}
+        create_orders(orders, T)
+
+        for o in T.order_set.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            not T.unit_set.filter(government__power__name="Italy").exists())
+
+    def test_three_retreats_to_same_area_disbands_units(self):
+        # DATC 6.H.8
+        units = {"England": ("A Liverpool", "F Yorkshire", "F Norway"),
+                 "Germany": ("A Kiel", "A Ruhr"),
+                 "Russia": ("F Edinburgh", "A Sweden",
+                            "A Finland", "F Holland")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Liverpool M Edinburgh",
+                              "F Yorkshire S A Liverpool - Edinburgh",
+                              "F Norway H"),
+                  "Germany": ("A Kiel S A Ruhr - Holland",
+                              "A Ruhr M Holland"),
+                  "Russia": ("F Edinburgh H",
+                             "A Sweden S A Finland - Norway",
+                             "A Finland M Norway",
+                             "F Holland H")}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(displaced_from__isnull=False).count(), 3)
+
+        orders = {"England": ("F Norway M North Sea",),
+                  "Russia": ("F Edinburgh M North Sea",
+                             "F Holland M North Sea")}
+        create_orders(orders, T)
+
+        for o in T.order_set.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="England").count(), 2)
+
+        self.assertTrue(
+            not T.unit_set.filter(
+                government__power__name="England",
+                previous__subregion__territory__name="Norway").exists())
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 2)
+
+        self.assertTrue(
+            not T.unit_set.filter(
+                government__power__name="Russia",
+                previous__subregion__territory__name="Edinburgh").exists())
+
+        self.assertTrue(
+            not T.unit_set.filter(
+                government__power__name="Russia",
+                previous__subregion__territory__name="Holland").exists())
+
+    def test_dislodged_unit_will_not_make_attackers_area_contested(self):
+        # DATC 6.H.9
+        units = {"England": ("F Helgoland Bight", "F Denmark"),
+                 "Germany": ("A Berlin", "F Kiel", "A Silesia"),
+                 "Russia": ("A Prussia",)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F Helgoland Bight M Kiel",
+                              "F Denmark S F Helgoland Bight - Kiel"),
+                  "Germany": ("A Berlin M Prussia",
+                              "F Kiel H",
+                              "A Silesia S A Berlin - Prussia"),
+                  "Russia": ("A Prussia M Berlin",)}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(displaced_from__isnull=False).count(), 2)
+
+        orders = {"Germany": ("F Kiel M Berlin",)}
+        create_orders(orders, T)
+
+        for o in T.order_set.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Germany").count(), 3)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              previous__subregion__territory__name="Kiel",
+                              government__power__name="Germany",
+                              u_type='F').exists())
+
+    def test_attackers_area_not_contested_for_other_retreats(self):
+        # DATC 6.H.10
+        units = {"England": ("A Kiel",),
+                 "Germany": ("A Berlin", "A Munich", "A Prussia"),
+                 "Russia": ("A Warsaw", "A Silesia")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Kiel H",),
+                  "Germany": ("A Berlin M Kiel",
+                              "A Munich S A Berlin - Kiel",
+                              "A Prussia H"),
+                  "Russia": ("A Warsaw M Prussia",
+                             "A Silesia S A Warsaw - Prussia")}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(displaced_from__isnull=False).count(), 2)
+
+        orders = {"England": ("A Kiel M Berlin",),
+                  "Germany": ("A Prussia M Berlin",)}
+        create_orders(orders, T)
+
+        self.assertTrue(
+            not T.is_legal(T.order_set.get(government__power__name="England"))
+        )
+        self.assertTrue(
+            T.is_legal(T.order_set.get(government__power__name="Germany"))
+        )
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertTrue(
+            not T.unit_set.filter(government__power__name="England").exists())
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Germany").count(), 3)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Berlin",
+                              previous__subregion__territory__name="Prussia",
+                              government__power__name="Germany",
                               u_type='A').exists())
 
-        italy = models.Government.objects.get(power__name="Italy")
-        vienna = models.Subregion.objects.get(territory__name="Vienna",
-                                              sr_type="L")
-        bohemia = models.Subregion.objects.get(territory__name="Bohemia",
-                                               sr_type="L")
+    def test_retreat_when_dislodged_by_adjacent_convoy(self):
+        # DATC 6.H.11
+        units = {"France": ("A Gascony", "A Burgundy", "F Mid-Atlantic Ocean",
+                            "F Western Mediterranean", "F Gulf of Lyon"),
+                 "Italy": ("A Marseilles",)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("A Gascony M Marseilles *", # via convoy
+                             "A Burgundy S A Gascony - Marseilles",
+                             "F Mid-Atlantic Ocean C A Gascony - Marseilles",
+                             "F Western Mediterranean C A Gascony - Marseilles",
+                             "F Gulf of Lyon C A Gascony - Marseilles"),
+                  "Italy": ("A Marseilles H",)}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(displaced_from__isnull=False).count(), 1)
 
         self.assertTrue(
-            not T.is_legal({'government': italy, 'turn': T,
-                            'actor': vienna, 'action': "M",
-                            'assist': None, 'target': bohemia}))
+            T.unit_set.filter(subregion__territory__name="Marseilles",
+                              previous__subregion__territory__name="Gascony",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        orders = {"Italy": ("A Marseilles M Gascony",)}
+        create_orders(orders, T)
+
+        self.assertTrue(T.is_legal(T.order_set.get()))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Italy").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Gascony",
+                              previous__subregion__territory__name="Marseilles",
+                              government__power__name="Italy",
+                              u_type='A').exists())
+
+    def test_retreat_when_dislodged_by_adjacent_convoy_while_convoying(self):
+        # DATC 6.H.12
+        units = {"England": ("A Liverpool", "F Irish Sea",
+                             "F English Channel", "F North Sea"),
+                 "France": ("F Brest", "F Mid-Atlantic Ocean"),
+                 "Russia": ("A Edinburgh", "F Norwegian Sea",
+                            "F North Atlantic Ocean", "A Clyde")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Liverpool M Edinburgh *", # via convoy
+                              "F Irish Sea C A Liverpool - Edinburgh",
+                              "F English Channel C A Liverpool - Edinburgh",
+                              "F North Sea C A Liverpool - Edinburgh"),
+                  "France":
+                      ("F Brest M English Channel",
+                       "F Mid-Atlantic Ocean S F Brest - English Channel"),
+                  "Russia":
+                      ("A Edinburgh M Liverpool *", # via convoy
+                       "F Norwegian Sea C A Edinburgh - Liverpool",
+                       "F North Atlantic Ocean C A Edinburgh - Liverpool",
+                       "A Clyde S A Edinburgh - Liverpool")}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(displaced_from__isnull=False).count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Liverpool",
+                              previous__subregion__territory__name="Edinburgh",
+                              government__power__name="Russia",
+                              u_type='A').exists())
+
+        orders = {"England": ("A Liverpool M Edinburgh",)}
+        create_orders(orders, T)
+
+        self.assertTrue(T.is_legal(T.order_set.get()))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="England").count(), 4)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Edinburgh",
+                              previous__subregion__territory__name="Liverpool",
+                              government__power__name="England",
+                              u_type='A').exists())
+
+    def test_no_retreat_with_convoy_in_main_phase(self):
+        # DATC 6.H.13
+        units = {"England": ("A Picardy", "F English Channel"),
+                 "France": ("A Paris", "A Brest")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Picardy H",
+                              "F English Channel C A Picardy - London"),
+                  "France": ("A Paris M Picardy",
+                             "A Brest S A Paris - Picardy")}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(displaced_from__isnull=False).count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Picardy",
+                              previous__subregion__territory__name="Paris",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        orders = {"England": ("A Picardy M London",)}
+        create_orders(orders, T)
+
+        self.assertTrue(not T.is_legal(T.order_set.get()))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="England").count(), 1)
+
+    def test_no_retreat_with_support_in_main_phase(self):
+        # DATC 6.H.14
+        units = {"England": ("A Picardy", "F English Channel"),
+                 "France": ("A Paris", "A Brest", "A Burgundy"),
+                 "Germany": ("A Munich", "A Marseilles")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("A Picardy H",
+                              "F English Channel S A Picardy - Belgium"),
+                  "France": ("A Paris M Picardy",
+                             "A Brest S A Paris - Picardy",
+                             "A Burgundy H"),
+                  "Germany": ("A Munich S A Marseilles - Burgundy",
+                              "A Marseilles M Burgundy")}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(displaced_from__isnull=False).count(), 2)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Picardy",
+                              previous__subregion__territory__name="Paris",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Burgundy",
+                              previous__subregion__territory__name="Marseilles",
+                              government__power__name="Germany",
+                              u_type='A').exists())
+
+        orders = {"England": ("A Picardy M Belgium",),
+                  "France": ("A Burgundy M Belgium",)}
+        create_orders(orders, T)
+
+        for o in T.order_set.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="England").count(), 1)
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="France").count(), 2)
+
+    def test_no_coastal_crawl_in_retreat(self):
+        # DATC 6.H.15
+        units = {"England": ("F Portugal",),
+                 "France": ("F Spain (SC)", "F Mid-Atlantic Ocean")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"England": ("F Portugal H",),
+                  "France": ("F Spain (SC) M Portugal",
+                             "F Mid-Atlantic Ocean S F Spain (SC) - Portugal")}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(displaced_from__isnull=False).count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Portugal",
+                              previous__subregion__territory__name="Spain",
+                              government__power__name="France",
+                              u_type='F').exists())
+
+        orders = {"England": ("F Portugal M Spain (NC)",)}
+        create_orders(orders, T)
+
+        self.assertTrue(not T.is_legal(T.order_set.get()))
+
+        orders = {"England": ("F Portugal M Mid-Atlantic Ocean",)}
+        create_orders(orders, T)
+
+        self.assertTrue(
+            not T.is_legal(
+                T.order_set.get(target__territory__name="Mid-Atlantic Ocean")))
+
+        orders = {"England": ("F Portugal M Spain (SC)",)}
+        create_orders(orders, T)
+
+        self.assertTrue(
+            not T.is_legal(
+                T.order_set.get(target__territory__name="Spain",
+                                target__subname="SC")))
+
+    def test_contested_for_both_coasts(self):
+        # DATC 6.H.16
+        units = {"France": ("F Mid-Atlantic Ocean", "F Gascony",
+                            "F Western Mediterranean"),
+                 "Italy": ("F Tunisia", "F Tyrrhenian Sea")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"France": ("F Mid-Atlantic Ocean M Spain (NC)",
+                             "F Gascony M Spain (NC)",
+                             "F Western Mediterranean H"),
+                  "Italy":
+                      ("F Tunisia S F Tyrrhenian Sea - Western Mediterranean",
+                       "F Tyrrhenian Sea M Western Mediterranean")}
+        create_orders(orders, T)
+
+        for o in models.Order.objects.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(displaced_from__isnull=False).count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(
+                subregion__territory__name="Western Mediterranean",
+                previous__subregion__territory__name="Tyrrhenian Sea",
+                government__power__name="Italy", u_type='F').exists())
+
+        orders = {"France": ("F Western Mediterranean M Spain (SC)",)}
+        create_orders(orders, T)
+
+        self.assertTrue(not T.is_legal(T.order_set.get()))
+
+        T.game.generate()
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="France").count(), 2)
