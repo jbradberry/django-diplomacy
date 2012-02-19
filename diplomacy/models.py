@@ -940,7 +940,7 @@ class Turn(models.Model):
             # allowed.  Disband inward from the outermost unit.
             # For ties, disband fleets first then armies, and do
             # in alphabetical order from there, if necessary.
-            g_names = dict((u.id, (u.sr_type, unicode(u))) for u in
+            g_names = dict((u.id, (u.sr_type == 'L', unicode(u))) for u in
                            sr.filter(unit__government=g, unit__turn=self.prev))
             g_units = set(g_names.iterkeys())
             examined = set(sc.id for sc in
