@@ -141,9 +141,9 @@
     "model": "diplomacy.turn",
     "fields": {
       "generated": "2011-05-07 16:29:30",
-      "season": "S",
+      "season": "FA",
       "game": 1,
-      "number": 0,
+      "number": 4,
       "year": 1900
     }
   },

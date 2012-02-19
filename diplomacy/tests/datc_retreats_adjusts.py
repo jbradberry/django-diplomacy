@@ -758,3 +758,162 @@ class Retreating(TestCase):
 
         self.assertEqual(
             T.unit_set.filter(government__power__name="France").count(), 2)
+
+
+class Building(TestCase):
+    """
+    Based on section 6.I from the Diplomacy Adjudicator Test Cases
+    website.
+
+    http://web.inter.nl.net/users/L.B.Kruijswijk/#6.I
+
+    """
+
+    fixtures = ['adjustment_turn.json']
+
+    def test_too_many_build_orders(self):
+        # DATC 6.I.1
+        units = {"Germany": ("F North Sea", "F English Channel")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Germany": ("A Warsaw B",
+                              "A Kiel B",
+                              "A Munich B")}
+        create_orders(orders, T)
+
+        for o in T.order_set.filter(actor__territory__name="Warsaw"):
+            self.assertTrue(not T.is_legal(o))
+
+        for o in T.order_set.exclude(actor__territory__name="Warsaw"):
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Germany").count(), 3)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Kiel",
+                              government__power__name="Germany",
+                              u_type='A').exists())
+
+    def test_fleets_cannot_be_built_in_land_areas(self):
+        # DATC 6.I.2
+
+        # Note: this test does nothing useful, since the appearance of
+        # unit type to the user is merely a proxy for Subregion type.
+        # This situation can never occur, since there exists no sea
+        # Subregion in Moscow's Territory.
+        units = {"Russia": ("F St. Petersburg (SC)", "A Warsaw",
+                            "F Sevastopol")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Russia": ("F Moscow B",)}
+        create_orders(orders, T)
+
+        self.assertTrue(T.is_legal(T.order_set.get()))
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 3)
+
+        self.assertTrue(
+            not T.unit_set.filter(subregion__territory__name="Moscow",
+                                  government__power__name="Russia").exists())
+
+    def test_supply_center_must_be_empty_for_building(self):
+        # DATC 6.I.3
+        units = {"Germany": ("A Berlin", "F English Channel")}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Germany": ("A Berlin B",)}
+        create_orders(orders, T)
+
+        self.assertTrue(not T.is_legal(T.order_set.get()))
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Germany").count(), 2)
+
+    def test_both_coasts_must_be_empty_for_building(self):
+        # DATC 6.I.4
+        units = {"Russia": ("F St. Petersburg (SC)",)}
+        T = models.Turn.objects.get()
+        create_units(units, T)
+
+        orders = {"Russia": ("F St. Petersburg (NC) B",)}
+        create_orders(orders, T)
+
+        self.assertTrue(not T.is_legal(T.order_set.get()))
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="St. Petersburg",
+                              government__power__name="Russia",
+                              subregion__subname="SC").exists())
+
+    def test_building_in_home_supply_center_that_is_not_owned(self):
+        # DATC 6.I.5
+        T = models.Turn.objects.get()
+        russia = models.Government.objects.get(power__name="Russia")
+        T.ownership_set.filter(
+            territory__name="Berlin").update(government=russia)
+
+        orders = {"Germany": ("A Berlin B",)}
+        create_orders(orders, T)
+
+        self.assertTrue(not T.is_legal(T.order_set.get()))
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Germany").count(), 0)
+
+    def test_building_in_owned_supply_center_that_is_not_a_home_center(self):
+        # DATC 6.I.6
+        T = models.Turn.objects.get()
+        germany = models.Government.objects.get(power__name="Germany")
+        T.ownership_set.filter(
+            territory__name="Warsaw").update(government=germany)
+
+        orders = {"Germany": ("A Warsaw B",)}
+        create_orders(orders, T)
+
+        self.assertTrue(not T.is_legal(T.order_set.get()))
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Germany").count(), 0)
+
+    def test_only_one_build_in_a_home_supply_center(self):
+        # DATC 6.I.7
+        T = models.Turn.objects.get()
+
+        orders = {"Russia": ("A Moscow B",
+                             "A Moscow B")}
+        create_orders(orders, T)
+
+        for o in T.order_set.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 1)
