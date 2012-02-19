@@ -917,3 +917,276 @@ class Building(TestCase):
 
         self.assertEqual(
             T.unit_set.filter(government__power__name="Russia").count(), 1)
+
+
+class CivilDisorderAndDisbands(TestCase):
+    """
+    Based on section 6.J from the Diplomacy Adjudicator Test Cases
+    website.
+
+    http://web.inter.nl.net/users/L.B.Kruijswijk/#6.J
+
+    """
+
+    fixtures = ['adjustment_turn.json']
+
+    def test_too_many_remove_orders(self):
+        # DATC 6.J.1
+        T = models.Turn.objects.get()
+        germany = models.Government.objects.get(power__name="Germany")
+        T.ownership_set.filter(government__power__name="France").exclude(
+            territory__name="Marseilles").update(government=germany)
+
+        units = {"France": ("A Paris", "A Picardy")}
+        create_units(units, T)
+
+        orders = {"France": ("F Gulf of Lyon D",
+                             "A Picardy D",
+                             "A Paris D")}
+        create_orders(orders, T)
+
+        for o in T.order_set.exclude(actor__territory__name="Gulf of Lyon"):
+            self.assertTrue(T.is_legal(o))
+
+        for o in T.order_set.filter(actor__territory__name="Gulf of Lyon"):
+            self.assertTrue(not T.is_legal(o))
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="France").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Paris",
+                              government__power__name="France",
+                              u_type='A').exists())
+
+    def test_removing_the_same_unit_twice(self):
+        # DATC 6.J.2
+        T = models.Turn.objects.get()
+        germany = models.Government.objects.get(power__name="Germany")
+        T.ownership_set.filter(government__power__name="France").exclude(
+            territory__name="Marseilles").update(government=germany)
+
+        units = {"France": ("A Paris", "F English Channel", "F North Sea")}
+        create_units(units, T)
+
+        orders = {"France": ("A Paris D",
+                             "A Paris D")}
+        create_orders(orders, T)
+
+        for o in T.order_set.all():
+            self.assertTrue(T.is_legal(o))
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="France").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              government__power__name="France",
+                              u_type='F').exists())
+
+    def test_civil_disorder_two_armies_with_different_distance(self):
+        # DATC 6.J.3
+        T = models.Turn.objects.get()
+        germany = models.Government.objects.get(power__name="Germany")
+        T.ownership_set.filter(government__power__name="Russia").exclude(
+            territory__name="Moscow").update(government=germany)
+
+        units = {"Russia": ("A Livonia", "A Sweden")}
+        create_units(units, T)
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Livonia",
+                              government__power__name="Russia",
+                              u_type='A').exists())
+
+    def test_civil_disorder_two_armies_with_equal_distance(self):
+        # DATC 6.J.4
+        T = models.Turn.objects.get()
+        germany = models.Government.objects.get(power__name="Germany")
+        T.ownership_set.filter(government__power__name="Russia").exclude(
+            territory__name="Moscow").update(government=germany)
+
+        units = {"Russia": ("A Livonia", "A Ukraine")}
+        create_units(units, T)
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ukraine",
+                              government__power__name="Russia",
+                              u_type='A').exists())
+
+    def test_civil_disorder_two_fleets_with_different_distance(self):
+        # DATC 6.J.5
+        T = models.Turn.objects.get()
+        germany = models.Government.objects.get(power__name="Germany")
+        T.ownership_set.filter(government__power__name="Russia").exclude(
+            territory__name="Moscow").update(government=germany)
+
+        units = {"Russia": ("F Skagerrak", "F Berlin")}
+        create_units(units, T)
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Skagerrak",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+    def test_civil_disorder_two_fleets_with_equal_distance(self):
+        # DATC 6.J.6
+        T = models.Turn.objects.get()
+        germany = models.Government.objects.get(power__name="Germany")
+        T.ownership_set.filter(government__power__name="Russia").exclude(
+            territory__name="Moscow").update(government=germany)
+
+        units = {"Russia": ("F Berlin", "F Helgoland Bight")}
+        create_units(units, T)
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Helgoland Bight",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+    def test_civil_disorder_two_fleets_and_army_with_equal_distance(self):
+        # DATC 6.J.7
+        T = models.Turn.objects.get()
+        germany = models.Government.objects.get(power__name="Germany")
+        T.ownership_set.filter(government__power__name="Russia").exclude(
+            territory__name="Moscow").exclude(
+            territory__name="Warsaw").update(government=germany)
+
+        units = {"Russia": ("A Bohemia", "F Skagerrak", "F North Sea")}
+        create_units(units, T)
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 2)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Skagerrak",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Bohemia",
+                              government__power__name="Russia",
+                              u_type='A').exists())
+
+    def test_civil_disorder_fleet_with_shorter_distance_than_army(self):
+        # DATC 6.J.8
+        T = models.Turn.objects.get()
+        germany = models.Government.objects.get(power__name="Germany")
+        T.ownership_set.filter(government__power__name="Russia").exclude(
+            territory__name="Moscow").update(government=germany)
+
+        units = {"Russia": ("A Tyrolia", "F Baltic Sea")}
+        create_units(units, T)
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Baltic Sea",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+    def test_civil_disorder_must_be_counted_from_both_coasts(self):
+        # DATC 6.J.9
+        T = models.Turn.objects.get()
+        germany = models.Government.objects.get(power__name="Germany")
+        T.ownership_set.filter(government__power__name="Russia").exclude(
+            territory__name="Moscow").update(government=germany)
+
+        units = {"Russia": ("A Tyrolia", "F Skagerrak")}
+        create_units(units, T)
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Russia").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Skagerrak",
+                              government__power__name="Russia",
+                              u_type='F').exists())
+
+    def test_civil_disorder_counting_convoying_distance(self):
+        # DATC 6.J.10
+        T = models.Turn.objects.get()
+        france = models.Government.objects.get(power__name="France")
+        T.ownership_set.filter(government__power__name="Italy").exclude(
+            territory__name="Rome").exclude(
+            territory__name="Venice").update(government=france)
+
+        units = {"Italy": ("F Ionian Sea", "A Greece", "A Silesia")}
+        create_units(units, T)
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Italy").count(), 2)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Ionian Sea",
+                              government__power__name="Italy",
+                              u_type='F').exists())
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Greece",
+                              government__power__name="Italy",
+                              u_type='A').exists())
+
+    def test_civil_disorder_counting_distance_without_convoying_fleet(self):
+        # DATC 6.J.11
+        T = models.Turn.objects.get()
+        france = models.Government.objects.get(power__name="France")
+        T.ownership_set.filter(government__power__name="Italy").exclude(
+            territory__name="Rome").update(government=france)
+
+        units = {"Italy": ("A Greece", "A Silesia")}
+        create_units(units, T)
+
+        T.game.generate() # S 1901
+        T = T.game.current_turn()
+
+        self.assertEqual(
+            T.unit_set.filter(government__power__name="Italy").count(), 1)
+
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="Greece",
+                              government__power__name="Italy",
+                              u_type='A').exists())
