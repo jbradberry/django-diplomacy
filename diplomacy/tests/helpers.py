@@ -102,12 +102,13 @@ def create_order(turn, gvt, orderstr):
               'assist': assist, 'target': target,
               'via_convoy': bool(o_dict.get('via_convoy'))}
 
-    return models.Order(turn=turn, government=gvt, **kwargs)
+    return models.Order.objects.create(turn=turn, government=gvt, **kwargs)
 
 def create_orders(orders, turn):
     for gname, oset in orders.iteritems():
         gvt = models.Government.objects.get(power__name__startswith=gname)
         new_orders = [create_order(turn, gvt, order) for order in oset]
-        for i, o in enumerate(sorted(new_orders, key=lambda x: x.actor_id)):
-            o.slot = i
-            o.save()
+        if turn.season == 'FA':
+            for i, o in enumerate(sorted(new_orders, key=lambda x: x.actor_id)):
+                o.slot = i
+                o.save()

@@ -52,9 +52,9 @@ class Setup(object):
         if target:
             sr = assist if assist else actor
             target = "%s %s" % (convert[self.sr[sr].sr_type], target)
+        slot = self.gvt_index[gvt] if self.turn.season == 'FA' else None
         models.Order.objects.create(turn=self.turn,
-                                    government=gvt,
-                                    slot=self.gvt_index[gvt],
+                                    government=gvt, slot=slot,
                                     actor=self.sr[actor],
                                     action=action,
                                     assist=self.sr[assist],

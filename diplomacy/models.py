@@ -777,7 +777,7 @@ class Turn(models.Model):
 
         # fallback orders
         if self.season == 'FA':
-            orders = dict(((g, s),
+            orders = dict(((g.id, s),
                            {'government': g, 'slot': s, 'turn': self,
                             'actor': None, 'action': None,
                             'assist': None, 'target': None,
@@ -786,12 +786,12 @@ class Turn(models.Model):
                           for s in xrange(abs(g.builds_available(self))))
         else:
             action = 'H' if self.season in ('S', 'F') else None
-            orders = dict(((g, s),
-                           {'government': g, 'slot': s, 'turn': self,
+            orders = dict(((g.id, a.id),
+                           {'government': g, 'turn': self,
                             'actor': a, 'action': action,
                             'assist': None, 'target': None,
                             'via_convoy': False, 'convoy': False})
-                          for g in gvts for s, a in enumerate(g.actors(self)))
+                          for g in gvts for a in g.actors(self))
 
         # use the most recent legal order
         orderset = self.order_set.all()
@@ -799,9 +799,10 @@ class Turn(models.Model):
             orderset = orderset.filter(government=gvt)
         for o in orderset:
             if self.is_legal(o):
-                # FIXME: We shouldn't assume that the order matches up
-                # with the slot.
-                orders[(o.government, o.slot)] = {
+                slot = o.slot if self.season == 'FA' else o.actor_id
+                if (o.government_id, slot) not in orders:
+                    continue
+                orders[(o.government_id, slot)] = {
                     'id': o.id, 'government': o.government, 'slot': o.slot,
                     'turn': o.turn, 'actor': o.actor, 'action': o.action,
                     'assist': o.assist, 'target': o.target,
@@ -1186,7 +1187,7 @@ class Order(models.Model):
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     timestamp = models.DateTimeField(auto_now_add=True)
-    slot = models.PositiveSmallIntegerField()
+    slot = models.PositiveSmallIntegerField(null=True, blank=True)
     actor = models.ForeignKey(Subregion, null=True, blank=True,
                               related_name='acts')
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,

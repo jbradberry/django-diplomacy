@@ -117,10 +117,10 @@ class BasicChecks(TestCase):
                               "F North Sea C F London - Belgium")}
         create_orders(orders, T)
 
-        orders = models.Order.objects.all()
+        order1, order2 = models.Order.objects.all()
 
-        self.assertTrue(not T.is_legal(orders.get(slot=0)))
-        self.assertTrue(not T.is_legal(orders.get(slot=1)))
+        self.assertTrue(not T.is_legal(order1))
+        self.assertTrue(not T.is_legal(order2))
 
     def test_support_to_hold_yourself(self):
         # DATC 6.A.8
