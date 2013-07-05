@@ -1,7 +1,7 @@
-from diplomacy import models
-
-import re
 from collections import defaultdict
+import re
+
+from .. import models
 
 
 convert = {'F': 'S', 'A': 'L'}

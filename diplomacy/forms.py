@@ -1,7 +1,7 @@
 from django.forms import Form, CharField, Textarea, ValidationError
 from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
-from diplomacy.models import Order, Subregion, Unit, territory
 from collections import defaultdict
+from .models import Order, Subregion, Unit, territory
 
 convert = {'L': 'A', 'S': 'F'}
 

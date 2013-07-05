@@ -1,5 +1,5 @@
-from diplomacy import models
-from diplomacy.tests.helpers import create_units, create_orders
+from .. import models
+from .helpers import create_units, create_orders
 from django.test import TestCase
 from django.db.models import Count
 

@@ -1,16 +1,16 @@
 from django.views.generic.list_detail import object_list, object_detail
-from django.shortcuts import get_object_or_404, redirect
 from django.views.generic.simple import direct_to_template
+from django.shortcuts import get_object_or_404, redirect
 from django.forms.formsets import formset_factory
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
-from django.utils import simplejson
+from django.http import (HttpResponse, HttpResponseRedirect,
+                         HttpResponseForbidden)
 from django.contrib import messages
 from django.db.models import ForeignKey, Max
-from diplomacy.models import (Game, Government, Turn, Order, Territory,
-                              Subregion, DiplomacyPrefs)
-from diplomacy.forms import OrderForm, OrderFormSet, GameMasterForm
+import json
+from .models import (Game, Government, Turn, Order, Territory,
+                     Subregion, DiplomacyPrefs)
+from .forms import OrderForm, OrderFormSet, GameMasterForm
 
 
 def game_list(request, page=None, paginate_by=30, state=None, **kwargs):
@@ -75,7 +75,7 @@ def orders(request, slug, power):
     try:
         gvt = g.government_set.get(power__name__iexact=power,
                                    user=request.user)
-    except ObjectDoesNotExist:
+    except Government.DoesNotExist:
         return HttpResponseForbidden("<h1>Permission denied</h1>")
 
     OFormSet = formset_factory(form=OrderForm, formset=OrderFormSet, extra=0)
@@ -98,7 +98,7 @@ def orders(request, slug, power):
     order_filter = {'unit_fixed': (g.current_turn().season != 'FA'),
                     'tree': gvt.filter_orders()}
     context = {'formset': formset, 'game': g, 'current': True,
-               'order_filter': simplejson.dumps(order_filter)}
+               'order_filter': json.dumps(order_filter)}
     return direct_to_template(request, 'diplomacy/manage_orders.html',
                               extra_context=context)
 
