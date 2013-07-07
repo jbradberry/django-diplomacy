@@ -2,8 +2,8 @@ from django.forms import Form, CharField, Textarea, ValidationError
 from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
 from collections import defaultdict
 from .models import Order, Subregion, Unit, territory
+from .helpers import unit
 
-convert = {'L': 'A', 'S': 'F'}
 
 msgs = {'s-hold': "{0} has an order to support {1} to hold, but {1} does not"
                   " have an order to hold, support, or convoy.",
@@ -24,9 +24,6 @@ msgs = {'s-hold': "{0} has an order to support {1} to hold, but {1} does not"
                   " territories.  This will not work unless you convoy one"
                   " of them."}
 
-
-def unit(u):
-    return u"{0} {1}".format(convert[u.sr_type], u)
 
 def join(*args):
     args = [unit(u) for u in args]

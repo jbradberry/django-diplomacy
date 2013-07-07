@@ -10,6 +10,8 @@ from collections import defaultdict
 from functools import partial
 import datetime
 
+from .helpers import unit, convert
+
 
 SEASON_CHOICES = (
     ('S', 'Spring'),
@@ -29,7 +31,6 @@ SUBREGION_CHOICES = (
     ('S', 'Sea')
 )
 
-convert = {'L': 'A', 'S': 'F'}
 
 def territory(sr):
     if sr is None:
@@ -1237,9 +1238,9 @@ class CanonicalOrder(models.Model):
 
     @property
     def full_actor(self):
-        return u"{0} {1}".format(convert[self.actor.sr_type], self.actor)
+        return unit(self.actor)
 
     @property
     def full_assist(self):
         if self.assist:
-            return u"{0} {1}".format(convert[self.assist.sr_type], self.assist)
+            return unit(self.assist)
