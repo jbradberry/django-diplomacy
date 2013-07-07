@@ -206,7 +206,7 @@ class OrderFormSet(BaseFormSet):
                                       " you have supply centers.")
             if builds < 0 and len(actors) != abs(builds):
                 u = "unit" if builds == -1 else "units"
-                msg = "You must disband exactly %d %s." % (abs(builds), u)
+                msg = "You must disband exactly {0} {1}.".format(abs(builds), u)
                 raise ValidationError(msg)
 
 

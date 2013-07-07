@@ -501,7 +501,7 @@ class Turn(models.Model):
     generated = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
-        return "%s %s" % (self.get_season_display(), self.year)
+        return "{0} {1}".format(self.get_season_display(), self.year)
 
     @models.permalink
     def get_absolute_url(self):
@@ -1052,7 +1052,7 @@ class Subregion(models.Model):
 
     def __unicode__(self):
         if self.subname:
-            return u'%s (%s)' % (self.territory.name, self.subname)
+            return u'{0} ({1})'.format(self.territory.name, self.subname)
         else:
             return self.territory.name
 
@@ -1166,7 +1166,7 @@ class Unit(models.Model):
                                       related_name='standoff')
 
     def __unicode__(self):
-        return u'%s %s' % (self.u_type, self.subregion.territory)
+        return u'{0} {1}'.format(self.u_type, self.subregion.territory)
 
 
 ACTION_CHOICES = (
