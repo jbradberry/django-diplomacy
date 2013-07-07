@@ -35,7 +35,7 @@ SUBREGION_CHOICES = (
 def territory(sr):
     if sr is None:
         return None
-    return sr.territory.id
+    return sr.territory_id
 
 def assist(T1, o1, T2, o2):
     return territory(o2['assist']) == T1
@@ -311,7 +311,7 @@ class Game(models.Model):
                             unit__turn=turn,
                             unit__subregion__territory__id__in=(T,T2)
                             ).distinct().count() != 1):
-                        attack_str[order['assist'].territory.id] += 1
+                        attack_str[order['assist'].territory_id] += 1
                 if defend_str[territory(order['assist'])]:
                     defend_str[territory(order['assist'])] += 1
                 if prevent_str[territory(order['assist'])]:
@@ -549,7 +549,7 @@ class Turn(models.Model):
                                       subregion=o.actor)
                 u = u.get() if u else None
                 if u is None:
-                    orders[p]["b{0}".format(o.actor.id)].append(o)
+                    orders[p]["b{0}".format(o.actor_id)].append(o)
                     continue
                 u_id = u.id
                 while u_id in units:
@@ -895,7 +895,7 @@ class Turn(models.Model):
                 if d: # move succeeded
                     units[(a, retreat)]['subregion'] = target
                     if not retreat:
-                        self.displaced[target.territory.id] = T
+                        self.displaced[target.territory_id] = T
                 elif retreat: # move is a failed retreat
                     del units[(a, retreat)]
                     continue
@@ -931,7 +931,7 @@ class Turn(models.Model):
 
     def _update_units_autodisband(self, orders, units):
         sr = Subregion.objects.all()
-        t_id = dict((s.id, s.territory.id) for s in sr)
+        t_id = dict((s.id, s.territory_id) for s in sr)
         for g in self.game.government_set.all():
             builds = g.builds_available(self.prev) + len(self.disbands[g.id])
             if builds >= 0:

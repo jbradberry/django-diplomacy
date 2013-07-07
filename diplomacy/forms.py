@@ -168,8 +168,8 @@ class OrderFormSet(BaseFormSet):
                         if f2.instance.actor.sr_type != 'S':
                             continue
                         if not (f2.instance.action == 'C' and
-                                f2.instance.assist.id == actor.id):
-                            F.discard(f2.instance.actor.id)
+                                f2.instance.assist_id == actor.id):
+                            F.discard(f2.instance.actor_id)
                     F = Subregion.objects.filter(id__in=F)
                     if not any(actor.id in A and target.id in A
                                for F, A in self.turn.find_convoys(F)):
