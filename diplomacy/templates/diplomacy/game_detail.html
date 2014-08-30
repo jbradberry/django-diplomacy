@@ -28,8 +28,11 @@
 
   {% include "diplomacy/turn_paging.html" %}
 
-  {% if game.press %}
-  <h3>Read <a href="{% url diplomacy:press_article_list realm_slug=game.slug %}">{{ game.press }}</a>!</h3>
+  {% url "diplomacy:press_article_list" realm_slug=game.slug as press_url %}
+  {% if press_url %}
+    {% with link="diplomacy/micropress_link.html" %}
+      {% include link %}
+    {% endwith %}
   {% endif %}
 
     {% map 800 670 %}

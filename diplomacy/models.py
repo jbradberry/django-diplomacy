@@ -116,18 +116,6 @@ class Game(models.Model):
     def get_absolute_url(self):
         return ('diplomacy_game_detail', (), {'slug': self.slug})
 
-    @property
-    def press(self):
-        if 'micropress' in settings.INSTALLED_APPS:
-            press = models.get_model('micropress', 'press')
-            ct = ContentType.objects.get(app_label="diplomacy",
-                                         model="game")
-            press = press.objects.filter(
-                content_type=ct,
-                object_id=self.id)
-            if press.exists():
-                return press.get()
-
     def governments(self, turn=None):
         gvts = self.government_set.all()
         owns = Ownership.objects.filter(turn=turn, territory__is_supply=True)
