@@ -1,6 +1,17 @@
 from distutils.core import setup
 import os
 
+
+def read_file(filename):
+    """Read a file into a string"""
+    path = os.path.abspath(os.path.dirname(__file__))
+    filepath = os.path.join(path, filename)
+    try:
+        return open(filepath).read()
+    except IOError:
+        return ''
+
+
 packages, data_files = [], []
 root_dir = os.path.dirname(__file__)
 if root_dir:
@@ -35,5 +46,5 @@ setup(name='django-diplomacy',
                    'Operating System :: OS Independent',
                    'Programming Language :: Python',
                    'Topic :: Games/Entertainment :: Turn Based Strategy'],
-      long_description=open('README.rst').read(),
+      long_description=read_file('README.rst'),
       )
