@@ -35,5 +35,5 @@ setup(name='django-diplomacy',
                    'Operating System :: OS Independent',
                    'Programming Language :: Python',
                    'Topic :: Games/Entertainment :: Turn Based Strategy'],
-      long_description=open('README.txt').read(),
+      long_description=open('README.rst').read(),
       )
