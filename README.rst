@@ -19,3 +19,37 @@ Requirements
 Recommended
 -----------
 - django-micro-press
+
+Installation
+------------
+
+Use pip to install Django Diplomacy from github
+
+    pip install git+https://github.com/jbradberry/django-diplomacy.git
+
+
+Configuration
+-------------
+
+Add Django Diplomacy to the `INSTALLED_APPS` in your settings file.
+
+    INSTALLED_APPS = (
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.sessions',
+        'django.contrib.sites',
+        'django.contrib.messages',
+        'django.contrib.staticfiles',
+
+        # Added.
+        'diplomacy',
+    )
+
+Also, be sure to include `diplomacy.urls` in your root urlconf.
+
+Example:
+
+    urlpatterns = patterns('',
+        (r'^', include('diplomacy.urls')),
+        (r'^admin/', include(admin.site.urls)),
+    )
