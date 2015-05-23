@@ -3,13 +3,13 @@ from .helpers import create_units, create_orders
 from django.test import TestCase
 
 
-unit_subs = dict(("{0} {1}".format(models.convert[s.sr_type], unicode(s)), s)
-                  for s in models.Subregion.objects.select_related('territory'))
-subs_unit = dict((v.id, k) for k,v in unit_subs.iteritems())
-
-
 class CorrectnessHelperTest(TestCase):
     fixtures = ['basic_game.json']
+
+    def setUp(self):
+        unit_subs = dict(("{0} {1}".format(models.convert[s.sr_type], unicode(s)), s)
+                         for s in models.Subregion.objects.select_related('territory'))
+        self.subs_unit = dict((v.id, k) for k,v in unit_subs.iteritems())
 
     def test_find_convoys(self):
         units = {'England': ('F Mid-Atlantic Ocean',
@@ -36,7 +36,7 @@ class CorrectnessHelperTest(TestCase):
 
         self.assertEqual(len(seas1), 3)
         self.assertEqual(
-            set(subs_unit[sr.id] for sr in full_sr.filter(id__in=seas1)),
+            set(self.subs_unit[sr.id] for sr in full_sr.filter(id__in=seas1)),
             set(n for n in units['England'][:3]))
 
         self.assertEqual(len(lands1), 10)
@@ -47,7 +47,7 @@ class CorrectnessHelperTest(TestCase):
 
         self.assertEqual(len(seas2), 2)
         self.assertEqual(
-            set(subs_unit[sr.id] for sr in full_sr.filter(id__in=seas2)),
+            set(self.subs_unit[sr.id] for sr in full_sr.filter(id__in=seas2)),
             set(n for n in units['England'][6:8]))
 
         self.assertEqual(len(lands2), 8)

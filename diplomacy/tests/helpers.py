@@ -34,16 +34,22 @@ order_patterns = {'H': re.compile(r"(?P<actor>{0}) H$".format(U)),
                   'D': re.compile(r"(?P<actor>{0}) D$".format(U))}
 
 lookup = defaultdict(list)
-for t in models.Territory.objects.all():
-    for sr in t.subregion_set.all():
-        lookup[(t.name,)].append(sr)
-        lookup[(t.name, sr.subname or '')].append(sr)
-        lookup[(t.name, sr.subname or '', sr.sr_type)].append(sr)
+t_dict = {}
 
-t_dict = dict((t.name, t.id) for t in models.Territory.objects.all())
+def init_lookup():
+    for t in models.Territory.objects.all():
+        for sr in t.subregion_set.all():
+            lookup[(t.name,)].append(sr)
+            lookup[(t.name, sr.subname or '')].append(sr)
+            lookup[(t.name, sr.subname or '', sr.sr_type)].append(sr)
+
+    t_dict.update((t.name, t.id) for t in models.Territory.objects.all())
 
 
 def fetch(sr_type, territory, subname, strict=False):
+    if not lookup:
+        init_lookup()
+
     if sr_type in ('F', 'A'):
         sr_type = convert[sr_type]
     if subname is None:
