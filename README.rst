@@ -32,6 +32,7 @@ Configuration
 -------------
 
 Add Django Diplomacy to the `INSTALLED_APPS` in your settings file.
+::
 
     INSTALLED_APPS = (
         'django.contrib.auth',
@@ -47,7 +48,7 @@ Add Django Diplomacy to the `INSTALLED_APPS` in your settings file.
 
 Also, be sure to include `diplomacy.urls` in your root urlconf.
 
-Example:
+Example::
 
     urlpatterns = patterns('',
         (r'^', include('diplomacy.urls')),
