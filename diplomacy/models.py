@@ -775,7 +775,7 @@ class Turn(models.Model):
         else:
             action = 'H' if self.season in ('S', 'F') else None
             orders = dict(((g.id, a.id),
-                           {'government': g, 'turn': self,
+                           {'government': g, 'slot': a.id, 'turn': self,
                             'actor': a, 'action': action,
                             'assist': None, 'target': None,
                             'via_convoy': False, 'convoy': False})
