@@ -9,7 +9,7 @@ Powers.
 For game instructions and other useful info, see
 `http://www.wizards.com/default.asp?x=ah/prod/diplomacy`
 
-See also `http://en.wikipedia.org/wiki/Diplomacy_%28game%29`
+See also `http://en.wikipedia.org/wiki/Diplomacy_(game)`
 
 Requirements
 ------------
