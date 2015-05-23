@@ -24,6 +24,7 @@ Installation
 ------------
 
 Use pip to install Django Diplomacy from github
+::
 
     pip install git+https://github.com/jbradberry/django-diplomacy.git
 
