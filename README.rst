@@ -14,9 +14,7 @@ See also `http://en.wikipedia.org/wiki/Diplomacy_(game)`
 Requirements
 ------------
 - Python >= 2.6
-- Django >= 1.2
-- template-utils (`https://bitbucket.org/ubernostrum/django-template-utils`)
-- lxml
+- Django >= 1.3, < 1.7
 
 Recommended
 -----------
