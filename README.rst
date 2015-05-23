@@ -23,7 +23,7 @@ Recommended
 Installation
 ------------
 
-Use pip to install Django Diplomacy from github
+Use pip to install django-diplomacy from github
 ::
 
     pip install git+https://github.com/jbradberry/django-diplomacy.git
@@ -32,7 +32,7 @@ Use pip to install Django Diplomacy from github
 Configuration
 -------------
 
-Add Django Diplomacy to the `INSTALLED_APPS` in your settings file.
+Add Django Diplomacy to the ``INSTALLED_APPS`` in your settings file.
 ::
 
     INSTALLED_APPS = (
@@ -47,7 +47,7 @@ Add Django Diplomacy to the `INSTALLED_APPS` in your settings file.
         'diplomacy',
     )
 
-Also, be sure to include `diplomacy.urls` in your root urlconf.
+Also, be sure to include ``diplomacy.urls`` in your root urlconf.
 
 Example::
 
