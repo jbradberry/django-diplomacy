@@ -11,14 +11,20 @@ For game instructions and other useful info, see
 
 See also `http://en.wikipedia.org/wiki/Diplomacy_(game)`
 
+
 Requirements
 ------------
+
 - Python >= 2.6
 - Django >= 1.3, < 1.7
 
+
 Recommended
 -----------
-- django-micro-press
+
+- `django-turn-generation <https://github.com/jbradberry/django-turn-generation>`_
+- `django-postoffice <https://github.com/jbradberry/django-postoffice>`_
+
 
 Installation
 ------------
