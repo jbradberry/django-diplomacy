@@ -1,7 +1,7 @@
 {% extends "diplomacy/game_detail.html" %}
 {% load maps %}
 
-{% block title %}{{ formset.government.power }} | {{ block.super }}{% endblock %}
+{% block title %}{{ form.government.power }} | {{ block.super }}{% endblock %}
 
 {% block extra_head %}
     <link rel="stylesheet" href="{{ STATIC_URL }}css/orders.css"
@@ -114,12 +114,12 @@
     </script>
 {% endblock %}
 
-{% block page_title %}Orders - {{ formset.government.power }}{% endblock %}
+{% block page_title %}Orders - {{ form.government.power }}{% endblock %}
 
 {% block breadcrumbs %}
 {{ block.super }}
 &rsaquo;
-{{ formset.government.power }}
+{{ form.government.power }}
 {% endblock %}
 
 {% block content %}
@@ -135,27 +135,27 @@
     {% map 800 670 %}
 
     <form method="POST" action="">{% csrf_token %}
-      {{ formset.management_form }}
-      {{ formset.non_form_errors.as_ul }}
+      {{ form.management_form }}
+      {{ form.non_form_errors.as_ul }}
       <table class="formset">
-	{% for form in formset.forms %}
+	{% for formrow in form.forms %}
 	{% if forloop.first %}
-	{% for field in form.visible_fields %}
+	{% for field in formrow.visible_fields %}
 	<col id="{{ field.name }}">
 	{% endfor %}
 	<thead>
 	  <tr>
-	    {% for field in form.visible_fields %}
+	    {% for field in formrow.visible_fields %}
 	    <th>{{ field.label|capfirst }}</th>
 	    {% endfor %}
 	  </tr>
 	</thead>
 	{% endif %}
-	<tr class="form{% if form.errors %} errorform{% endif %}">
-	  {% for field in form.visible_fields %}
+	<tr class="form{% if formrow.errors %} errorform{% endif %}">
+	  {% for field in formrow.visible_fields %}
 	  <td{% if field.errors %} class="errorfield"{% endif %}>
 	    {% if forloop.first %}
-	    {% for hidden in form.hidden_fields %}
+	    {% for hidden in formrow.hidden_fields %}
 	    {{ hidden }}
 	    {% endfor %}
 	    {% endif %}
