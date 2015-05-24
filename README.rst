@@ -16,7 +16,7 @@ Requirements
 ------------
 
 - Python >= 2.6
-- Django >= 1.3, < 1.7
+- Django >= 1.4, < 1.7
 
 
 Recommended
