@@ -2,11 +2,6 @@
 {% load maps %}
 
 {% block title %}Map | {{ block.super }}{% endblock %}
-{% block extra_head %}
-    <script type="text/javascript"
-    src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js">
-    </script>
-{% endblock %}
 
 {% block content %}
   {% map 800 670 %}

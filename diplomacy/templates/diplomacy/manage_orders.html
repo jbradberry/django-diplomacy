@@ -4,167 +4,155 @@
 {% block title %}{{ form.government.power }} | {{ block.super }}{% endblock %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="{{ STATIC_URL }}css/orders.css"
-      type="text/css">
-    <script type="text/javascript"
-    src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js">
-    </script>
-    <script type="text/javascript">
-      function objlen(obj) {
-        var len = 0;
-        $.each(obj, function() { len++; });
-        return len;
-      }
-
-      function in_obj(item, obj) {
-        if ( obj instanceof Array ) {
-          if ( item != "" ) { item = parseInt(item); }
-          return ( $.inArray(item, obj) >= 0 );
-        }
-        return ( obj.hasOwnProperty(item) );
-      }
-
-      function filter(widget, data) {
-        var selected = widget.val();
-        var w_class = widget.attr("class");
-        var sel = false;
-
-        widget.empty();
-        $.each(data, function(index, value) {
-          if ( index == selected ) { sel = true; }
-          widget.append("<option value='"+index+"'>"+options[w_class][index]+"</option>");
-        });
-
-        if ( objlen(data) == 1 && in_obj("", data) ) {
-          widget.val("");
-          widget.fadeOut("def");
-        } else {
-          if ( widget.is(":hidden") ) { widget.fadeIn(); }
-          if ( sel ) { widget.val(selected); }
-        }
-        widget.trigger("change");
-      }
-
-      function readonly() {
-        $(this).hide();
-        $(this).parent().append( $(this).find(":selected").text() );
-      }
-
-      $(document).ready(function() {
-        $("col").each(function() { $(this).width( $(this).width() ); });
-
-        options = {'unit': {}, 'action': {}, 'subregion': {}};
-        $("tr.form td select.unit:first option").each(function() {
-          var $opt = $(this);
-          options.unit[$opt.val()] = $opt.text();
-        });
-
-        $("tr.form td select.action:first option").each(function() {
-          var $opt = $(this);
-          options.action[$opt.val()] = $opt.text();
-        });
-
-        $("tr.form td select.subregion:first option").each(function() {
-          var $opt = $(this);
-          options.subregion[$opt.val()] = $opt.text();
-        });
-
-        var data = {{ order_filter|safe }};
-        var unit_fixed = data.unit_fixed;
-        var tree = data.tree;
-
-        $("tr.form").each(function() {
-          var form = $(this);
-          var actor, action, assist;
-
-          filter(form.find("select[name$=actor]"), tree);
-
-          if ( unit_fixed ) {
-            actor = form.find("select[name$=actor]");
-            actor.each(readonly);
-            actor = actor.val();
-          }
-
-          form.find("select[name$=actor]").change(function() {
-            actor = $(this).val();
-            filter(form.find("select[name$=action]"), tree[actor]);
-          }).trigger("change");
-
-          form.find("select[name$=action]").change(function() {
-            action = $(this).val();
-            var current = tree[actor][action];
-            filter(form.find("select[name$=assist]"), current);
-          }).trigger("change");
-
-          form.find("select[name$=assist]").change(function() {
-            assist = $(this).val();
-            var current = tree[actor][action][assist];
-            filter(form.find("select[name$=target]"), current);
-          }).trigger("change");
-
-          form.find("select[name$=target]").change(function() {
-            target = $(this).val();
-            var current = tree[actor][action][assist][target];
-            var $via_convoy = form.find(":checkbox")
-            if ( current ) { $via_convoy.show(); }
-            else { $via_convoy.hide(); }
-          }).trigger("change");
-        });
-      });
-    </script>
+<link rel="stylesheet" href="{{ STATIC_URL }}css/orders.css" type="text/css">
 {% endblock %}
 
-{% block page_title %}Orders - {{ form.government.power }}{% endblock %}
-
-{% block breadcrumbs %}
-{{ block.super }}
-&rsaquo;
-{{ form.government.power }}
+{% block header %}
+<h1>Orders - {{ form.government.power }}</h1>
+<p class="lead">{{ turn|default:"Setup" }} [{{ game.get_state_display }}]</p>
 {% endblock %}
 
 {% block content %}
+  {% map 800 670 %}
 
-  {% if messages %}
-  <div class="notifications">
-    {% for msg in messages %}
-    <div{% if msg.tags %} class="{{ msg.tags }}"{% endif %}>{{ msg }}</div>
-    {% endfor %}
-  </div>
-  {% endif %}
+  <form method="post" action="">{% csrf_token %}
+    {{ form.management_form }}
+    {{ form.non_form_errors.as_ul }}
+    <table class="formset">
+      {% for formrow in form.forms %}
+      {% if forloop.first %}
+      {% for field in formrow.visible_fields %}
+      <col id="{{ field.name }}">
+      {% endfor %}
+      <thead>
+        <tr>
+          {% for field in formrow.visible_fields %}
+          <th>{{ field.label|capfirst }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      {% endif %}
+      <tr class="form{% if formrow.errors %} errorform{% endif %}">
+        {% for field in formrow.visible_fields %}
+        <td{% if field.errors %} class="errorfield"{% endif %}>
+          {% if forloop.first %}
+          {% for hidden in formrow.hidden_fields %}
+          {{ hidden }}
+          {% endfor %}
+          {% endif %}
+          {{ field }}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
+    <input type="submit" value="Submit" />
+  </form>
+{% endblock %}
 
-    {% map 800 670 %}
+{% block extra_scripts %}
+  {{ block.super }}
+  <script type="text/javascript">
+    function objlen(obj) {
+      var len = 0;
+      $.each(obj, function() { len++; });
+      return len;
+    }
 
-    <form method="POST" action="">{% csrf_token %}
-      {{ form.management_form }}
-      {{ form.non_form_errors.as_ul }}
-      <table class="formset">
-	{% for formrow in form.forms %}
-	{% if forloop.first %}
-	{% for field in formrow.visible_fields %}
-	<col id="{{ field.name }}">
-	{% endfor %}
-	<thead>
-	  <tr>
-	    {% for field in formrow.visible_fields %}
-	    <th>{{ field.label|capfirst }}</th>
-	    {% endfor %}
-	  </tr>
-	</thead>
-	{% endif %}
-	<tr class="form{% if formrow.errors %} errorform{% endif %}">
-	  {% for field in formrow.visible_fields %}
-	  <td{% if field.errors %} class="errorfield"{% endif %}>
-	    {% if forloop.first %}
-	    {% for hidden in formrow.hidden_fields %}
-	    {{ hidden }}
-	    {% endfor %}
-	    {% endif %}
-	    {{ field }}
-	  </td>
-	  {% endfor %}
-	</tr>
-	{% endfor %}
-      </table>
-      <input type="submit" value="Submit" />
-    </form>
+    function in_obj(item, obj) {
+      if ( obj instanceof Array ) {
+        if ( item != "" ) { item = parseInt(item); }
+        return ( $.inArray(item, obj) >= 0 );
+      }
+      return ( obj.hasOwnProperty(item) );
+    }
+
+    function filter(widget, data) {
+      var selected = widget.val();
+      var w_class = widget.attr("class");
+      var sel = false;
+
+      widget.empty();
+      $.each(data, function(index, value) {
+        if ( index == selected ) { sel = true; }
+        widget.append("<option value='"+index+"'>"+options[w_class][index]+"</option>");
+      });
+
+      if ( objlen(data) == 1 && in_obj("", data) ) {
+        widget.val("");
+        widget.fadeOut("def");
+      } else {
+        if ( widget.is(":hidden") ) { widget.fadeIn(); }
+        if ( sel ) { widget.val(selected); }
+      }
+      widget.trigger("change");
+    }
+
+    function readonly() {
+      $(this).hide();
+      $(this).parent().append( $(this).find(":selected").text() );
+    }
+
+    $(document).ready(function() {
+      $("col").each(function() { $(this).width( $(this).width() ); });
+
+      options = {'unit': {}, 'action': {}, 'subregion': {}};
+      $("tr.form td select.unit:first option").each(function() {
+        var $opt = $(this);
+        options.unit[$opt.val()] = $opt.text();
+      });
+
+      $("tr.form td select.action:first option").each(function() {
+        var $opt = $(this);
+        options.action[$opt.val()] = $opt.text();
+      });
+
+      $("tr.form td select.subregion:first option").each(function() {
+        var $opt = $(this);
+        options.subregion[$opt.val()] = $opt.text();
+      });
+
+      var data = {{ order_filter|safe }};
+      var unit_fixed = data.unit_fixed;
+      var tree = data.tree;
+
+      $("tr.form").each(function() {
+        var form = $(this);
+        var actor, action, assist;
+
+        filter(form.find("select[name$=actor]"), tree);
+
+        if ( unit_fixed ) {
+          actor = form.find("select[name$=actor]");
+          actor.each(readonly);
+          actor = actor.val();
+        }
+
+        form.find("select[name$=actor]").change(function() {
+          actor = $(this).val();
+          filter(form.find("select[name$=action]"), tree[actor]);
+        }).trigger("change");
+
+        form.find("select[name$=action]").change(function() {
+          action = $(this).val();
+          var current = tree[actor][action];
+          filter(form.find("select[name$=assist]"), current);
+        }).trigger("change");
+
+        form.find("select[name$=assist]").change(function() {
+          assist = $(this).val();
+          var current = tree[actor][action][assist];
+          filter(form.find("select[name$=target]"), current);
+        }).trigger("change");
+
+        form.find("select[name$=target]").change(function() {
+          target = $(this).val();
+          var current = tree[actor][action][assist][target];
+          var $via_convoy = form.find(":checkbox")
+          if ( current ) { $via_convoy.show(); }
+          else { $via_convoy.hide(); }
+        }).trigger("change");
+      });
+    });
+  </script>
 {% endblock %}

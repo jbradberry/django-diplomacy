@@ -2,11 +2,7 @@
 
 {% block title %}Games | {{ block.super }}{% endblock %}
 
-{% block breadcrumbs %}
-{{ block.super }}
-&rsaquo;
-<a href="{% url diplomacy_game_list %}">Games</a>
-{% endblock %}
+{% block header %}<h1>Games</h1>{% endblock %}
   
 {% block content %}
 
@@ -14,12 +10,13 @@
   {% include "diplomacy/list_paging.html" %}
   {% endif %}
   
-  <table>
+  <table class="table">
     <thead>
       <tr>
 	<th>Name</th>
 	<th>Turn</th>
 	<th>Last Generated</th>
+        <th>State</th>
       </tr>
     </thead>
     {% for game in game_list %}
@@ -29,6 +26,7 @@
       <td>{{ current|default_if_none:"Setup" }}</td>
       <td>{% if current %}{{ current.generated|date:"D, j M Y g:ia T" }}{% else %}{{ game.created|date:"D, j M Y g:ia T" }}{% endif %}</td>
       {% endwith %}
+      <td>{{ game.get_state_display }}</td>
     </tr>
     {% endfor %}
   </table>

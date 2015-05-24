@@ -2,12 +2,9 @@
 
 {% block title %}Master | {{ block.super }}{% endblock %}
 
-{% block page_title %}{{ game.name }}{% endblock %}
-
-{% block breadcrumbs %}
-{{ block.super }}
-&rsaquo;
-Game Master
+{% block header %}
+<h1>{{ game.name }}</h1>
+<p class="lead">Game Administration</p>
 {% endblock %}
 
 {% block content %}

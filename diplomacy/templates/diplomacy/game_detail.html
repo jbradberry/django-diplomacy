@@ -1,32 +1,22 @@
 {% extends "diplomacy/game_list.html" %}
+{% load url from future %}
 {% load maps %}
 
 {% block title %}{% if not current and not setup %}{{ turn }} | {% endif %}{{ game.name }} | {{ block.super }}{% endblock %}
 
-{% block extra_head %}
-    <link rel="stylesheet" href="{{ STATIC_URL }}css/game.css"
-      type="text/css">
-    <script type="text/javascript"
-    src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.js">
-    </script>
-{% endblock %}
-
-{% block page_title %}{{ game.name }}{% endblock %}
-
-{% block breadcrumbs %}
-{{ block.super }}
-&rsaquo;
-<a href="{% url diplomacy_game_detail game.slug %}">{{ game.name }}</a>
-{% if not current and not setup %}
-&rsaquo;
-<a href="{% url diplomacy_turn_detail game.slug turn.season turn.year %}">{{ turn }}</a>
-{% endif %}
+{% block header %}
+<h1>{{ game.name }}</h1>
+<p class="lead">{{ turn|default:"Setup" }} [{{ game.get_state_display }}]</p>
 {% endblock %}
 
 {% block content %}
-  <h2>{{ turn|default:"Setup" }}</h2>
-
   {% include "diplomacy/turn_paging.html" %}
+
+  {% if game.description %}
+  <div class="description">
+    {{ game.description }}
+  </div>
+  {% endif %}
 
   {% url "diplomacy:press_article_list" realm_slug=game.slug as press_url %}
   {% if press_url %}
@@ -35,48 +25,51 @@
     {% endwith %}
   {% endif %}
 
-    {% map 800 670 %}
+  {% map 800 670 %}
 
-    <div class="player-list">
-      <table>
-	<thead>
-	  <tr>
-	    <th>Name</th>
-	    <th>Power</th>
-	    <th>SC</th>
-	    <th>Units</th>
-	    <th>Ready</th>
-	  </tr>
-	</thead>
-	{% for government, sc, uc, turnedin in governments %}
-	<tr class="{{ government.power|lower }}">
-	  <td>{{ government }}</td>
-	  <td><div class="legend {{ government.power|lower }}"></div>{% if current %}<a href="{% url diplomacy_orders game.slug government.power.name %}">{{ government.power }}</a>{% else %}{{ government.power|default:"N/A" }}{% endif %}</td>
-	  <td>{{ sc }}</td>
-	  <td>{{ uc }}</td>
-	  <td>{{ turnedin|yesno:"Y,N" }}</td>
-	</tr>
-	{% endfor %}
-      </table>
-    </div>
-
-    <div class="previous-orders">
-      {% for power, actorset in turn.recent_orders %}
-        <p class="power-orders">
-	<strong>{{ power }}:</strong><br />
-	  {% for actor, orders in actorset %}
-	    {% for o in orders %}
-	      {% if not forloop.first %}/{% endif %}
-	      {% if not o.user_issued %}(default){% endif %}
-	      {{ o.full_actor }} {{ o.get_action_display }}
-	      {{ o.full_assist|default:"" }}
-	      {{ o.target|default:"" }}
-	      {% if o.via_convoy %}via Convoy{% endif %}
-	      [{{ o.get_result_display }}]
-	    {% endfor %}<br />
-	  {% endfor %}
-	</p>
+  <div class="player-list">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Power</th>
+          <th>SC</th>
+          <th>Units</th>
+          <th>Ready</th>
+        </tr>
+      </thead>
+      {% for government, sc, uc, turnedin in governments %}
+      <tr class="{{ government.power|lower }}">
+        <td>{{ government }}</td>
+        <td><div class="legend {{ government.power|lower }}"></div>{% if current %}<a href="{% url 'diplomacy_orders' game.slug government.power.name %}">{{ government.power }}</a>{% else %}{{ government.power|default:"N/A" }}{% endif %}</td>
+        <td>{{ sc }}</td>
+        <td>{{ uc }}</td>
+        <td>{{ turnedin|yesno:"Y,N" }}</td>
+      </tr>
       {% endfor %}
-    </div>
+    </table>
+  </div>
 
+  <div class="previous-orders">
+    {% for power, actorset in turn.recent_orders %}
+      <p class="power-orders">
+      <strong>{{ power }}:</strong><br />
+        {% for actor, orders in actorset %}
+          {% for o in orders %}
+            {% if not forloop.first %}/{% endif %}
+            {% if not o.user_issued %}(default){% endif %}
+            {{ o.full_actor }} {{ o.get_action_display }}
+            {{ o.full_assist|default:"" }}
+            {{ o.target|default:"" }}
+            {% if o.via_convoy %}via Convoy{% endif %}
+            [{{ o.get_result_display }}]
+          {% endfor %}<br />
+        {% endfor %}
+      </p>
+    {% endfor %}
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="text/javascript" src="{{ STATIC_URL }}js/map.js"></script>
 {% endblock %}
