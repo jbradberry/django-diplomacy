@@ -26,7 +26,7 @@
       <td>{{ current|default_if_none:"Setup" }}</td>
       <td>{% if current %}{{ current.generated|date:"D, j M Y g:ia T" }}{% else %}{{ game.created|date:"D, j M Y g:ia T" }}{% endif %}</td>
       {% endwith %}
-      <td>{{ game.get_state_display }}</td>
+      <td><span class="label label-{% if game.state == 'S' %}info{% elif game.state == 'A' %}success{% elif game.state == 'P' %}primary{% elif game.state == 'F' %}danger{% endif %}">{{ game.get_state_display }}</span></td>
     </tr>
     {% endfor %}
   </table>

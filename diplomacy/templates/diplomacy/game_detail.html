@@ -6,7 +6,7 @@
 
 {% block header %}
 <h1>{{ game.name }}</h1>
-<p class="lead">{{ turn|default:"Setup" }} <button type="button" class="btn btn-xs btn-{% if game.state == 'S' %}info{% elif game.state == 'A' %}success{% elif game.state == 'P' %}primary{% elif game.state == 'F' %}danger{% endif %}">{{ game.get_state_display }}</button></p>
+<p class="lead">{{ turn|default:"" }} <span class="label label-{% if game.state == 'S' %}info{% elif game.state == 'A' %}success{% elif game.state == 'P' %}primary{% elif game.state == 'F' %}danger{% endif %}">{{ game.get_state_display }}</span></p>
 {% endblock %}
 
 {% block content %}
@@ -62,7 +62,7 @@
             {{ o.full_assist|default:"" }}
             {{ o.target|default:"" }}
             {% if o.via_convoy %}via Convoy{% endif %}
-            <button type="button" class="btn btn-xs btn-{% if o.result == 'S' %}success{% elif o.result == 'F' %}warning{% elif o.result == 'B' or o.result == 'D' %}danger{% endif %}">{{ o.get_result_display }}</button>
+            <span class="label label-{% if o.result == 'S' %}success{% elif o.result == 'F' %}warning{% elif o.result == 'B' or o.result == 'D' %}danger{% endif %}">{{ o.get_result_display }}</span>
           {% endfor %}<br />
         {% endfor %}
       </p>
