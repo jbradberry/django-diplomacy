@@ -45,9 +45,10 @@ class Retreating(TestCase):
                   "Turkey": ("F Greece M Albania",)}
         create_orders(orders, T)
 
-        for o in T.order_set.filter(action='M'):
+        for o in models.Order.objects.filter(post__turn=T, action='M'):
             self.assertTrue(T.is_legal(o))
-        self.assertTrue(not T.is_legal(T.order_set.get(action='S')))
+        self.assertFalse(
+            T.is_legal(models.Order.objects.get(post__turn=T, action='S')))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -96,9 +97,10 @@ class Retreating(TestCase):
                              "F Holland S F Edinburgh - North Sea")}
         create_orders(orders, T)
 
-        for o in T.order_set.filter(action='M'):
+        for o in models.Order.objects.filter(post__turn=T, action='M'):
             self.assertTrue(T.is_legal(o))
-        self.assertTrue(not T.is_legal(T.order_set.get(action='S')))
+        self.assertFalse(
+            T.is_legal(models.Order.objects.get(post__turn=T, action='S')))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -111,21 +113,21 @@ class Retreating(TestCase):
         self.assertEqual(
             T.unit_set.filter(government__power__name="England").count(), 2)
 
-        self.assertTrue(
-            not T.unit_set.filter(
+        self.assertFalse(
+            T.unit_set.filter(
                 government__power__name="England",
                 previous__subregion__territory__name="Norway").exists())
 
         self.assertEqual(
             T.unit_set.filter(government__power__name="Russia").count(), 2)
 
-        self.assertTrue(
-            not T.unit_set.filter(
+        self.assertFalse(
+            T.unit_set.filter(
                 government__power__name="Russia",
                 previous__subregion__territory__name="Edinburgh").exists())
 
-        self.assertTrue(
-            not T.unit_set.filter(
+        self.assertFalse(
+            T.unit_set.filter(
                 government__power__name="Russia",
                 previous__subregion__territory__name="Holland").exists())
 
@@ -152,8 +154,8 @@ class Retreating(TestCase):
                               "F North Sea C A Holland - Yorkshire")}
         create_orders(orders, T)
 
-        for o in T.order_set.all():
-            self.assertTrue(not T.is_legal(o))
+        for o in models.Order.objects.filter(post__turn=T):
+            self.assertFalse(T.is_legal(o))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -166,8 +168,8 @@ class Retreating(TestCase):
         self.assertEqual(
             T.unit_set.filter(government__power__name="England").count(), 1)
 
-        self.assertTrue(
-            not T.unit_set.filter(
+        self.assertFalse(
+            T.unit_set.filter(
                 government__power__name="England",
                 previous__subregion__territory__name="Holland").exists())
 
@@ -194,10 +196,12 @@ class Retreating(TestCase):
                               "F North Sea M Norwegian Sea")}
         create_orders(orders, T)
 
-        o = T.order_set.get(actor__territory__name="Holland")
+        o = models.Order.objects.get(
+            post__turn=T, actor__territory__name="Holland")
         self.assertTrue(T.is_legal(o))
-        o = T.order_set.get(actor__territory__name="North Sea")
-        self.assertTrue(not T.is_legal(o))
+        o = models.Order.objects.get(
+            post__turn=T, actor__territory__name="North Sea")
+        self.assertFalse(T.is_legal(o))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -239,8 +243,8 @@ class Retreating(TestCase):
         orders = {"Turkey": ("F Ankara M Black Sea",)}
         create_orders(orders, T)
 
-        for o in T.order_set.all():
-            self.assertTrue(not T.is_legal(o))
+        for o in models.Order.objects.filter(post__turn=T):
+            self.assertFalse(T.is_legal(o))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -250,8 +254,8 @@ class Retreating(TestCase):
                               ).annotate(count=Count('subregion__territory')
                                          ).filter(count__gt=1).exists())
 
-        self.assertTrue(
-            not T.unit_set.filter(government__power__name="Turkey").exists())
+        self.assertFalse(
+            T.unit_set.filter(government__power__name="Turkey").exists())
 
     def test_unit_may_not_retreat_to_contested_area(self):
         # DATC 6.H.6
@@ -277,13 +281,14 @@ class Retreating(TestCase):
         orders = {"Italy": ("A Vienna M Bohemia",)}
         create_orders(orders, T)
 
-        self.assertTrue(not T.is_legal(T.order_set.get()))
+        self.assertFalse(
+            T.is_legal(models.Order.objects.get(post__turn=T)))
 
         T.game.generate()
         T = T.game.current_turn()
 
-        self.assertTrue(
-            not T.unit_set.filter(government__power__name="Italy").exists())
+        self.assertFalse(
+            T.unit_set.filter(government__power__name="Italy").exists())
 
     def test_two_retreats_to_same_area_disbands_units(self):
         # DATC 6.H.7
@@ -311,14 +316,14 @@ class Retreating(TestCase):
                             "A Vienna M Tyrolia")}
         create_orders(orders, T)
 
-        for o in T.order_set.all():
+        for o in models.Order.objects.filter(post__turn=T):
             self.assertTrue(T.is_legal(o))
 
         T.game.generate()
         T = T.game.current_turn()
 
-        self.assertTrue(
-            not T.unit_set.filter(government__power__name="Italy").exists())
+        self.assertFalse(
+            T.unit_set.filter(government__power__name="Italy").exists())
 
     def test_three_retreats_to_same_area_disbands_units(self):
         # DATC 6.H.8
@@ -354,7 +359,7 @@ class Retreating(TestCase):
                              "F Holland M North Sea")}
         create_orders(orders, T)
 
-        for o in T.order_set.all():
+        for o in models.Order.objects.filter(post__turn=T):
             self.assertTrue(T.is_legal(o))
 
         T.game.generate()
@@ -363,21 +368,21 @@ class Retreating(TestCase):
         self.assertEqual(
             T.unit_set.filter(government__power__name="England").count(), 2)
 
-        self.assertTrue(
-            not T.unit_set.filter(
+        self.assertFalse(
+            T.unit_set.filter(
                 government__power__name="England",
                 previous__subregion__territory__name="Norway").exists())
 
         self.assertEqual(
             T.unit_set.filter(government__power__name="Russia").count(), 2)
 
-        self.assertTrue(
-            not T.unit_set.filter(
+        self.assertFalse(
+            T.unit_set.filter(
                 government__power__name="Russia",
                 previous__subregion__territory__name="Edinburgh").exists())
 
-        self.assertTrue(
-            not T.unit_set.filter(
+        self.assertFalse(
+            T.unit_set.filter(
                 government__power__name="Russia",
                 previous__subregion__territory__name="Holland").exists())
 
@@ -409,7 +414,7 @@ class Retreating(TestCase):
         orders = {"Germany": ("F Kiel M Berlin",)}
         create_orders(orders, T)
 
-        for o in T.order_set.all():
+        for o in models.Order.objects.filter(post__turn=T):
             self.assertTrue(T.is_legal(o))
 
         T.game.generate()
@@ -453,17 +458,21 @@ class Retreating(TestCase):
                   "Germany": ("A Prussia M Berlin",)}
         create_orders(orders, T)
 
+        self.assertFalse(
+            T.is_legal(
+                models.Order.objects.get(
+                    post__turn=T,
+                    post__government__power__name="England")))
         self.assertTrue(
-            not T.is_legal(T.order_set.get(government__power__name="England"))
-        )
-        self.assertTrue(
-            T.is_legal(T.order_set.get(government__power__name="Germany"))
-        )
+            T.is_legal(
+                models.Order.objects.get(
+                    post__turn=T,
+                    post__government__power__name="Germany")))
         T.game.generate()
         T = T.game.current_turn()
 
-        self.assertTrue(
-            not T.unit_set.filter(government__power__name="England").exists())
+        self.assertFalse(
+            T.unit_set.filter(government__power__name="England").exists())
 
         self.assertEqual(
             T.unit_set.filter(government__power__name="Germany").count(), 3)
@@ -509,7 +518,7 @@ class Retreating(TestCase):
         orders = {"Italy": ("A Marseilles M Gascony",)}
         create_orders(orders, T)
 
-        self.assertTrue(T.is_legal(T.order_set.get()))
+        self.assertTrue(T.is_legal(models.Order.objects.get(post__turn=T)))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -566,7 +575,7 @@ class Retreating(TestCase):
         orders = {"England": ("A Liverpool M Edinburgh",)}
         create_orders(orders, T)
 
-        self.assertTrue(T.is_legal(T.order_set.get()))
+        self.assertTrue(T.is_legal(models.Order.objects.get(post__turn=T)))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -611,7 +620,7 @@ class Retreating(TestCase):
         orders = {"England": ("A Picardy M London",)}
         create_orders(orders, T)
 
-        self.assertTrue(not T.is_legal(T.order_set.get()))
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -661,7 +670,7 @@ class Retreating(TestCase):
                   "France": ("A Burgundy M Belgium",)}
         create_orders(orders, T)
 
-        for o in T.order_set.all():
+        for o in models.Order.objects.filter(post__turn=T):
             self.assertTrue(T.is_legal(o))
 
         T.game.generate()
@@ -703,22 +712,27 @@ class Retreating(TestCase):
         orders = {"England": ("F Portugal M Spain (NC)",)}
         create_orders(orders, T)
 
-        self.assertTrue(not T.is_legal(T.order_set.get()))
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
 
         orders = {"England": ("F Portugal M Mid-Atlantic Ocean",)}
         create_orders(orders, T)
 
-        self.assertTrue(
-            not T.is_legal(
-                T.order_set.get(target__territory__name="Mid-Atlantic Ocean")))
+        self.assertFalse(
+            T.is_legal(
+                models.Order.objects.get(
+                    post__turn=T,
+                    target__territory__name="Mid-Atlantic Ocean"))
+        )
 
         orders = {"England": ("F Portugal M Spain (SC)",)}
         create_orders(orders, T)
 
-        self.assertTrue(
-            not T.is_legal(
-                T.order_set.get(target__territory__name="Spain",
-                                target__subname="SC")))
+        self.assertFalse(
+            T.is_legal(
+                models.Order.objects.get(
+                    post__turn=T, target__territory__name="Spain",
+                    target__subname="SC"))
+        )
 
     def test_contested_for_both_coasts(self):
         # DATC 6.H.16
@@ -754,7 +768,7 @@ class Retreating(TestCase):
         orders = {"France": ("F Western Mediterranean M Spain (SC)",)}
         create_orders(orders, T)
 
-        self.assertTrue(not T.is_legal(T.order_set.get()))
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -780,15 +794,23 @@ class Building(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T)
 
+        self.assertEqual(T.unit_set.count(), 2)
+        gvt = models.Government.objects.get(power__name="Germany")
+        self.assertEqual(gvt.builds_available(T), 1)
+
         orders = {"Germany": ("A Warsaw B",
                               "A Kiel B",
                               "A Munich B")}
         create_orders(orders, T)
 
-        for o in T.order_set.filter(actor__territory__name="Warsaw"):
-            self.assertTrue(not T.is_legal(o))
+        self.assertEqual(models.Order.objects.filter(post__turn=T).count(), 3)
 
-        for o in T.order_set.exclude(actor__territory__name="Warsaw"):
+        for o in models.Order.objects.filter(post__turn=T,
+                                             actor__territory__name="Warsaw"):
+            self.assertFalse(T.is_legal(o))
+
+        for o in models.Order.objects.filter(
+                post__turn=T).exclude(actor__territory__name="Warsaw"):
             self.assertTrue(T.is_legal(o))
 
         T.game.generate() # S 1901
@@ -817,7 +839,7 @@ class Building(TestCase):
         orders = {"Russia": ("F Moscow B",)}
         create_orders(orders, T)
 
-        self.assertTrue(T.is_legal(T.order_set.get()))
+        self.assertTrue(T.is_legal(models.Order.objects.get(post__turn=T)))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -825,9 +847,9 @@ class Building(TestCase):
         self.assertEqual(
             T.unit_set.filter(government__power__name="Russia").count(), 3)
 
-        self.assertTrue(
-            not T.unit_set.filter(subregion__territory__name="Moscow",
-                                  government__power__name="Russia").exists())
+        self.assertFalse(
+            T.unit_set.filter(subregion__territory__name="Moscow",
+                              government__power__name="Russia").exists())
 
     def test_supply_center_must_be_empty_for_building(self):
         # DATC 6.I.3
@@ -838,7 +860,7 @@ class Building(TestCase):
         orders = {"Germany": ("A Berlin B",)}
         create_orders(orders, T)
 
-        self.assertTrue(not T.is_legal(T.order_set.get()))
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -855,7 +877,7 @@ class Building(TestCase):
         orders = {"Russia": ("F St. Petersburg (NC) B",)}
         create_orders(orders, T)
 
-        self.assertTrue(not T.is_legal(T.order_set.get()))
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -878,7 +900,7 @@ class Building(TestCase):
         orders = {"Germany": ("A Berlin B",)}
         create_orders(orders, T)
 
-        self.assertTrue(not T.is_legal(T.order_set.get()))
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -896,7 +918,7 @@ class Building(TestCase):
         orders = {"Germany": ("A Warsaw B",)}
         create_orders(orders, T)
 
-        self.assertTrue(not T.is_legal(T.order_set.get()))
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -912,7 +934,7 @@ class Building(TestCase):
                              "A Moscow B")}
         create_orders(orders, T)
 
-        for o in T.order_set.all():
+        for o in models.Order.objects.filter(post__turn=T):
             self.assertTrue(T.is_legal(o))
 
         T.game.generate() # S 1901
@@ -933,7 +955,6 @@ class CivilDisorderAndDisbands(TestCase):
 
     fixtures = ['adjustment_turn.json']
 
-    @expectedFailure
     def test_too_many_remove_orders(self):
         # DATC 6.J.1
         T = models.Turn.objects.get()
@@ -949,11 +970,13 @@ class CivilDisorderAndDisbands(TestCase):
                              "A Paris D")}
         create_orders(orders, T)
 
-        for o in T.order_set.exclude(actor__territory__name="Gulf of Lyon"):
+        for o in models.Order.objects.filter(
+                post__turn=T).exclude(actor__territory__name="Gulf of Lyon"):
             self.assertTrue(T.is_legal(o))
 
-        for o in T.order_set.filter(actor__territory__name="Gulf of Lyon"):
-            self.assertTrue(not T.is_legal(o))
+        for o in models.Order.objects.filter(
+                post__turn=T, actor__territory__name="Gulf of Lyon"):
+            self.assertFalse(T.is_legal(o))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -980,7 +1003,7 @@ class CivilDisorderAndDisbands(TestCase):
                              "A Paris D")}
         create_orders(orders, T)
 
-        for o in T.order_set.all():
+        for o in models.Order.objects.filter(post__turn=T):
             self.assertTrue(T.is_legal(o))
 
         T.game.generate() # S 1901

@@ -266,7 +266,8 @@ class Convoys(TestCase):
 
         orders = {"England": ("F North Sea M Holland",)}
         create_orders(orders, T)
-        order = T.order_set.get()
+
+        order = models.Order.objects.get(post__turn=T)
         self.assertTrue(T.is_legal(order))
 
     def test_dislodged_convoy_does_not_cause_a_bounce(self):

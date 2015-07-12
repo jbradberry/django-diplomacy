@@ -153,15 +153,21 @@ class OrdersView(DetailView, BaseFormView):
 
     def get_form_kwargs(self):
         kwargs = super(OrdersView, self).get_form_kwargs()
-        turn = self.object.game.current_turn()
         kwargs.update(
             government=self.object,
-            first_submit=not self.object.order_set.filter(turn=turn).exists()
         )
         return kwargs
 
     def form_valid(self, form):
-        form.save()
+        orders = form.save(commit=False)
+        post = models.OrderPost.objects.create(
+            government=self.object,
+            turn=self.object.game.current_turn()
+        )
+        for order in orders:
+            order.post = post
+            order.save()
+
         messages.success(self.request, "Your orders have been submitted.",
                          fail_silently=True)
         prefs = models.DiplomacyPrefs.objects.filter(user=self.request.user)

@@ -120,11 +120,11 @@ class Game(models.Model):
         gvts = self.government_set.all()
         owns = Ownership.objects.filter(turn=turn, territory__is_supply=True)
         units = Unit.objects.filter(turn=turn)
-        orders = Order.objects.filter(turn=turn)
+        orders = Order.objects.filter(post__turn=turn)
         return sorted(
             [(g, owns.filter(government=g).count(),
               units.filter(government=g).count(),
-              bool(g.slots(turn)) == orders.filter(government=g).exists())
+              bool(g.slots(turn)) == orders.filter(post__government=g).exists())
              for g in gvts],
             key=lambda x: (-x[1], -x[2], getattr(x[0].power, 'name', None)))
 
@@ -712,7 +712,8 @@ class Turn(models.Model):
 
     def is_legal(self, order):
         if isinstance(order, Order):
-            order = {'government': order.government, 'turn': order.turn,
+            order = {'government': order.post.government,
+                     'turn': order.post.turn,
                      'actor': order.actor, 'action': order.action,
                      'assist': order.assist, 'target': order.target}
         if order['actor'] is None:
@@ -766,7 +767,7 @@ class Turn(models.Model):
         # fallback orders
         if self.season == 'FA':
             orders = dict(((g.id, s),
-                           {'government': g, 'slot': s, 'turn': self,
+                           {'government': g, 'turn': self,
                             'actor': None, 'action': None,
                             'assist': None, 'target': None,
                             'via_convoy': False, 'convoy': False})
@@ -775,33 +776,51 @@ class Turn(models.Model):
         else:
             action = 'H' if self.season in ('S', 'F') else None
             orders = dict(((g.id, a.id),
-                           {'government': g, 'slot': a.id, 'turn': self,
+                           {'government': g, 'turn': self,
                             'actor': a, 'action': action,
                             'assist': None, 'target': None,
                             'via_convoy': False, 'convoy': False})
                           for g in gvts for a in g.actors(self))
 
-        # use the most recent legal order
-        orderset = self.order_set.all()
+        posts = self.posts.all()
         if gvt:
-            orderset = orderset.filter(government=gvt)
-        for o in orderset:
-            if self.is_legal(o):
-                slot = o.slot if self.season == 'FA' else o.actor_id
-                if (o.government_id, slot) not in orders:
-                    continue
-                orders[(o.government_id, slot)] = {
-                    'id': o.id, 'government': o.government, 'slot': o.slot,
-                    'turn': o.turn, 'actor': o.actor, 'action': o.action,
-                    'assist': o.assist, 'target': o.target,
-                    'via_convoy': o.via_convoy and o.action == 'M' and
-                    o.actor.sr_type == 'L' and self.season in ('S', 'F') and
-                    o.target in o.actor.borders.all()}
+            posts = posts.filter(government=gvt)
+
+        most_recent = {}
+        for post in posts:
+            most_recent.setdefault(post.government, post)
+            if post.timestamp > most_recent[post.government].timestamp:
+                most_recent[post.government] = post
+
+        for gvt, post in most_recent.iteritems():
+            i = 0
+            for o in post.orders.all():
+                if self.is_legal(o):
+                    if self.season == 'FA':
+                        index = i
+                        i += 1
+                    else:
+                        index = o.actor_id
+
+                    if (gvt.id, index) not in orders:
+                        continue
+                    orders[(gvt.id, index)] = {
+                        'id': o.id, 'government': post.government,
+                        'turn': self, 'actor': o.actor, 'action': o.action,
+                        'assist': o.assist, 'target': o.target,
+                        'via_convoy': (
+                            o.via_convoy and o.action == 'M'
+                            and o.actor.sr_type == 'L'
+                            and self.season in ('S', 'F')
+                            and o.target in o.actor.borders.all()
+                        )
+                    }
+
         if self.season in ('S', 'F'):
-            for (g, slot), o in orders.iteritems():
+            for (g, index), o in orders.iteritems():
                 if o['action'] != 'M':
                     continue
-                matching = [(g2, o2) for (g2, s2), o2 in orders.iteritems()
+                matching = [(g2, o2) for (g2, i2), o2 in orders.iteritems()
                             if o2['action'] == 'C' and
                             assist(territory(o['actor']), o,
                                    territory(o2['actor']), o2)]
@@ -812,6 +831,7 @@ class Turn(models.Model):
                                    (o['via_convoy'] and matching))
                 else:
                     o['convoy'] = bool(matching)
+
         return [v for k, v in sorted(orders.iteritems())]
 
     def immediate_fails(self, orders):
@@ -1157,6 +1177,16 @@ class Unit(models.Model):
         return u'{0} {1}'.format(self.u_type, self.subregion.territory)
 
 
+class OrderPost(models.Model):
+    turn = models.ForeignKey(Turn, related_name='posts')
+    government = models.ForeignKey(Government, related_name='posts')
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('timestamp',)
+        get_latest_by = 'timestamp'
+
+
 ACTION_CHOICES = (
     ('H', 'Hold'),
     ('M', 'Move'),
@@ -1168,14 +1198,8 @@ ACTION_CHOICES = (
 
 
 class Order(models.Model):
-    class Meta:
-        ordering = ("timestamp",)
-        get_latest_by = "timestamp"
+    post = models.ForeignKey(OrderPost, related_name='orders')
 
-    turn = models.ForeignKey(Turn)
-    government = models.ForeignKey(Government)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    slot = models.PositiveSmallIntegerField(null=True, blank=True)
     actor = models.ForeignKey(Subregion, null=True, blank=True,
                               related_name='acts')
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,

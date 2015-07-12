@@ -46,9 +46,11 @@ class OrderForm(ModelForm):
 
     class Meta:
         model = Order
-        exclude = ('turn', 'government', 'timestamp', 'slot')
+        exclude = ('post',)
 
     def __init__(self, *args, **kwargs):
+        self.government = kwargs.pop('government', None)
+
         super(OrderForm, self).__init__(*args, **kwargs)
 
         my_css = {'actor': 'unit',
@@ -59,12 +61,11 @@ class OrderForm(ModelForm):
             self.fields[w].widget.attrs['class'] = c
 
     def clean(self):
-        gvt = self.initial['government']
-        turn = gvt.game.current_turn()
-        actor = self.cleaned_data.get("actor")
+        turn = self.government.game.current_turn()
+        actor = self.cleaned_data.get('actor')
         if turn.season == 'FA':
             # Fall Adjustment builds are optional.
-            if gvt.builds_available() > 0 and actor is None:
+            if self.government.builds_available() > 0 and actor is None:
                 return {}
         else:
             if actor != self.initial['actor']:
@@ -79,26 +80,22 @@ class OrderForm(ModelForm):
 
 
 class OrderFormSet(BaseFormSet):
-    def __init__(self, government, first_submit, data=None, **kwargs):
+    def __init__(self, government, data=None, **kwargs):
         self.government = government
         self.turn = government.game.current_turn()
         self.season = self.turn.season
-        self.first_submit = first_submit
 
         super(OrderFormSet, self).__init__(data=data, **kwargs)
 
-    def _construct_forms(self):
-        self.forms = [self._construct_form(i, instance=
-                                           Order(slot=x['slot'],
-                                                 turn=x['turn'],
-                                                 government=x['government']))
-                      for i, x in enumerate(self.initial)]
+    def _construct_form(self, *args, **kwargs):
+        kwargs['government'] = self.government
+        return super(OrderFormSet, self)._construct_form(*args, **kwargs)
 
-    def save(self):
+    def save(self, commit=True):
+        instances = []
         for form in self.forms:
-            if (form.cleaned_data.get('actor') and
-                (self.first_submit or form.has_changed())):
-                form.save()
+            instances.append(form.save(commit=commit))
+        return instances
 
     def irrational_orders(self):
         warnings = []
@@ -191,7 +188,7 @@ class OrderFormSet(BaseFormSet):
         actors = set()
         for i in xrange(self.total_form_count()):
             form = self.forms[i]
-            actor = getattr(form.cleaned_data.get("actor"), 'territory', None)
+            actor = getattr(form.cleaned_data.get('actor'), 'territory', None)
             if not actor:
                 continue
             if actor in actors:

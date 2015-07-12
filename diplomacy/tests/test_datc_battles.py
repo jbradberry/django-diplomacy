@@ -715,10 +715,10 @@ class SupportsAndDislodges(TestCase):
                              "A Berlin S A Munich - Kiel")}
         create_orders(orders, T)
 
-        for o in models.Order.objects.filter(government__power__name=
+        for o in models.Order.objects.filter(post__government__power__name=
                                              "Germany"):
             self.assertTrue(not T.is_legal(o))
-        for o in models.Order.objects.filter(government__power__name=
+        for o in models.Order.objects.filter(post__government__power__name=
                                              "Russia"):
             self.assertTrue(T.is_legal(o))
 
@@ -750,10 +750,10 @@ class SupportsAndDislodges(TestCase):
                              "F Marseilles S F Spain (NC) - Gulf of Lyon")}
         create_orders(orders, T)
 
-        for o in models.Order.objects.filter(government__power__name=
+        for o in models.Order.objects.filter(post__government__power__name=
                                              "France"):
             self.assertTrue(not T.is_legal(o))
-        for o in models.Order.objects.filter(government__power__name=
+        for o in models.Order.objects.filter(post__government__power__name=
                                              "Italy"):
             self.assertTrue(T.is_legal(o))
 
@@ -787,10 +787,10 @@ class SupportsAndDislodges(TestCase):
                              "F Western Mediterranean M Gulf of Lyon")}
         create_orders(orders, T)
 
-        for o in models.Order.objects.filter(government__power__name=
+        for o in models.Order.objects.filter(post__government__power__name=
                                              "France"):
             self.assertTrue(not T.is_legal(o))
-        for o in models.Order.objects.exclude(government__power__name=
+        for o in models.Order.objects.exclude(post__government__power__name=
                                               "France"):
             self.assertTrue(T.is_legal(o))
 
@@ -916,10 +916,10 @@ class SupportsAndDislodges(TestCase):
                              "A Bulgaria S F Black Sea - Rumania")}
         create_orders(orders, T)
 
-        for o in models.Order.objects.filter(government__power__name=
+        for o in models.Order.objects.filter(post__government__power__name=
                                              "Russia"):
             self.assertTrue(not T.is_legal(o))
-        for o in models.Order.objects.exclude(government__power__name=
+        for o in models.Order.objects.exclude(post__government__power__name=
                                               "Russia"):
             self.assertTrue(T.is_legal(o))
 
@@ -950,10 +950,10 @@ class SupportsAndDislodges(TestCase):
                              "A Bulgaria S F Black Sea - Rumania")}
         create_orders(orders, T)
 
-        for o in models.Order.objects.filter(government__power__name=
+        for o in models.Order.objects.filter(post__government__power__name=
                                              "Russia"):
             self.assertTrue(not T.is_legal(o))
-        for o in models.Order.objects.exclude(government__power__name=
+        for o in models.Order.objects.exclude(post__government__power__name=
                                               "Russia"):
             self.assertTrue(T.is_legal(o))
 
@@ -984,10 +984,10 @@ class SupportsAndDislodges(TestCase):
                              "A Bulgaria S F Black Sea - Constantinople")}
         create_orders(orders, T)
 
-        for o in models.Order.objects.filter(government__power__name=
+        for o in models.Order.objects.filter(post__government__power__name=
                                              "Russia"):
             self.assertTrue(not T.is_legal(o))
-        for o in models.Order.objects.exclude(government__power__name=
+        for o in models.Order.objects.exclude(post__government__power__name=
                                               "Russia"):
             self.assertTrue(T.is_legal(o))
 
@@ -1018,13 +1018,13 @@ class SupportsAndDislodges(TestCase):
         orders = {"Turkey": ("F Black Sea M Constantinople",)}
         create_orders(orders, T)
 
-        o = models.Order.objects.get(government__power__name="Turkey",
+        o = models.Order.objects.get(post__government__power__name="Turkey",
                                      action='S')
         self.assertTrue(not T.is_legal(o))
-        o = models.Order.objects.get(government__power__name="Turkey",
+        o = models.Order.objects.get(post__government__power__name="Turkey",
                                      action='M')
         self.assertTrue(T.is_legal(o))
-        o = models.Order.objects.get(government__power__name=
+        o = models.Order.objects.get(post__government__power__name=
                                      "Austria-Hungary")
         self.assertTrue(T.is_legal(o))
 
@@ -1055,10 +1055,10 @@ class SupportsAndDislodges(TestCase):
                   "Germany": ("A Yorkshire M Holland",)}
         create_orders(orders, T)
 
-        for o in models.Order.objects.filter(government__power__name=
+        for o in models.Order.objects.filter(post__government__power__name=
                                              "Germany"):
             self.assertTrue(not T.is_legal(o))
-        for o in models.Order.objects.exclude(government__power__name=
+        for o in models.Order.objects.exclude(post__government__power__name=
                                               "Germany"):
             self.assertTrue(T.is_legal(o))
 
@@ -1127,10 +1127,10 @@ class SupportsAndDislodges(TestCase):
                              "A Livonia M Prussia")}
         create_orders(orders, T)
 
-        for o in models.Order.objects.filter(government__power__name=
+        for o in models.Order.objects.filter(post__government__power__name=
                                              "Italy"):
             self.assertTrue(not T.is_legal(o))
-        for o in models.Order.objects.exclude(government__power__name=
+        for o in models.Order.objects.exclude(post__government__power__name=
                                               "Italy"):
             self.assertTrue(T.is_legal(o))
 
@@ -1691,10 +1691,12 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
                   "Russia": ("F Edinburgh M Liverpool",)}
         create_orders(orders, T)
 
-        self.assertTrue(T.is_legal(
-                models.Order.objects.get(government__power__name="England")))
-        self.assertTrue(not T.is_legal(
-                models.Order.objects.get(government__power__name="Russia")))
+        self.assertTrue(
+            T.is_legal(
+                models.Order.objects.get(post__government__power__name="England")))
+        self.assertFalse(
+            T.is_legal(
+                models.Order.objects.get(post__government__power__name="Russia")))
 
         T.game.generate()
         T = T.game.current_turn()

@@ -81,10 +81,10 @@ class BasicChecks(TestCase):
 
         orders = models.Order.objects.all()
 
-        for o in orders.filter(government__power__name='England'):
-            self.assertTrue(not T.is_legal(o))
+        for o in orders.filter(post__government__power__name='England'):
+            self.assertFalse(T.is_legal(o))
 
-        for o in orders.filter(government__power__name='Germany'):
+        for o in orders.filter(post__government__power__name='Germany'):
             self.assertTrue(T.is_legal(o))
 
         T.game.generate()
@@ -136,7 +136,7 @@ class BasicChecks(TestCase):
         create_orders(orders, T)
 
         order = models.Order.objects.get(
-            government__power__name="Austria-Hungary")
+            post__government__power__name="Austria-Hungary")
 
         self.assertTrue(not T.is_legal(order))
 

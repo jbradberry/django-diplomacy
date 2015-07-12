@@ -92,14 +92,14 @@ def split_unit(ustr, regexp=None):
         return ('', '', '')
     return u.groups('')
 
-def create_order(turn, gvt, orderstr):
+def create_order(post, orderstr):
     for action, regexp in order_patterns.iteritems():
         o = regexp.match(orderstr)
         if o is not None:
             break
     o_dict = o.groupdict('')
     actor = fetch(*split_unit(o_dict.get('actor', '')),
-                   strict=(turn.season == 'FA'))
+                   strict=(post.turn.season == 'FA'))
     assist = fetch(*split_unit(o_dict.get('assist', '')))
     sr_type = assist.sr_type if assist else (actor.sr_type if actor else '')
     target = fetch(sr_type, *split_unit(o_dict.get('target', ''), locRE)[:2])
@@ -108,13 +108,11 @@ def create_order(turn, gvt, orderstr):
               'assist': assist, 'target': target,
               'via_convoy': bool(o_dict.get('via_convoy'))}
 
-    return models.Order.objects.create(turn=turn, government=gvt, **kwargs)
+    return models.Order.objects.create(post=post, **kwargs)
 
 def create_orders(orders, turn):
     for gname, oset in orders.iteritems():
         gvt = models.Government.objects.get(power__name__startswith=gname)
-        new_orders = [create_order(turn, gvt, order) for order in oset]
-        if turn.season == 'FA':
-            for i, o in enumerate(sorted(new_orders, key=lambda x: x.actor_id)):
-                o.slot = i
-                o.save()
+        post = models.OrderPost.objects.create(turn=turn,
+                                               government=gvt)
+        new_orders = [create_order(post, order) for order in oset]
