@@ -9,12 +9,12 @@
       "is_active": true,
       "is_superuser": false,
       "is_staff": false,
-      "last_login": "2011-05-07 16:22:41",
+      "last_login": "2011-05-07 16:22:41-04:00",
       "groups": [],
       "user_permissions": [],
       "password": "!",
       "email": "player1@example.com",
-      "date_joined": "2011-05-07 16:22:41"
+      "date_joined": "2011-05-07 16:22:41-04:00"
     }
   },
   {
@@ -27,12 +27,12 @@
       "is_active": true,
       "is_superuser": false,
       "is_staff": false,
-      "last_login": "2011-05-07 16:22:41",
+      "last_login": "2011-05-07 16:22:41-04:00",
       "groups": [],
       "user_permissions": [],
       "password": "!",
       "email": "player2@example.com",
-      "date_joined": "2011-05-07 16:22:41"
+      "date_joined": "2011-05-07 16:22:41-04:00"
     }
   },
   {
@@ -45,12 +45,12 @@
       "is_active": true,
       "is_superuser": false,
       "is_staff": false,
-      "last_login": "2011-05-07 16:22:41",
+      "last_login": "2011-05-07 16:22:41-04:00",
       "groups": [],
       "user_permissions": [],
       "password": "!",
       "email": "player3@example.com",
-      "date_joined": "2011-05-07 16:22:41"
+      "date_joined": "2011-05-07 16:22:41-04:00"
     }
   },
   {
@@ -63,12 +63,12 @@
       "is_active": true,
       "is_superuser": false,
       "is_staff": false,
-      "last_login": "2011-05-07 16:22:41",
+      "last_login": "2011-05-07 16:22:41-04:00",
       "groups": [],
       "user_permissions": [],
       "password": "!",
       "email": "player4@example.com",
-      "date_joined": "2011-05-07 16:22:41"
+      "date_joined": "2011-05-07 16:22:41-04:00"
     }
   },
   {
@@ -81,12 +81,12 @@
       "is_active": true,
       "is_superuser": false,
       "is_staff": false,
-      "last_login": "2011-05-07 16:22:41",
+      "last_login": "2011-05-07 16:22:41-04:00",
       "groups": [],
       "user_permissions": [],
       "password": "!",
       "email": "player5@example.com",
-      "date_joined": "2011-05-07 16:22:41"
+      "date_joined": "2011-05-07 16:22:41-04:00"
     }
   },
   {
@@ -99,12 +99,12 @@
       "is_active": true,
       "is_superuser": false,
       "is_staff": false,
-      "last_login": "2011-05-07 16:22:41",
+      "last_login": "2011-05-07 16:22:41-04:00",
       "groups": [],
       "user_permissions": [],
       "password": "!",
       "email": "player6@example.com",
-      "date_joined": "2011-05-07 16:22:41"
+      "date_joined": "2011-05-07 16:22:41-04:00"
     }
   },
   {
@@ -117,12 +117,12 @@
       "is_active": true,
       "is_superuser": false,
       "is_staff": false,
-      "last_login": "2011-05-07 16:22:41",
+      "last_login": "2011-05-07 16:22:41-04:00",
       "groups": [],
       "user_permissions": [],
       "password": "!",
       "email": "player7@example.com",
-      "date_joined": "2011-05-07 16:22:41"
+      "date_joined": "2011-05-07 16:22:41-04:00"
     }
   },
   {
@@ -130,7 +130,7 @@
     "model": "diplomacy.game",
     "fields": {
       "name": "Test",
-      "created": "2011-05-07 16:24:45",
+      "created": "2011-05-07 16:24:45-04:00",
       "state": "A",
       "owner": 1,
       "slug": "test"
@@ -140,7 +140,7 @@
     "pk": 1,
     "model": "diplomacy.turn",
     "fields": {
-      "generated": "2011-05-07 16:29:30",
+      "generated": "2011-05-07 16:29:30-04:00",
       "season": "FA",
       "game": 1,
       "number": 4,
