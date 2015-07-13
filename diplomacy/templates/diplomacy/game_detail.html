@@ -5,7 +5,7 @@
 {% block title %}{% if not current and not setup %}{{ turn }} | {% endif %}{{ game.name }} | {{ block.super }}{% endblock %}
 
 {% block header %}
-<h1>{{ game.name }}</h1>
+<h1>{% block header_title %}{{ game.name }}{% endblock %}</h1>
 <p class="lead">{{ turn|default:"" }} <span class="label label-{% if game.state == 'S' %}info{% elif game.state == 'A' %}success{% elif game.state == 'P' %}primary{% elif game.state == 'F' %}danger{% endif %}">{{ game.get_state_display }}</span></p>
 {% endblock %}
 

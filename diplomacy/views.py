@@ -142,6 +142,7 @@ class OrdersView(DetailView, BaseFormView):
         }
         context = {
             'game': self.object.game,
+            'turn': self.object.game.current_turn(),
             'current': True,
             'order_filter': json.dumps(order_filter),
         }

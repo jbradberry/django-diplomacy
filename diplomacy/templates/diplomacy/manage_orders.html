@@ -7,10 +7,7 @@
 <link rel="stylesheet" href="{{ STATIC_URL }}css/orders.css" type="text/css">
 {% endblock %}
 
-{% block header %}
-<h1>Orders - {{ form.government.power }}</h1>
-<p class="lead">{{ turn|default:"Setup" }} [{{ game.get_state_display }}]</p>
-{% endblock %}
+{% block header_title %}{{ block.super }} - {{ form.government.power }}{% endblock %}
 
 {% block content %}
   {% map 800 670 %}
