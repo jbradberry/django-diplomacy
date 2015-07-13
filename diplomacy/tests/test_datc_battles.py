@@ -36,7 +36,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Venice",
                               government__power__name="Italy",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
@@ -66,7 +66,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Venice",
                               government__power__name="Italy",
-                              displaced_from__isnull=False).exists())
+                              dislodged=True).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Venice",
@@ -100,7 +100,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Venice",
                               government__power__name="Italy",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ionian Sea",
@@ -134,7 +134,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
                               government__power__name="Germany",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Prussia",
@@ -164,7 +164,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
                               government__power__name="Germany",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Prussia",
@@ -199,7 +199,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Baltic Sea",
                               government__power__name="Germany",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Livonia",
@@ -229,7 +229,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Baltic Sea",
                               government__power__name="Germany",
-                              displaced_from__isnull=False).exists())
+                              dislodged=True).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Baltic Sea",
@@ -263,7 +263,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Greece",
                               government__power__name="Turkey",
-                              displaced_from__isnull=False).exists())
+                              dislodged=True).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Greece",
@@ -292,7 +292,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
                               government__power__name="Austria-Hungary",
-                              displaced_from__isnull=False).exists())
+                              dislodged=True).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
@@ -318,7 +318,7 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='A').exists())
 
         self.assertTrue(
@@ -346,7 +346,7 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='A').exists())
 
         self.assertTrue(
@@ -377,7 +377,7 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -405,7 +405,7 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -438,7 +438,7 @@ class SupportsAndDislodges(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
-                              displaced_from__isnull=False,
+                              dislodged=True,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -467,7 +467,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ankara",
                               government__power__name="Turkey",
-                              displaced_from__isnull=False,
+                              dislodged=True,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -497,7 +497,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="London",
                               government__power__name="England",
-                              displaced_from__isnull=False,
+                              dislodged=True,
                               u_type='A').exists())
 
         self.assertTrue(
@@ -566,7 +566,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Constantinople",
                               government__power__name="Russia",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ankara",
@@ -606,7 +606,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Constantinople",
                               government__power__name="Russia",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -699,7 +699,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",
                               government__power__name="Austria-Hungary",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
     def test_impossible_fleet_move_cannot_be_supported(self):
@@ -835,7 +835,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
                               government__power__name="Germany",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Prussia",
@@ -864,7 +864,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
                               government__power__name="Germany",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Prussia",
@@ -895,7 +895,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Baltic Sea",
                               government__power__name="Russia",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Sweden",
@@ -929,7 +929,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Rumania",
                               government__power__name="Russia",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Black Sea",
@@ -963,7 +963,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Rumania",
                               government__power__name="Russia",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Black Sea",
@@ -997,7 +997,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Constantinople",
                               government__power__name="Russia",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Black Sea",
@@ -1068,7 +1068,7 @@ class SupportsAndDislodges(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Yorkshire",
                               government__power__name="Germany",
-                              displaced_from__isnull=True).exists())
+                              dislodged=False).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Liverpool",
@@ -1226,7 +1226,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Kiel",
                               government__power__name="Germany",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
     def test_no_help_dislodging_own_unit(self):
@@ -1255,7 +1255,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
                               government__power__name="Germany",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='A').exists())
 
     def test_non_dislodged_loser_still_has_effect(self):
@@ -1288,13 +1288,13 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Holland",
                               government__power__name="Germany",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="France",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -1339,7 +1339,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Holland",
                               government__power__name="Germany",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -1384,13 +1384,13 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Holland",
                               government__power__name="Germany",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="France",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -1423,7 +1423,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="England",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -1461,13 +1461,13 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="England",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Norway",
                               government__power__name="Russia",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -1538,7 +1538,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="England",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -1622,7 +1622,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Budapest",
                               government__power__name="Austria-Hungary",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='A').exists())
 
         self.assertTrue(
@@ -1662,7 +1662,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="Germany",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -1709,7 +1709,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Edinburgh",
                               government__power__name="Russia",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
     def test_friendly_head_to_head_battle(self):
@@ -1742,13 +1742,13 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Kiel",
                               government__power__name="France",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Berlin",
                               government__power__name="Germany",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='A').exists())
 
         self.assertTrue(

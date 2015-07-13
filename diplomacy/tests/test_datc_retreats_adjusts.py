@@ -352,7 +352,7 @@ class Retreating(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(displaced_from__isnull=False).count(), 3)
+            T.unit_set.filter(dislodged=True).count(), 3)
 
         orders = {"England": ("F Norway M North Sea",),
                   "Russia": ("F Edinburgh M North Sea",
@@ -409,7 +409,7 @@ class Retreating(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(displaced_from__isnull=False).count(), 2)
+            T.unit_set.filter(dislodged=True).count(), 2)
 
         orders = {"Germany": ("F Kiel M Berlin",)}
         create_orders(orders, T)
@@ -452,7 +452,7 @@ class Retreating(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(displaced_from__isnull=False).count(), 2)
+            T.unit_set.filter(dislodged=True).count(), 2)
 
         orders = {"England": ("A Kiel M Berlin",),
                   "Germany": ("A Prussia M Berlin",)}
@@ -483,7 +483,6 @@ class Retreating(TestCase):
                               government__power__name="Germany",
                               u_type='A').exists())
 
-    @expectedFailure
     def test_retreat_when_dislodged_by_adjacent_convoy(self):
         # DATC 6.H.11
         units = {"France": ("A Gascony", "A Burgundy", "F Mid-Atlantic Ocean",
@@ -507,7 +506,7 @@ class Retreating(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(displaced_from__isnull=False).count(), 1)
+            T.unit_set.filter(dislodged=True).count(), 1)
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Marseilles",
@@ -532,7 +531,6 @@ class Retreating(TestCase):
                               government__power__name="Italy",
                               u_type='A').exists())
 
-    @expectedFailure
     def test_retreat_when_dislodged_by_adjacent_convoy_while_convoying(self):
         # DATC 6.H.12
         units = {"England": ("A Liverpool", "F Irish Sea",
@@ -564,13 +562,18 @@ class Retreating(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(displaced_from__isnull=False).count(), 1)
+            T.unit_set.filter(dislodged=True).count(), 2)
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Liverpool",
                               previous__subregion__territory__name="Edinburgh",
                               government__power__name="Russia",
                               u_type='A').exists())
+        self.assertTrue(
+            T.unit_set.filter(subregion__territory__name="English Channel",
+                              previous__subregion__territory__name="Brest",
+                              government__power__name="France",
+                              u_type='F').exists())
 
         orders = {"England": ("A Liverpool M Edinburgh",)}
         create_orders(orders, T)
@@ -580,8 +583,9 @@ class Retreating(TestCase):
         T.game.generate()
         T = T.game.current_turn()
 
+        # We lose the fleet in the English Channel, since it didn't retreat.
         self.assertEqual(
-            T.unit_set.filter(government__power__name="England").count(), 4)
+            T.unit_set.filter(government__power__name="England").count(), 3)
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Edinburgh",
@@ -609,7 +613,7 @@ class Retreating(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(displaced_from__isnull=False).count(), 1)
+            T.unit_set.filter(dislodged=True).count(), 1)
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Picardy",
@@ -652,7 +656,7 @@ class Retreating(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(displaced_from__isnull=False).count(), 2)
+            T.unit_set.filter(dislodged=True).count(), 2)
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Picardy",
@@ -701,7 +705,7 @@ class Retreating(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(displaced_from__isnull=False).count(), 1)
+            T.unit_set.filter(dislodged=True).count(), 1)
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Portugal",
@@ -757,7 +761,7 @@ class Retreating(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(displaced_from__isnull=False).count(), 1)
+            T.unit_set.filter(dislodged=True).count(), 1)
 
         self.assertTrue(
             T.unit_set.filter(

@@ -118,7 +118,7 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="England",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -157,7 +157,7 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="England",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -626,13 +626,13 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="London",
                               government__power__name="England",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="English Channel",
                               government__power__name="France",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -676,13 +676,13 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="London",
                               government__power__name="England",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="English Channel",
                               government__power__name="France",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -725,7 +725,7 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="England",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -756,13 +756,13 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Tyrrhenian Sea",
                               government__power__name="France",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Naples",
                               government__power__name="Italy",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -858,8 +858,7 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Clyde",
                               government__power__name="England",
-                              displaced_from__name="Norway",
-                              u_type='F').exists())
+                              dislodged=True, u_type='F').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Clyde",
@@ -968,7 +967,7 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="English Channel",
                               government__power__name="France",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -979,7 +978,7 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="North Sea",
                               government__power__name="Russia",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -1027,7 +1026,7 @@ class Convoys(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="English Channel",
                               government__power__name="France",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='F').exists())
 
         self.assertTrue(
@@ -1370,7 +1369,7 @@ class ConvoyingToAdjacent(TestCase):
             T.unit_set.filter(subregion__territory__name="Norway",
                               previous__subregion__territory__name="Sweden",
                               government__power__name="Russia",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               u_type='A').exists())
 
     def test_swapped_or_head_to_head(self):
@@ -1407,8 +1406,7 @@ class ConvoyingToAdjacent(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Sweden",
                               government__power__name="Russia",
-                              displaced_from__name="Norway",
-                              u_type='A').exists())
+                              dislodged=True, u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Norwegian Sea",
@@ -1594,8 +1592,7 @@ class ConvoyingToAdjacent(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Belgium",
                               government__power__name="France",
-                              displaced_from__name="London",
-                              u_type='A').exists())
+                              dislodged=True, u_type='A').exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Yorkshire",

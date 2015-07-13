@@ -181,7 +181,7 @@ class BasicChecks(TestCase):
         T = T.game.current_turn()
 
         self.assertTrue(
-            not T.unit_set.filter(displaced_from__isnull=False).exists())
+            not T.unit_set.filter(dislodged=True).exists())
 
     def test_simple_bounce(self):
         # DATC 6.A.11
@@ -342,7 +342,7 @@ class CoastalIssues(TestCase):
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Gulf of Lyon",
-                              displaced_from__isnull=True,
+                              dislodged=False,
                               government__power__name="Italy").exists())
 
         self.assertTrue(
@@ -778,7 +778,7 @@ class CircularMovement(TestCase):
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Ionian Sea",
                               u_type='F', government__power__name="Turkey",
-                              displaced_from__isnull=False).exists())
+                              dislodged=True).exists())
 
         self.assertTrue(
             T.unit_set.filter(subregion__territory__name="Trieste",

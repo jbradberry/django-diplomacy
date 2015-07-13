@@ -29,7 +29,7 @@ def map(context, width, height):
                                                ownership__government=G)])
         data['units'] = json.dumps(
             [(unicode(u.subregion), u.u_type, u.government.power.name)
-             for u in turn.unit_set.filter(displaced_from__isnull=True)])
+             for u in turn.unit_set.filter(dislodged=False)])
     else:
         data['owns'] = json.dumps(
             [(re.sub('[ .]', '', T.name.lower()), P.name)

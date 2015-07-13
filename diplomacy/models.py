@@ -202,12 +202,15 @@ class Game(models.Model):
         attack_str = defaultdict(int)
         defend_str = defaultdict(int)
         prevent_str = defaultdict(int)
-        path, convoy = {}, defaultdict(lambda: False)
+
+        path = {}
+        convoy = defaultdict(lambda: False) # True if this unit is successfully
+                                            # convoyed, False otherwise.
 
         # determine if moves have a valid path
         for T, order in orders.iteritems():
             if order['action'] == 'M':
-                defend_str[T], path[T], P = 1, True, False
+                defend_str[T], path[T], P = 1, False, False
 
                 # matching successful convoy orders
                 matching = [orders[T2]['actor'].id
@@ -223,21 +226,25 @@ class Game(models.Model):
                                          and order['convoy']]
                 matching = Subregion.objects.filter(id__in=matching)
                 p_matching = Subregion.objects.filter(id__in=p_matching)
-                if not any(order['actor'].id in L and
-                           order['target'].id in L
-                           for F, L in turn.find_convoys(matching)):
-                    # we have no path if there isn't a chain of
-                    # successful convoys between our endpoints
-                    path[T] = False
-                    if any(order['actor'].id in L and
-                           order['target'].id in L
-                           for F, L in turn.find_convoys(p_matching)):
-                        # but if there is a path when paradoxical
-                        # convoys are included, we have a paradox
-                        P = True
+
+                if any(order['actor'].id in L and
+                       order['target'].id in L
+                       for F, L in turn.find_convoys(matching)):
+                    # We have a valid convoy path if there is a chain
+                    # of successful convoys between our endpoints.
+                    path[T] = True
+
+                if (not path[T] and
+                    any(order['actor'].id in L and
+                        order['target'].id in L
+                        for F, L in turn.find_convoys(p_matching))):
+                    # But if there is a path when paradoxical convoys
+                    # are included, we have a paradox.
+                    P = True
 
                 convoy[T] = path[T]
-                if order['target'] in order['actor'].borders.all():
+                if (not order['convoy'] and
+                    order['target'] in order['actor'].borders.all()):
                     # if we are adjacent to the target, we can have a
                     # path even without a successful convoy, but only
                     # if we don't have a paradox
@@ -590,16 +597,21 @@ class Turn(models.Model):
         target = Subregion.objects.filter(borders=actor)
 
         if self.season in ('SR', 'FR'):
-            # only displaced units retreat
-            unit = unit.filter(displaced_from__isnull=False)
+            # only dislodged units retreat
+            unit = unit.filter(dislodged=True)
             target = target.exclude(
                 # only go to empty territories ...
-                territory__subregion__unit__turn=self).exclude(
+                territory__subregion__unit__turn=self
+            ).exclude(
                 # that we weren't displaced from ...
-                territory__in=[u.displaced_from for u in unit]).exclude(
+                territory__in=[
+                    u.displaced_from for u in unit if u.displaced_from]
+            ).exclude(
                 # and that isn't empty because of a standoff.
-                territory__in=[u.standoff_from for u in self.unit_set.filter(
-                        standoff_from__isnull=False)]).distinct()
+                territory__in=[
+                    u.standoff_from for u in
+                    self.unit_set.filter(standoff_from__isnull=False)]
+            ).distinct()
 
         if unit.count() != 1:
             return {}
@@ -700,7 +712,7 @@ class Turn(models.Model):
 
         unit = actor.unit_set.filter(turn=self)
         if self.season in ('SR', 'FR'):
-            if not unit.filter(displaced_from__isnull=False).exists():
+            if not unit.filter(dislodged=True).exists():
                 return {}
         elif unit.get().government.builds_available() >= 0:
             return {}
@@ -716,6 +728,7 @@ class Turn(models.Model):
                      'turn': order.post.turn,
                      'actor': order.actor, 'action': order.action,
                      'assist': order.assist, 'target': order.target}
+
         if order['actor'] is None:
             if self.season != 'FA':
                 return False
@@ -733,7 +746,7 @@ class Turn(models.Model):
             if units.get().government != order['government']:
                 return False
         elif self.season in ('SR', 'FR'):
-            units = units.filter(displaced_from__isnull=False)
+            units = units.filter(dislodged=True)
             if not units.exists():
                 return False
             if units.get().government != order['government']:
@@ -827,8 +840,8 @@ class Turn(models.Model):
                 gvt_matching = [o2 for g2, o2 in matching if g2 == g]
 
                 if o['target'] in o['actor'].borders.all():
-                    o['convoy'] = (gvt_matching or
-                                   (o['via_convoy'] and matching))
+                    o['convoy'] = bool(gvt_matching or
+                                       (o['via_convoy'] and matching))
                 else:
                     o['convoy'] = bool(matching)
 
@@ -929,7 +942,14 @@ class Turn(models.Model):
             # if our location is marked as the target of a
             # successful move and we failed to move, we are displaced.
             if not d and a in self.displaced:
-                units[key]['displaced_from'] = self.displaced[a]
+                units[key].update(
+                    dislodged=True,
+                    displaced_from=( # only mark a location as disallowed for
+                        None         # retreats if it wasn't via convoy
+                        if orders[self.displaced[a].id].get('convoy')
+                        else self.displaced[a]
+                    )
+                )
             if orders[a].get('action') != 'M':
                 continue
             t = orders[a]['target'].territory
@@ -983,9 +1003,9 @@ class Turn(models.Model):
                       {'turn': self, 'government': u.government,
                        'u_type': u.u_type, 'subregion': u.subregion,
                        'previous': u})
-                     for x in (True, False) # displaced or not
+                     for x in (True, False) # dislodged or not
                      for u in
-                     self.prev.unit_set.filter(displaced_from__isnull=not x))
+                     self.prev.unit_set.filter(dislodged=x))
 
         self._update_units_changes(orders, decisions, units)
 
@@ -1107,7 +1127,7 @@ class Government(models.Model):
         else:
             displaced = {}
             if turn.season in ('SR', 'FR'): # only dislodged units move
-                displaced['unit__displaced_from__isnull'] = False
+                displaced['unit__dislodged'] = True
             actors = Subregion.objects.filter(unit__turn=turn,
                                               unit__government=self,
                                               **displaced)
@@ -1168,6 +1188,7 @@ class Unit(models.Model):
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
     previous = models.ForeignKey("self", null=True, blank=True)
+    dislodged = models.BooleanField(default=False)
     displaced_from = models.ForeignKey(Territory, null=True, blank=True,
                                        related_name='displaced')
     standoff_from = models.ForeignKey(Territory, null=True, blank=True,
