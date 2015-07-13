@@ -1174,7 +1174,6 @@ class CivilDisorderAndDisbands(TestCase):
                               government__power__name="Russia",
                               u_type='F').exists())
 
-    @expectedFailure
     def test_civil_disorder_counting_convoying_distance(self):
         # DATC 6.J.10
         T = models.Turn.objects.get()
@@ -1202,7 +1201,6 @@ class CivilDisorderAndDisbands(TestCase):
                               government__power__name="Italy",
                               u_type='A').exists())
 
-    @expectedFailure
     def test_civil_disorder_counting_distance_without_convoying_fleet(self):
         # DATC 6.J.11
         T = models.Turn.objects.get()

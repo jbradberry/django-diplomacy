@@ -959,44 +959,70 @@ class Turn(models.Model):
 
     def _update_units_autodisband(self, orders, units):
         sr = Subregion.objects.all()
-        t_id = dict((s.id, s.territory_id) for s in sr)
+        t_id = dict((s, s.territory_id) for s in sr)
         for g in self.game.government_set.all():
             builds = g.builds_available(self.prev) + len(self.disbands[g.id])
             if builds >= 0:
                 continue
 
-            # If we've reached this point, we have more units than
-            # allowed.  Disband inward from the outermost unit.
-            # For ties, disband fleets first then armies, and do
-            # in alphabetical order from there, if necessary.
-            g_names = dict((u.id, (u.sr_type == 'L', unicode(u))) for u in
-                           sr.filter(unit__government=g, unit__turn=self.prev))
-            g_units = set(g_names.iterkeys())
-            examined = set(sc.id for sc in
+            # If we've reached this point, we have more units than allowed.
+            # Disband inward from the outermost unit.  For ties, disband fleets
+            # first then armies, and do in alphabetical order from there, if
+            # necessary.  Fleets may only count distance via water, but
+            # armies may count both land and water as one space each.
+
+            unit_distances = dict(
+                (u, [None, u.sr_type == 'L', unicode(u)])
+                for u in sr.filter(unit__government=g, unit__turn=self.prev)
+            )
+
+            distance = 0
+            examined = set(sc for sc in
+                           sr.filter(territory__power=g.power,
+                                     territory__is_supply=True,
+                                     sr_type='S'))
+            while any(not D[1] and D[0] is None
+                      for D in unit_distances.itervalues()):
+                for u, D in unit_distances.iteritems():
+                    if not D[1] and D[0] is None and u in examined:
+                        D[0] = -distance  # We want them reversed by distance,
+                adj = set(                # but non-reversed by name.
+                    s for s in sr.filter(
+                        borders__in=examined
+                    ).exclude(id__in=[se.id for se in examined]).distinct()
+                )
+                examined |= adj
+                distance += 1
+
+            distance = 0
+            examined = set(sc for sc in
                            sr.filter(territory__power=g.power,
                                      territory__is_supply=True))
-            u_distance = [list(examined)]
-            while any(u not in examined for u in g_units):
-                adj = set(s.id for s in
-                          sr.filter(borders__in=examined
-                                    ).exclude(id__in=examined).distinct())
-                u_distance.append(list(adj))
+            while any(D[1] and D[0] is None
+                      for D in unit_distances.itervalues()):
+                for u, D in unit_distances.iteritems():
+                    if D[1] and D[0] is None and u in examined:
+                        D[0] = -distance  # We want them reversed by distance,
+                adj = set(                # but non-reversed by name.
+                    s for s in sr.filter(
+                        territory__subregion__borders__in=examined
+                    ).exclude(id__in=[se.id for se in examined]).distinct()
+                )
                 examined |= adj
+                distance += 1
 
-            while builds < 0 and u_distance:
-                current = sorted((u for u in u_distance.pop() if u in g_names),
-                                 key=lambda x: g_names[x])
-                for x in current:
-                    if t_id[x] in self.disbands[g.id]: continue
-                    orders[t_id[x]] = {'government': g, 'actor': sr.get(id=x),
-                                       'action': 'D', 'assist': None,
-                                       'target': None, 'via_convoy': False}
+            for u in sorted(unit_distances, key=lambda x: unit_distances[x]):
+                if t_id[u] in self.disbands[g.id]:
+                    continue
 
-                    del units[(t_id[x], False)]
-                    self.disbands[g.id].add(t_id[x])
-                    builds += 1
-                    if builds == 0:
-                        break
+                orders[t_id[u]] = {'government': g, 'actor': u,
+                                   'action': 'D', 'assist': None,
+                                   'target': None, 'via_convoy': False}
+                del units[(t_id[u], False)]
+                self.disbands[g.id].add(t_id[u])
+                builds += 1
+                if builds == 0:
+                    break
 
     def update_units(self, orders, decisions):
         units = dict(((territory(u.subregion), x),
