@@ -821,12 +821,7 @@ class Turn(models.Model):
                         'id': o.id, 'government': post.government,
                         'turn': self, 'actor': o.actor, 'action': o.action,
                         'assist': o.assist, 'target': o.target,
-                        'via_convoy': (
-                            o.via_convoy and o.action == 'M'
-                            and o.actor.sr_type == 'L'
-                            and self.season in ('S', 'F')
-                            and o.target in o.actor.borders.all()
-                        )
+                        'via_convoy': o.via_convoy
                     }
 
         if self.season in ('S', 'F'):
