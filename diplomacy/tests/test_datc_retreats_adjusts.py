@@ -1,8 +1,9 @@
-from .. import models
-from .helpers import create_units, create_orders
-from django.utils.unittest import expectedFailure
-from django.test import TestCase
 from django.db.models import Count
+from django.test import TestCase
+from django.utils.unittest import expectedFailure
+
+from .helpers import create_units, create_orders
+from .. import models
 
 
 class Retreating(TestCase):

@@ -1,15 +1,15 @@
+import json
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.core.urlresolvers import reverse
+from django.db.models import Max
+from django.forms.formsets import formset_factory
+from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 from django.views.generic import ListView, DetailView
 from django.views.generic.edit import BaseFormView
-from django.core.urlresolvers import reverse
-from django.core.exceptions import PermissionDenied
-from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404
-from django.forms.formsets import formset_factory
-from django.contrib import messages
-from django.db.models import Max
-
-import json
 
 from . import models, forms
 

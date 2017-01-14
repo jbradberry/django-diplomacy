@@ -1,14 +1,14 @@
-from django.db import models
-from django.db.models.signals import pre_save, post_save
-from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
-from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
-from random import shuffle
-from itertools import permutations
 from collections import defaultdict
 from functools import partial
-import datetime
+from itertools import permutations
+from random import shuffle
+
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import models
+from django.db.models.signals import pre_save, post_save
 
 from .helpers import unit, convert
 

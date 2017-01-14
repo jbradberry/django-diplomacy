@@ -1,7 +1,10 @@
-from ..models import Territory, Power
-from django import template
 import json
 import re
+
+from django import template
+
+from ..models import Territory, Power
+
 
 register = template.Library()
 

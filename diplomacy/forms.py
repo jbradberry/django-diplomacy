@@ -1,6 +1,8 @@
+from collections import defaultdict
+
 from django.forms import Form, CharField, Textarea, ValidationError
 from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
-from collections import defaultdict
+
 from .models import Order, Subregion, Unit, territory
 from .helpers import unit
 
