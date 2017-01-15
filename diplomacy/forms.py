@@ -3,7 +3,7 @@ from collections import defaultdict
 from django.forms import Form, CharField, Textarea, ValidationError
 from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
 
-from .models import Order, Subregion, Unit, territory, borders
+from .models import Order, Subregion, Unit, territory, borders, find_convoys
 from .helpers import unit
 
 
@@ -155,7 +155,7 @@ class OrderFormSet(BaseFormSet):
                         cross_moves.add(territory(actor))
                         cross_moves.add(territory(t_actor))
                 if actor.sr_type == 'L' and (target not in borders(actor) or f.instance.via_convoy):
-                    convoys = self.turn.find_convoys()
+                    convoys = find_convoys(self.turn)
                     fleets = set()
                     for F, A in convoys:
                         if actor.id in A and target.id in A:
@@ -169,7 +169,7 @@ class OrderFormSet(BaseFormSet):
                             F.discard(f2.instance.actor_id)
                     F = Subregion.objects.filter(id__in=F)
                     if not any(actor.id in A and target.id in A
-                               for F, A in self.turn.find_convoys(F)):
+                               for F, A in find_convoys(self.turn, F)):
                         w = msgs['m-conv'].format(unit(actor), target)
                         warnings.append(w)
 

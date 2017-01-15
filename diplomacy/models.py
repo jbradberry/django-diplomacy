@@ -33,8 +33,40 @@ SUBREGION_CHOICES = (
 )
 
 
+# Refactor wrapper functions
+
 def borders(sr):
     return sr.borders.all()
+
+def find_convoys(turn, fleets=None):
+    """
+    Generates pairs consisting of a cluster of adjacent non-coastal
+    fleets, and the coastal territories that are reachable via convoy
+    from that cluster.  This is necessary to determine legal orders.
+
+    """
+    if fleets is None:
+        fleets = Subregion.objects.filter(
+            sr_type='S', unit__turn=turn).exclude(
+            territory__subregion__sr_type='L').distinct()
+
+    C = {f.id: set([f.id]) for f in fleets}
+    for f in fleets:
+        for f2 in fleets.filter(borders=f):
+            if C[f.id] is not C[f2.id]:
+                C[f.id] |= C[f2.id]
+                C.update((x, C[f.id]) for x in C[f2.id])
+    groups = set(frozenset(C[f]) for f in C)
+    convoyable = []
+    for g in groups:
+        coasts = Subregion.objects.filter(
+            sr_type='L', territory__subregion__borders__id__in=g
+        ).distinct()
+        if coasts.filter(unit__turn=turn).exists():
+            convoyable.append((set(g), set(sr.id for sr in coasts)))
+    return convoyable
+
+# End of refactor wrapper functions
 
 def territory(sr):
     if sr is None:
@@ -239,7 +271,7 @@ class Game(models.Model):
                 # FIXME refactor
                 if any(order['actor'].id in L
                        and order['target'].id in L
-                       for F, L in turn.find_convoys(matching)):
+                       for F, L in find_convoys(turn, matching)):
                     # We have a valid convoy path if there is a chain
                     # of successful convoys between our endpoints.
                     path[T] = True
@@ -248,7 +280,7 @@ class Game(models.Model):
                 if (not path[T] and
                     any(order['actor'].id in L
                         and order['target'].id in L
-                        for F, L in turn.find_convoys(p_matching))):
+                        for F, L in find_convoys(turn, p_matching))):
                     # But if there is a path when paradoxical convoys
                     # are included, we have a paradox.
                     P = True
@@ -573,35 +605,6 @@ class Turn(models.Model):
                       for power, adict in orders.iteritems())
 
     # FIXME refactor
-    def find_convoys(self, fleets=None):
-        """
-        Generates pairs consisting of a cluster of adjacent non-coastal
-        fleets, and the coastal territories that are reachable via convoy
-        from that cluster.  This is necessary to determine legal orders.
-
-        """
-        if fleets is None:
-            fleets = Subregion.objects.filter(
-                sr_type='S', unit__turn=self).exclude(
-                territory__subregion__sr_type='L').distinct()
-
-        C = {f.id: set([f.id]) for f in fleets}
-        for f in fleets:
-            for f2 in fleets.filter(borders=f):
-                if C[f.id] is not C[f2.id]:
-                    C[f.id] |= C[f2.id]
-                    C.update((x, C[f.id]) for x in C[f2.id])
-        groups = set(frozenset(C[f]) for f in C)
-        convoyable = []
-        for g in groups:
-            coasts = Subregion.objects.filter(
-                sr_type='L', territory__subregion__borders__id__in=g
-                ).distinct()
-            if coasts.filter(unit__turn=self).exists():
-                convoyable.append((set(g), set(sr.id for sr in coasts)))
-        return convoyable
-
-    # FIXME refactor
     def valid_hold(self, actor, empty=None):
         if self.season in ('S', 'F'):
             if self.unit_set.filter(subregion=actor).count() == 1:
@@ -640,7 +643,7 @@ class Turn(models.Model):
         convoyable = set()
         if self.season in ('S', 'F') and unit.get().u_type == 'A':
             target = set(target)
-            for fset, lset in self.find_convoys():
+            for fset, lset in find_convoys(self):
                 if actor.id in lset:
                     target.update(lset)
                     convoyable.update(lset)
@@ -684,7 +687,7 @@ class Turn(models.Model):
             # if we are issuing a support, we can't convoy.
             id=actor.id).distinct()
 
-        for fset, lset in self.find_convoys(fleets):
+        for fset, lset in find_convoys(self, fleets):
             for a in attackers:
                 if a.id not in lset:
                     continue
@@ -705,7 +708,7 @@ class Turn(models.Model):
             return {}
 
         sr = Subregion.objects.all()
-        for fset, lset in self.find_convoys():
+        for fset, lset in find_convoys(self):
             if actor.id in fset:
                 attackers = sr.filter(unit__turn=self, sr_type='L',
                                       id__in=lset).distinct()
@@ -903,7 +906,7 @@ class Turn(models.Model):
                                 o2['target'] == o['target']]
                     matching = Subregion.objects.filter(id__in=matching)
                     if any(o['actor'].id in L and o['target'].id in L
-                           for F, L in self.find_convoys(matching)):
+                           for F, L in find_convoys(self, matching)):
                         continue
                 else:
                     continue
