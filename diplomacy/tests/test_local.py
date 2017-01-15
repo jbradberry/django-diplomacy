@@ -8,9 +8,9 @@ class CorrectnessHelperTest(TestCase):
     fixtures = ['basic_game.json']
 
     def setUp(self):
-        unit_subs = dict(("{0} {1}".format(models.convert[s.sr_type], unicode(s)), s)
-                         for s in models.Subregion.objects.select_related('territory'))
-        self.subs_unit = dict((v.id, k) for k,v in unit_subs.iteritems())
+        unit_subs = {"{0} {1}".format(models.convert[s.sr_type], unicode(s)): s
+                     for s in models.Subregion.objects.select_related('territory')}
+        self.subs_unit = {v.id: k for k, v in unit_subs.iteritems()}
 
     def test_find_convoys(self):
         units = {'England': ('F Mid-Atlantic Ocean',

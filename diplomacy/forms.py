@@ -104,8 +104,8 @@ class OrderFormSet(BaseFormSet):
         moves = defaultdict(list)
         cross_moves = set()
 
-        orders = dict((territory(f.instance.actor), f.instance)
-                      for f in self.forms)
+        orders = {territory(f.instance.actor): f.instance
+                  for f in self.forms}
         for f in self.forms:
             w = None
             actor = f.instance.actor

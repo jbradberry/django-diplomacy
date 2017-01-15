@@ -456,8 +456,9 @@ class Game(models.Model):
 
         turn.consistency_check()
 
-        orders = dict((territory(o['actor']), o) for o in
-                      turn.normalize_orders() if o['actor'] is not None)
+        orders = {territory(o['actor']): o
+                  for o in turn.normalize_orders()
+                  if o['actor'] is not None}
 
         if turn.season in ('S', 'F'):
             # FIXME: do something with civil disorder
@@ -567,7 +568,7 @@ class Turn(models.Model):
                 sr_type='S', unit__turn=self).exclude(
                 territory__subregion__sr_type='L').distinct()
 
-        C = dict((f.id, set([f.id])) for f in fleets)
+        C = {f.id: set([f.id]) for f in fleets}
         for f in fleets:
             for f2 in fleets.filter(borders=f):
                 if C[f.id] is not C[f2.id]:
@@ -628,9 +629,9 @@ class Turn(models.Model):
 
         if not target:
             return {}
-        return {empty: dict((x, x in convoyable and
-                             x in actor.borders.values_list('id', flat=True))
-                            for x in target)}
+        return {empty: {x: (x in convoyable
+                            and x in actor.borders.values_list('id', flat=True))
+                        for x in target}}
 
     def valid_support(self, actor, empty=None):
         if self.season not in ('S', 'F'):
@@ -642,8 +643,8 @@ class Turn(models.Model):
         adj = sr.filter(territory__subregion__borders=actor).distinct()
 
         # support to hold
-        results = dict((a.id, {empty: False})
-                       for a in adj.filter(unit__turn=self))
+        results = {a.id: {empty: False}
+                   for a in adj.filter(unit__turn=self)}
 
         adj = set(a.id for a in adj)
 
@@ -688,8 +689,8 @@ class Turn(models.Model):
             if actor.id in fset:
                 attackers = sr.filter(unit__turn=self, sr_type='L',
                                       id__in=lset).distinct()
-                return dict((a.id, dict((x, False) for x in lset - set([a.id])))
-                            for a in attackers)
+                return {a.id: {x: False for x in lset - set([a.id])}
+                        for a in attackers}
         return {}
 
     def valid_build(self, actor, empty=None):
@@ -779,21 +780,24 @@ class Turn(models.Model):
 
         # fallback orders
         if self.season == 'FA':
-            orders = dict(((g.id, s),
-                           {'government': g, 'turn': self,
+            orders = {
+                (g.id, s): {'government': g, 'turn': self,
                             'actor': None, 'action': None,
                             'assist': None, 'target': None,
-                            'via_convoy': False, 'convoy': False})
-                          for g in gvts
-                          for s in xrange(abs(g.builds_available(self))))
+                            'via_convoy': False, 'convoy': False}
+                for g in gvts
+                for s in xrange(abs(g.builds_available(self)))
+            }
         else:
             action = 'H' if self.season in ('S', 'F') else None
-            orders = dict(((g.id, a.id),
-                           {'government': g, 'turn': self,
-                            'actor': a, 'action': action,
-                            'assist': None, 'target': None,
-                            'via_convoy': False, 'convoy': False})
-                          for g in gvts for a in g.actors(self))
+            orders = {
+                (g.id, a.id): {'government': g, 'turn': self,
+                               'actor': a, 'action': action,
+                               'assist': None, 'target': None,
+                               'via_convoy': False, 'convoy': False}
+                for g in gvts
+                for a in g.actors(self)
+            }
 
         posts = self.posts.all()
         if gvt:
@@ -878,7 +882,7 @@ class Turn(models.Model):
                     'assist', 'target', 'via_convoy'))
 
         for T, o in orders.iteritems():
-            order = dict((k, v) for k, v in o.iteritems() if k in keys)
+            order = {k: v for k, v in o.iteritems() if k in keys}
             order['user_issued'] = o.get('id') is not None
             if decisions.get(T):
                 order['result'] = 'S'
@@ -954,7 +958,7 @@ class Turn(models.Model):
 
     def _update_units_autodisband(self, orders, units):
         sr = Subregion.objects.all()
-        t_id = dict((s, s.territory_id) for s in sr)
+        t_id = {s: s.territory_id for s in sr}
         for g in self.game.government_set.all():
             builds = g.builds_available(self.prev) + len(self.disbands[g.id])
             if builds >= 0:
@@ -966,10 +970,10 @@ class Turn(models.Model):
             # necessary.  Fleets may only count distance via water, but
             # armies may count both land and water as one space each.
 
-            unit_distances = dict(
-                (u, [None, u.sr_type == 'L', unicode(u)])
+            unit_distances = {
+                u: [None, u.sr_type == 'L', unicode(u)]
                 for u in sr.filter(unit__government=g, unit__turn=self.prev)
-            )
+            }
 
             distance = 0
             examined = set(sc for sc in
@@ -1020,13 +1024,13 @@ class Turn(models.Model):
                     break
 
     def update_units(self, orders, decisions):
-        units = dict(((territory(u.subregion), x),
-                      {'turn': self, 'government': u.government,
-                       'u_type': u.u_type, 'subregion': u.subregion,
-                       'previous': u})
-                     for x in (True, False) # dislodged or not
-                     for u in
-                     self.prev.unit_set.filter(dislodged=x))
+        units = {
+            (territory(u.subregion), x): {'turn': self, 'government': u.government,
+                                          'u_type': u.u_type, 'subregion': u.subregion,
+                                          'previous': u}
+            for x in (True, False) # dislodged or not
+            for u in self.prev.unit_set.filter(dislodged=x)
+        }
 
         self._update_units_changes(orders, decisions, units)
 

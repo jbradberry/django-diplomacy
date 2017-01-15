@@ -69,7 +69,7 @@ def fetch(sr_type, territory, subname, strict=False):
 def create_unit(turn, gvt, unitstr):
     u = unit_enhRE.match(unitstr)
     kwargs = (group.split('=') for group in u.groups('') if '=' in group)
-    kwargs = dict((g[0], territory[g[1]]) for g in kwargs)
+    kwargs = {g[0]: territory[g[1]] for g in kwargs}
     opts = u.groupdict('')
     return models.Unit.objects.create(u_type=opts['u_type'],
                                       subregion=fetch(opts['u_type'],
