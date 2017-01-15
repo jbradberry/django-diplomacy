@@ -15,7 +15,7 @@ See also `http://en.wikipedia.org/wiki/Diplomacy_(game)`
 Requirements
 ------------
 
-- Python >= 2.6
+- Python >= 2.7
 - Django >= 1.4, < 1.7
 
 
