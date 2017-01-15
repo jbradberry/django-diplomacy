@@ -149,8 +149,7 @@ class Game(models.Model):
             depend = False
             act1, act2 = o1['action'], o2['action']
             if (act1, act2) in DEPENDENCIES:
-                depend = any(f(T1, o1, T2, o2) for f in
-                             DEPENDENCIES[(act1, act2)])
+                depend = any(f(T1, o1, T2, o2) for f in DEPENDENCIES[(act1, act2)])
 
             if depend:
                 dep[T1].append(T2)
@@ -199,7 +198,6 @@ class Game(models.Model):
     def consistent(self, state, orders, fails, paradox):
         state = dict(state)
 
-        # REVIEW: make consistent() a method of Turn instead?
         turn = self.current_turn()
 
         hold_str = defaultdict(int)
@@ -217,38 +215,47 @@ class Game(models.Model):
                 defend_str[T], path[T], P = 1, False, False
 
                 # matching successful convoy orders
-                matching = [orders[T2]['actor'].id
-                            for T2, d2 in state.iteritems()
-                            if d2 and orders[T2]['action'] == 'C' and
-                            assist(T, order, T2, orders[T2]) and
-                            (order['government'] == orders[T2]['government']
-                             or order['convoy'])]
+                matching = [
+                    orders[T2]['actor'].id
+                    for T2, d2 in state.iteritems()
+                    if d2
+                    and orders[T2]['action'] == 'C'
+                    and assist(T, order, T2, orders[T2])
+                    and (order['government'] == orders[T2]['government']
+                         or order['convoy'])
+                ]
                 # matching successful and paradoxical convoy orders
-                p_matching = matching + [orders[T2]['actor'].id
-                                         for T2 in paradox
-                                         if assist(T, order, T2, orders[T2])
-                                         and order['convoy']]
+                p_matching = matching + [
+                    orders[T2]['actor'].id
+                    for T2 in paradox
+                    if assist(T, order, T2, orders[T2])
+                    and order['convoy']
+                ]
+
+                # FIXME refactor
                 matching = Subregion.objects.filter(id__in=matching)
                 p_matching = Subregion.objects.filter(id__in=p_matching)
 
-                if any(order['actor'].id in L and
-                       order['target'].id in L
+                # FIXME refactor
+                if any(order['actor'].id in L
+                       and order['target'].id in L
                        for F, L in turn.find_convoys(matching)):
                     # We have a valid convoy path if there is a chain
                     # of successful convoys between our endpoints.
                     path[T] = True
 
+                # FIXME refactor
                 if (not path[T] and
-                    any(order['actor'].id in L and
-                        order['target'].id in L
+                    any(order['actor'].id in L
+                        and order['target'].id in L
                         for F, L in turn.find_convoys(p_matching))):
                     # But if there is a path when paradoxical convoys
                     # are included, we have a paradox.
                     P = True
 
                 convoy[T] = path[T]
-                if (not order['convoy'] and
-                    order['target'] in borders(order['actor'])):
+                if (not order['convoy']
+                    and order['target'] in borders(order['actor'])):
                     # if we are adjacent to the target, we can have a
                     # path even without a successful convoy, but only
                     # if we don't have a paradox
@@ -265,15 +272,17 @@ class Game(models.Model):
                         d2 = state[T2]
 
                         # other unit moves away
-                        if (d2 and orders[T2]['action'] == 'M' and not
-                            head_to_head(T, order, T2, orders[T2],
-                                         convoy[T], convoy[T2])):
+                        if (d2
+                            and orders[T2]['action'] == 'M'
+                            and not head_to_head(T, order, T2, orders[T2],
+                                                 convoy[T], convoy[T2])):
                             attack_str[T] = 1
+                        # FIXME refactor
                         # other unit is also ours
-                        elif (Government.objects.filter(
-                                unit__turn=turn,
-                                unit__subregion__territory__id__in=(T,T2)
-                                ).distinct().count() == 1):
+                        elif Government.objects.filter(
+                            unit__turn=turn,
+                            unit__subregion__territory__id__in=(T, T2)
+                        ).distinct().count() == 1:
                             attack_str[T] = 0
 
                         # prevent strength
@@ -302,14 +311,16 @@ class Game(models.Model):
                     d2 = state.get(T2, False)
                     if T2 not in orders:
                         attack_str[territory(order['assist'])] += 1
-                    elif (d2 and orders[T2]['action'] == 'M' and not
-                          head_to_head(T, order, T2, orders[T2],
-                                       convoy[T], convoy[T2])):
+                    elif (d2
+                          and orders[T2]['action'] == 'M'
+                          and not head_to_head(T, order, T2, orders[T2],
+                                               convoy[T], convoy[T2])):
                         attack_str[territory(order['assist'])] += 1
-                    elif (Government.objects.filter(
-                            unit__turn=turn,
-                            unit__subregion__territory__id__in=(T,T2)
-                            ).distinct().count() != 1):
+                    # FIXME refactor
+                    elif Government.objects.filter(
+                        unit__turn=turn,
+                        unit__subregion__territory__id__in=(T, T2)
+                    ).distinct().count() != 1:
                         attack_str[order['assist'].territory_id] += 1
                 if defend_str[territory(order['assist'])]:
                     defend_str[territory(order['assist'])] += 1
@@ -323,17 +334,17 @@ class Game(models.Model):
             if order['action'] == 'M':
                 target = territory(order['target'])
                 move = True
-                if (target in orders and
-                    head_to_head(T, order, target, orders[target],
-                                 convoy[T], convoy[target]) and
-                    attack_str[T] <= defend_str[target]):
+                if (target in orders
+                    and head_to_head(T, order, target, orders[target],
+                                     convoy[T], convoy[target])
+                    and attack_str[T] <= defend_str[target]):
                     move = False
                 if attack_str[T] <= hold_str[target]:
                     move = False
                 if any(attack_str[T] <= prevent_str[T2]
                        for T2, o2 in orders.iteritems()
-                       if T != T2 and o2['action'] == 'M' and
-                       territory(o2['target']) == target):
+                       if T != T2 and o2['action'] == 'M'
+                       and territory(o2['target']) == target):
                     move = False
                 if not path[T]:
                     move = False
@@ -346,13 +357,13 @@ class Game(models.Model):
             if order['action'] == 'S':
                 target = territory(order['target'])
                 attackers = set(T2 for T2, o2 in orders.iteritems()
-                                if o2['action'] == 'M' and
-                                territory(o2['target']) == T)
-                cut = (T in fails or
-                       (target in attackers and
-                        attack_str[target] > hold_str[T]) or
-                       any(attack_str[T2] > 0 for T2 in attackers
-                           if T2 != target))
+                                if o2['action'] == 'M'
+                                and territory(o2['target']) == T)
+                cut = (T in fails
+                       or (target in attackers
+                           and attack_str[target] > hold_str[T])
+                       or any(attack_str[T2] > 0 for T2 in attackers
+                              if T2 != target))
                 if d ^ (not cut):
                     return False
 
@@ -362,8 +373,8 @@ class Game(models.Model):
                     hold = False
 
                 attackers = set(T2 for T2, o2 in orders.iteritems()
-                                if o2['action'] == 'M' and
-                                territory(o2['target']) == T)
+                                if o2['action'] == 'M'
+                                and territory(o2['target']) == T)
                 if attackers:
                     S, P, A = max((attack_str[T2], prevent_str[T2], T2)
                                   for T2 in attackers)
@@ -384,6 +395,7 @@ class Game(models.Model):
         # consistent if all orders within it have no remaining
         # unresolved dependencies.
         if all(all(o in _state for o in dep[T]) for T, d in state):
+            # FIXME refactor?
             if not self.consistent(state, orders, fails, paradox):
                 return None
 
@@ -560,6 +572,7 @@ class Turn(models.Model):
         return sorted((power, sorted(adict.iteritems()))
                       for power, adict in orders.iteritems())
 
+    # FIXME refactor
     def find_convoys(self, fleets=None):
         """
         Generates pairs consisting of a cluster of adjacent non-coastal
@@ -588,12 +601,14 @@ class Turn(models.Model):
                 convoyable.append((set(g), set(sr.id for sr in coasts)))
         return convoyable
 
+    # FIXME refactor
     def valid_hold(self, actor, empty=None):
         if self.season in ('S', 'F'):
             if self.unit_set.filter(subregion=actor).count() == 1:
                 return {empty: {empty: False}}
         return {}
 
+    # FIXME refactor
     def valid_move(self, actor, empty=None):
         if self.season == 'FA':
             return {}
@@ -636,6 +651,7 @@ class Turn(models.Model):
         return {empty: {x: (x in convoyable and any(x == b.id for b in borders(actor)))
                         for x in target}}
 
+    # FIXME refactor
     def valid_support(self, actor, empty=None):
         if self.season not in ('S', 'F'):
             return {}
@@ -679,6 +695,7 @@ class Turn(models.Model):
 
         return results
 
+    # FIXME refactor
     def valid_convoy(self, actor, empty=None):
         if self.season not in ('S', 'F'):
             return {}
@@ -696,6 +713,7 @@ class Turn(models.Model):
                         for a in attackers}
         return {}
 
+    # FIXME refactor
     def valid_build(self, actor, empty=None):
         if not self.season == 'FA':
             return {}
@@ -710,6 +728,7 @@ class Turn(models.Model):
             return {empty: {empty: False}}
         return {}
 
+    # FIXME refactor
     def valid_disband(self, actor, empty=None):
         if self.season in ('S', 'F'):
             return {}
@@ -726,6 +745,7 @@ class Turn(models.Model):
     def consistency_check(self):
         pass
 
+    # FIXME refactor
     def is_legal(self, order):
         if isinstance(order, Order):
             order = {'government': order.post.government,
@@ -778,10 +798,14 @@ class Turn(models.Model):
             return False
         return True
 
+    # FIXME refactor: The responsibility of this method should be to provide a
+    # list of Order instances.  Converting these to a list of dicts for use in
+    # the turn generation engine should be separate.
     def normalize_orders(self, gvt=None):
         gvts = (gvt,) if gvt else self.game.government_set.all()
 
-        # fallback orders
+        # Construct the set of default orders.  This set is exhaustive, no units
+        # outside or number of builds in excess will be permitted.
         if self.season == 'FA':
             orders = {
                 (g.id, s): {'government': g, 'turn': self,
@@ -802,6 +826,7 @@ class Turn(models.Model):
                 for a in g.actors(self)
             }
 
+        # Find the most recent set of posted orders from each relevant government.
         posts = self.posts.all()
         if gvt:
             posts = posts.filter(government=gvt)
@@ -812,6 +837,8 @@ class Turn(models.Model):
             if post.timestamp > most_recent[post.government].timestamp:
                 most_recent[post.government] = post
 
+        # For orders that were explicitly given, replace the default order if
+        # the given order is legal.  Illegal orders are dropped.
         for gvt, post in most_recent.iteritems():
             i = 0
             for o in post.orders.all():
@@ -822,8 +849,11 @@ class Turn(models.Model):
                     else:
                         index = o.actor_id
 
+                    # Drop the order if it falls outside of the set of allowable
+                    # acting units or build quantity.
                     if (gvt.id, index) not in orders:
                         continue
+
                     orders[(gvt.id, index)] = {
                         'id': o.id, 'government': post.government,
                         'turn': self, 'actor': o.actor, 'action': o.action,
@@ -833,8 +863,13 @@ class Turn(models.Model):
 
         if self.season in ('S', 'F'):
             for (g, index), o in orders.iteritems():
+                # This block concerns the convoyability of units, so if the unit
+                # isn't moving or isn't an army, ignore it.
                 if o['action'] != 'M':
                     continue
+
+                # Find all of the convoy orders that match the current move,
+                # both overall and specifically by this user's government.
                 matching = [(g2, o2) for (g2, i2), o2 in orders.iteritems()
                             if o2['action'] == 'C' and
                             assist(territory(o['actor']), o,
@@ -842,13 +877,21 @@ class Turn(models.Model):
                 gvt_matching = [o2 for g2, o2 in matching if g2 == g]
 
                 if o['target'] in borders(o['actor']):
+                    # If the target territory is adjacent to the moving unit,
+                    # only mark as convoying when the user's government issued
+                    # the convoy order, or the movement is explicitly marked as
+                    # 'via convoy'.
                     o['convoy'] = bool(gvt_matching or
                                        (o['via_convoy'] and matching))
                 else:
+                    # If the target isn't adjacent, the unit clearly couldn't
+                    # make it there on its own, so convoying is implied.  Allow
+                    # any specified supporting convoy orders.
                     o['convoy'] = bool(matching)
 
         return [v for k, v in sorted(orders.iteritems())]
 
+    # FIXME refactor
     def immediate_fails(self, orders):
         results = set()
         for T, o in orders.iteritems():
