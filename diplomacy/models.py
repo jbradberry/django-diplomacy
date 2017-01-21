@@ -1171,15 +1171,6 @@ class Territory(models.Model):
     def __unicode__(self):
         return self.name
 
-    @classmethod
-    def is_same(cls, *subregions):
-        if not all(subregions):
-            return False
-        subregions = [sr.id if isinstance(sr, Subregion) else sr
-                      for sr in subregions]
-        return cls.objects.filter(subregion__id__in=subregions
-                                  ).distinct().count() == 1
-
 
 class Subregion(models.Model):
     class Meta:
