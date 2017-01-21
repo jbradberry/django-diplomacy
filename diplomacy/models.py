@@ -38,18 +38,13 @@ SUBREGION_CHOICES = (
 def borders(sr):
     return sr.borders.all()
 
-def find_convoys(turn, fleets=None):
+def find_convoys(turn, fleets):
     """
     Generates pairs consisting of a cluster of adjacent non-coastal
     fleets, and the coastal territories that are reachable via convoy
     from that cluster.  This is necessary to determine legal orders.
 
     """
-    if fleets is None:
-        fleets = Subregion.objects.filter(
-            sr_type='S', unit__turn=turn).exclude(
-            territory__subregion__sr_type='L').distinct()
-
     C = {f.id: set([f.id]) for f in fleets}
     for f in fleets:
         for f2 in fleets.filter(borders=f):
@@ -643,7 +638,10 @@ class Turn(models.Model):
         convoyable = set()
         if self.season in ('S', 'F') and unit.get().u_type == 'A':
             target = set(target)
-            for fset, lset in find_convoys(self):
+            fleets = Subregion.objects.filter(
+                sr_type='S', unit__turn=self
+            ).exclude(territory__subregion__sr_type='L').distinct()
+            for fset, lset in find_convoys(self, fleets):
                 if actor.id in lset:
                     target.update(lset)
                     convoyable.update(lset)
@@ -708,7 +706,10 @@ class Turn(models.Model):
             return {}
 
         sr = Subregion.objects.all()
-        for fset, lset in find_convoys(self):
+        fleets = Subregion.objects.filter(
+            sr_type='S', unit__turn=self
+        ).exclude(territory__subregion__sr_type='L').distinct()
+        for fset, lset in find_convoys(self, fleets):
             if actor.id in fset:
                 attackers = sr.filter(unit__turn=self, sr_type='L',
                                       id__in=lset).distinct()

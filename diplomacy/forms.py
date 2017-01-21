@@ -155,7 +155,12 @@ class OrderFormSet(BaseFormSet):
                         cross_moves.add(territory(actor))
                         cross_moves.add(territory(t_actor))
                 if actor.sr_type == 'L' and (target not in borders(actor) or f.instance.via_convoy):
-                    convoys = find_convoys(self.turn)
+                    fleets = Subregion.objects.filter(
+                        sr_type='S', unit__turn=self.turn
+                    ).exclude(territory__subregion__sr_type='L').distinct()
+
+                    convoys = find_convoys(self.turn, fleets)
+
                     fleets = set()
                     for F, A in convoys:
                         if actor.id in A and target.id in A:
@@ -166,10 +171,10 @@ class OrderFormSet(BaseFormSet):
                             continue
                         if not (f2.instance.action == 'C' and
                                 f2.instance.assist_id == actor.id):
-                            F.discard(f2.instance.actor_id)
-                    F = Subregion.objects.filter(id__in=F)
+                            fleets.discard(f2.instance.actor_id)
+                    fleets = Subregion.objects.filter(id__in=fleets)
                     if not any(actor.id in A and target.id in A
-                               for F, A in find_convoys(self.turn, F)):
+                               for F, A in find_convoys(self.turn, fleets)):
                         w = msgs['m-conv'].format(unit(actor), target)
                         warnings.append(w)
 

@@ -25,7 +25,11 @@ class CorrectnessHelperTest(TestCase):
                              'A Sweden')}
         T = models.Turn.objects.get()
         create_units(units, T)
-        legal = models.find_convoys(T)
+
+        fleets = models.Subregion.objects.filter(
+            sr_type='S', unit__turn=T
+        ).exclude(territory__subregion__sr_type='L').distinct()
+        legal = models.find_convoys(T, fleets)
 
         full_sr = models.Subregion.objects.select_related('territory')
 
