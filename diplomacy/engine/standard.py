@@ -1142,3 +1142,8 @@ mapping = {
         ('North Sea', '', 'S'),
     ),
 }
+
+# Group together the subregions into territories.
+territories = {}
+for subregion in mapping:
+    territories.setdefault(subregion[0], []).append(subregion)

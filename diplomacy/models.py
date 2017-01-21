@@ -1,6 +1,6 @@
 from collections import defaultdict
 from functools import partial
-from itertools import permutations
+from itertools import combinations, permutations
 from random import shuffle
 
 from django.conf import settings
@@ -35,6 +35,14 @@ SUBREGION_CHOICES = (
 
 # Refactor wrapper functions
 
+def keys_to_ids(seq):
+    subregion_mapping = {
+        subregion_key(sr): sr.id
+        for sr in Subregion.objects.select_related('territory')
+    }
+
+    return [subregion_mapping[sr] for sr in seq]
+
 def borders(sr):
     return sr.borders.all()
 
@@ -45,23 +53,50 @@ def find_convoys(turn, fleets):
     from that cluster.  This is necessary to determine legal orders.
 
     """
-    C = {f.id: set([f.id]) for f in fleets}
-    for f in fleets:
-        for f2 in fleets.filter(borders=f):
-            if C[f.id] is not C[f2.id]:
-                C[f.id] |= C[f2.id]
-                C.update((x, C[f.id]) for x in C[f2.id])
-    groups = set(frozenset(C[f]) for f in C)
+    index = {subregion_key(f): {subregion_key(f)} for f in fleets}
+
+    # Calculate the connected sets of fleets
+    for f1, f2 in combinations(fleets, 2):
+        f1, f2 = subregion_key(f1), subregion_key(f2)
+
+        # If this pair is not adjacent, ignore it
+        if f2 not in standard.mapping.get(f1, ()):
+            continue
+
+        # If the sets for each of these fleets are not already the same set,
+        # merge them and update the index
+        if index[f1] != index[f2]:
+            index[f1] |= index[f2]
+            index.update((x, index[f1]) for x in index[f2])
+
+    groups = {frozenset(S) for S in index.itervalues()}
+
+    armies = {
+        subregion_key(sr)
+        for sr in Subregion.objects.select_related('territory').filter(
+            sr_type='L', unit__turn=turn, territory__subregion__sr_type='S'
+        )
+    }
+
     convoyable = []
-    for g in groups:
-        coasts = Subregion.objects.filter(
-            sr_type='L', territory__subregion__borders__id__in=g
-        ).distinct()
-        if coasts.filter(unit__turn=turn).exists():
-            convoyable.append((set(g), set(sr.id for sr in coasts)))
+    for gset in groups:
+        coasts = {
+            sr for f in gset
+            for b in standard.mapping.get(f, ())
+            for sr in standard.territories.get(b[0], ())
+            if sr[2] == 'L'
+        }
+        if coasts & armies:
+            convoyable.append((set(gset), coasts))
+
     return convoyable
 
 # End of refactor wrapper functions
+
+def subregion_key(sr):
+    if not sr:
+        return None
+    return (sr.territory.name, sr.subname, sr.sr_type)
 
 def territory(sr):
     if sr is None:
@@ -264,8 +299,8 @@ class Game(models.Model):
                 p_matching = Subregion.objects.filter(id__in=p_matching)
 
                 # FIXME refactor
-                if any(order['actor'].id in L
-                       and order['target'].id in L
+                if any(subregion_key(order['actor']) in L
+                       and subregion_key(order['target']) in L
                        for F, L in find_convoys(turn, matching)):
                     # We have a valid convoy path if there is a chain
                     # of successful convoys between our endpoints.
@@ -273,8 +308,8 @@ class Game(models.Model):
 
                 # FIXME refactor
                 if (not path[T] and
-                    any(order['actor'].id in L
-                        and order['target'].id in L
+                    any(subregion_key(order['actor']) in L
+                        and subregion_key(order['target']) in L
                         for F, L in find_convoys(turn, p_matching))):
                     # But if there is a path when paradoxical convoys
                     # are included, we have a paradox.
@@ -642,7 +677,8 @@ class Turn(models.Model):
                 sr_type='S', unit__turn=self
             ).exclude(territory__subregion__sr_type='L').distinct()
             for fset, lset in find_convoys(self, fleets):
-                if actor.id in lset:
+                if subregion_key(actor) in lset:
+                    lset = set(keys_to_ids(lset))
                     target.update(lset)
                     convoyable.update(lset)
             target.discard(actor.id)
@@ -687,12 +723,13 @@ class Turn(models.Model):
 
         for fset, lset in find_convoys(self, fleets):
             for a in attackers:
-                if a.id not in lset:
+                if subregion_key(a) not in lset:
                     continue
-                if not (adj & lset - set([a.id])):
+                lset_ids = set(keys_to_ids(lset))
+                if not (adj & lset_ids - set([a.id])):
                     continue
                 results.setdefault(a.id, {}).update((x, False) for x in
-                                                    adj & lset - set([a.id]))
+                                                    adj & lset_ids - set([a.id]))
 
         return results
 
@@ -710,7 +747,8 @@ class Turn(models.Model):
             sr_type='S', unit__turn=self
         ).exclude(territory__subregion__sr_type='L').distinct()
         for fset, lset in find_convoys(self, fleets):
-            if actor.id in fset:
+            if subregion_key(actor) in fset:
+                lset = set(keys_to_ids(lset))
                 attackers = sr.filter(unit__turn=self, sr_type='L',
                                       id__in=lset).distinct()
                 return {a.id: {x: False for x in lset - set([a.id])}
@@ -906,7 +944,7 @@ class Turn(models.Model):
                                 o2['assist'] == o['actor'] and
                                 o2['target'] == o['target']]
                     matching = Subregion.objects.filter(id__in=matching)
-                    if any(o['actor'].id in L and o['target'].id in L
+                    if any(subregion_key(o['actor']) in L and subregion_key(o['target']) in L
                            for F, L in find_convoys(self, matching)):
                         continue
                 else:

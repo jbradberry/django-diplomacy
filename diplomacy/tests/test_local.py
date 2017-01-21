@@ -8,9 +8,10 @@ class CorrectnessHelperTest(TestCase):
     fixtures = ['basic_game.json']
 
     def setUp(self):
-        unit_subs = {"{0} {1}".format(models.convert[s.sr_type], unicode(s)): s
-                     for s in models.Subregion.objects.select_related('territory')}
-        self.subs_unit = {v.id: k for k, v in unit_subs.iteritems()}
+        self.subs_unit = {
+            models.subregion_key(s): "{0} {1}".format(models.convert[s.sr_type], unicode(s))
+            for s in models.Subregion.objects.select_related('territory')
+        }
 
     def test_find_convoys(self):
         units = {'England': ('F Mid-Atlantic Ocean',
@@ -40,23 +41,27 @@ class CorrectnessHelperTest(TestCase):
             lands1, lands2 = lands2, lands1
 
         self.assertEqual(len(seas1), 3)
-        self.assertEqual(
-            set(self.subs_unit[sr.id] for sr in full_sr.filter(id__in=seas1)),
-            set(n for n in units['England'][:3]))
+        self.assertItemsEqual(
+            [self.subs_unit[sr] for sr in seas1],
+            units['England'][:3]
+        )
 
         self.assertEqual(len(lands1), 10)
-        self.assertEqual(
-            set(sr.territory.name for sr in full_sr.filter(id__in=lands1)),
-            set(['Tunisia', 'North Africa', 'London', 'Wales', 'Spain',
-                 'Brest', 'Gascony', 'Picardy', 'Belgium', 'Portugal']))
+        self.assertItemsEqual(
+            [sr[0] for sr in lands1],
+            ['Tunisia', 'North Africa', 'London', 'Wales', 'Spain',
+             'Brest', 'Gascony', 'Picardy', 'Belgium', 'Portugal']
+        )
 
         self.assertEqual(len(seas2), 2)
-        self.assertEqual(
-            set(self.subs_unit[sr.id] for sr in full_sr.filter(id__in=seas2)),
-            set(n for n in units['England'][6:8]))
+        self.assertItemsEqual(
+            [self.subs_unit[sr] for sr in seas2],
+            units['England'][6:8]
+        )
 
         self.assertEqual(len(lands2), 8)
-        self.assertEqual(
-            set(sr.territory.name for sr in full_sr.filter(id__in=lands2)),
-            set(['Prussia', 'Berlin', 'Kiel', 'Denmark', 'Sweden',
-                 'Finland', 'St. Petersburg', 'Livonia']))
+        self.assertItemsEqual(
+            [sr[0] for sr in lands2],
+            ['Prussia', 'Berlin', 'Kiel', 'Denmark', 'Sweden',
+             'Finland', 'St. Petersburg', 'Livonia']
+        )
