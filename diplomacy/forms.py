@@ -154,7 +154,10 @@ class OrderFormSet(BaseFormSet):
                         warnings.append(w)
                         cross_moves.add(territory(actor))
                         cross_moves.add(territory(t_actor))
-                if actor.sr_type == 'L' and (target not in borders(actor) or f.instance.via_convoy):
+                if (actor.sr_type == 'L'
+                    and (subregion_key(target) not in borders(actor)
+                         or f.instance.via_convoy)):
+
                     fleets = Subregion.objects.filter(
                         sr_type='S', unit__turn=self.turn
                     ).exclude(territory__subregion__sr_type='L').distinct()
