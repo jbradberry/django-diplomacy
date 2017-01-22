@@ -136,9 +136,9 @@ def detect_paradox(orders, dep):
         stack_pos = len(stack)
         stack.append(node)
 
-        for w in dep.get(t_id(node), ()):
-            visit(t_key(w), orders, dep)
-            low[node] = min(low[node], low[t_key(w)])
+        for w in dep.get(node, ()):
+            visit(w, orders, dep)
+            low[node] = min(low[node], low[w])
 
         if low[node] == index:
             component = tuple(stack[stack_pos:])
@@ -279,7 +279,7 @@ class Game(models.Model):
                 depend = any(f(t_key(T1), o1, t_key(T2), o2) for f in DEPENDENCIES[(act1, act2)])
 
             if depend:
-                dep[T1].append(T2)
+                dep[t_key(T1)].append(t_key(T2))
 
         return dep
 
@@ -473,12 +473,12 @@ class Game(models.Model):
         return True
 
     def resolve(self, state, orders, dep, fails, paradox):
-        _state = set(T for T, d in state)
+        _state = set(t_key(T) for T, d in state)
 
         # Only bother calculating whether the hypothetical solution is
         # consistent if all orders within it have no remaining
         # unresolved dependencies.
-        if all(all(o in _state for o in dep[T]) for T, d in state):
+        if all(all(o in _state for o in dep[t_key(T)]) for T, d in state):
             # FIXME refactor?
             if not self.consistent(state, orders, fails, paradox):
                 return None
@@ -486,9 +486,9 @@ class Game(models.Model):
         # For those orders not already in 'state', sort from least to
         # most remaining dependencies.
         remaining_deps = sorted(
-            (sum(1 for o in dep[T] if o not in _state), T)
+            (sum(1 for o in dep[t_key(T)] if o not in _state), T)
             for T in orders
-            if T not in _state
+            if t_key(T) not in _state
         )
         if not remaining_deps:
             return tuple((t_key(T), S) for T, S in state)
