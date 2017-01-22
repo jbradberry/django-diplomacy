@@ -464,11 +464,13 @@ class Game(models.Model):
 
         # For those orders not already in 'state', sort from least to
         # most remaining dependencies.
-        remaining_deps = sorted((sum(1 for o in dep[T]
-                                     if o not in _state), T)
-                                for T in orders if T not in _state)
+        remaining_deps = sorted(
+            (sum(1 for o in dep[T] if o not in _state), T)
+            for T in orders
+            if T not in _state
+        )
         if not remaining_deps:
-            return state
+            return tuple((t_key(T), S) for T, S in state)
         # Go with the order with the fewest remaining deps.
         q, T = remaining_deps[0]
 
@@ -490,18 +492,18 @@ class Game(models.Model):
             if order['action'] == 'M':
                 target_count[territory(order['target'])] += 1
             else:
-                decisions.append((T, None))
+                decisions.append((t_key(T), None))
         for T, order in orders.iteritems():
             if order['action'] != 'M':
                 continue
             if target_count[territory(order['target'])] == 1:
-                decisions.append((T, True))
+                decisions.append((t_key(T), True))
             else:
-                decisions.append((T, False))
+                decisions.append((t_key(T), False))
         return decisions
 
     def resolve_adjusts(self, orders):
-        return [(T, order.get('action') is not None)
+        return [(t_key(T), order.get('action') is not None)
                 for T, order in orders.iteritems()]
 
     def activate(self):
@@ -983,7 +985,7 @@ class Turn(models.Model):
         for T, o in orders.iteritems():
             order = {k: v for k, v in o.iteritems() if k in keys}
             order['user_issued'] = o.get('id') is not None
-            if decisions.get(T):
+            if decisions.get(t_key(T)):
                 order['result'] = 'S'
             elif any(T in db for db in turn.disbands.itervalues()):
                 order['result'] = 'D'
@@ -994,64 +996,68 @@ class Turn(models.Model):
             self.canonicalorder_set.create(**order)
 
     def _update_units_changes(self, orders, decisions, units):
+        t_id = {t.name: t.id for t in Territory.objects.all()}
+
         self.disbands = defaultdict(set)
         self.displaced, self.failed = {}, defaultdict(list)
 
         retreat = self.prev.season in ('SR', 'FR')
 
         for a, d in decisions:
-            action = orders[a].get('action')
+            action = orders[t_id[a]].get('action')
             # units that are displaced must retreat or be disbanded
             if retreat and action is None:
-                del units[(t_key(a), retreat)]
-                self.disbands[orders[a]['government'].id].add(a)
-                orders[a]['action'] = 'D'
+                del units[(a, retreat)]
+                self.disbands[orders[t_id[a]]['government'].id].add(a)
+                orders[t_id[a]]['action'] = 'D'
                 continue
 
             if action == 'M':
-                target = orders[a]['target']
-                T = orders[a]['actor'].territory
+                target = orders[t_id[a]]['target']
+                T = orders[t_id[a]]['actor'].territory
                 if d: # move succeeded
-                    units[(t_key(a), retreat)]['subregion'] = target
+                    units[(a, retreat)]['subregion'] = target
                     if not retreat:
                         self.displaced[target.territory_id] = T
                 elif retreat: # move is a failed retreat
-                    del units[(t_key(a), retreat)]
+                    del units[(a, retreat)]
                     continue
                 else: # move failed
                     self.failed[territory(target)].append(T)
 
             # successful build
             if d and action == 'B':
-                units[(t_key(a), False)] = {
+                units[(a, False)] = {
                     'turn': self,
-                    'government': orders[a]['government'],
-                    'u_type': convert[orders[a]['actor'].sr_type],
-                    'subregion': orders[a]['actor']
+                    'government': orders[t_id[a]]['government'],
+                    'u_type': convert[orders[t_id[a]]['actor'].sr_type],
+                    'subregion': orders[t_id[a]]['actor']
                 }
 
             if action == 'D':
-                del units[(t_key(a), retreat)]
-                self.disbands[orders[a]['government'].id].add(a)
+                del units[(a, retreat)]
+                self.disbands[orders[t_id[a]]['government'].id].add(a)
                 continue
 
     def _update_units_blocked(self, orders, decisions, units):
+        t_id = {t.name: t.id for t in Territory.objects.all()}
+
         for a, d in decisions:
-            key = (t_key(a), False)
+            key = (a, False)
             # if our location is marked as the target of a
             # successful move and we failed to move, we are displaced.
-            if not d and a in self.displaced:
+            if not d and t_id[a] in self.displaced:
                 units[key].update(
                     dislodged=True,
                     displaced_from=( # only mark a location as disallowed for
                         None         # retreats if it wasn't via convoy
-                        if orders[self.displaced[a].id].get('convoy')
-                        else self.displaced[a]
+                        if orders[self.displaced[t_id[a]].id].get('convoy')
+                        else self.displaced[t_id[a]]
                     )
                 )
-            if orders[a].get('action') != 'M':
+            if orders[t_id[a]].get('action') != 'M':
                 continue
-            t = orders[a]['target'].territory
+            t = orders[t_id[a]]['target'].territory
             # if multiple moves to our target failed, we have a standoff.
             if len(self.failed[t.id]) > 1:
                 units[key]['standoff_from'] = t
