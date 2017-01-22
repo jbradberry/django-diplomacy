@@ -432,7 +432,7 @@ class Game(models.Model):
                     move = False
                 if not path[T]:
                     move = False
-                if T in fails:
+                if t_key(T) in fails:
                     move = False
 
                 if d ^ move:
@@ -443,7 +443,7 @@ class Game(models.Model):
                 attackers = set(T2 for T2, o2 in orders.iteritems()
                                 if o2['action'] == 'M'
                                 and territory(o2['target']) == T)
-                cut = (T in fails
+                cut = (t_key(T) in fails
                        or (target in attackers
                            and attack_str[target] > hold_str[T])
                        or any(attack_str[T2] > 0 for T2 in attackers
@@ -453,7 +453,7 @@ class Game(models.Model):
 
             if order['action'] in ('H', 'C'):
                 hold = True
-                if T in fails:
+                if t_key(T) in fails:
                     hold = False
 
                 attackers = set(T2 for T2, o2 in orders.iteritems()
@@ -994,7 +994,7 @@ class Turn(models.Model):
                 else:
                     if assist['action'] in ('H', 'C', 'S'):
                         continue
-            results.add(T)
+            results.add(t_key(T))
 
         return results
 
