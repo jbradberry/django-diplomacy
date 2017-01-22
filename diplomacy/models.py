@@ -43,9 +43,8 @@ def keys_to_ids(seq):
 
     return [subregion_mapping[sr] for sr in seq]
 
-def borders(sr):
-    sr_key = subregion_key(sr)
-    return list(standard.mapping.get(sr_key, ()))
+def borders(sr_key):
+    return standard.mapping.get(sr_key, ())
 
 def find_convoys(turn, fleets):
     """
@@ -119,9 +118,9 @@ def head_to_head(T1, o1, T2, o2, c1=False, c2=False):
 
     actor = o2['assist'] if o2['assist'] else o2['actor']
     T2 = territory(actor)
-    if not any(territory_mapping[S[0]] == T2 for S in borders(o1['actor'])):
+    if not any(territory_mapping[S[0]] == T2 for S in borders(subregion_key(o1['actor']))):
         return False
-    if not any(territory_mapping[S[0]] == T1 for S in borders(actor)):
+    if not any(territory_mapping[S[0]] == T1 for S in borders(subregion_key(actor))):
         return False
     if c1 or c2:
         return False
@@ -320,7 +319,7 @@ class Game(models.Model):
 
                 convoy[T] = path[T]
                 if (not order['convoy']
-                    and subregion_key(order['target']) in borders(order['actor'])):
+                    and subregion_key(order['target']) in borders(subregion_key(order['actor']))):
                     # if we are adjacent to the target, we can have a
                     # path even without a successful convoy, but only
                     # if we don't have a paradox
@@ -690,7 +689,8 @@ class Turn(models.Model):
         if not target:
             return {}
         return {
-            empty: {x: (x in convoyable and any(sr_mapping[x] == b for b in borders(actor)))
+            empty: {x: (x in convoyable
+                        and any(sr_mapping[x] == b for b in borders(subregion_key(actor))))
                     for x in target}
         }
 
@@ -715,7 +715,7 @@ class Turn(models.Model):
                               unit__turn=self
                               ).exclude(id=actor.id).distinct()
         for a in attackers:
-            reachable = keys_to_ids(adj & set(borders(a)))
+            reachable = keys_to_ids(adj & set(borders(subregion_key(a))))
             results.setdefault(a.id, {}).update((x, False) for x in reachable)
 
         # support to convoyed attack
@@ -925,7 +925,7 @@ class Turn(models.Model):
                                    territory(o2['actor']), o2)]
                 gvt_matching = [o2 for g2, o2 in matching if g2 == g]
 
-                if subregion_key(o['target']) in borders(o['actor']):
+                if subregion_key(o['target']) in borders(subregion_key(o['actor'])):
                     # If the target territory is adjacent to the moving unit,
                     # only mark as convoying when the user's government issued
                     # the convoy order, or the movement is explicitly marked as
@@ -945,7 +945,7 @@ class Turn(models.Model):
         results = set()
         for T, o in orders.iteritems():
             if o['action'] == 'M':
-                if subregion_key(o['target']) not in borders(o['actor']):
+                if subregion_key(o['target']) not in borders(subregion_key(o['actor'])):
                     matching = [o2['actor'].id for T2, o2 in orders.iteritems()
                                 if o2['action'] == 'C' and
                                 o2['assist'] == o['actor'] and
