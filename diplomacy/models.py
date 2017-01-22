@@ -99,6 +99,7 @@ def detect_paradox(orders, dep):
     find the paradoxical convoys.
 
     """
+    t_id = {t.name: t.id for t in Territory.objects.all()}
     dep = dict(dep)
 
     low = {}
@@ -114,22 +115,22 @@ def detect_paradox(orders, dep):
         stack_pos = len(stack)
         stack.append(node)
 
-        if node in dep:
-            for w in dep[node]:
-                visit(w, orders, dep)
-                low[node] = min(low[node], low[w])
+        if t_id[node] in dep:
+            for w in dep[t_id[node]]:
+                visit(t_key(w), orders, dep)
+                low[node] = min(low[node], low[t_key(w)])
 
         if low[node] == index:
             component = tuple(stack[stack_pos:])
             del stack[stack_pos:]
             if len(component) > 1:
                 result.update(c for c in component
-                              if orders[c]['action'] == 'C')
+                              if orders[t_id[c]]['action'] == 'C')
             for item in component:
                 low[item] = len(orders)
 
     for node in orders:
-        visit(node, orders, dep)
+        visit(t_key(node), orders, dep)
     return result
 
 # End of refactor wrapper functions
@@ -263,6 +264,8 @@ class Game(models.Model):
         return dep
 
     def consistent(self, state, orders, fails, paradox):
+        t_id = {t.name: t.id for t in Territory.objects.all()}
+
         state = dict(state)
 
         turn = self.current_turn()
@@ -293,9 +296,9 @@ class Game(models.Model):
                 ]
                 # matching successful and paradoxical convoy orders
                 p_matching = matching + [
-                    subregion_key(orders[T2]['actor'])
+                    subregion_key(orders[t_id[T2]]['actor'])
                     for T2 in paradox
-                    if assist(t_key(T), order, t_key(T2), orders[T2])
+                    if assist(t_key(T), order, T2, orders[t_id[T2]])
                     and order['convoy']
                 ]
 
@@ -477,7 +480,7 @@ class Game(models.Model):
         # Unresolved dependencies might be circular, so it isn't
         # obvious how to resolve them.  Try both ways, with preference
         # for 'success'.
-        resolutions = (None, False) if T in paradox else (True, False)
+        resolutions = (None, False) if t_key(T) in paradox else (True, False)
         for S in resolutions:
             result = self.resolve(state+((T, S),), orders, dep, fails, paradox)
             if result:
