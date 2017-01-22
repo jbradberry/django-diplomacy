@@ -161,7 +161,7 @@ class OrderFormSet(BaseFormSet):
                     fleets = Subregion.objects.filter(
                         sr_type='S', unit__turn=self.turn
                     ).exclude(territory__subregion__sr_type='L').distinct()
-
+                    fleets = [subregion_key(sr) for sr in fleets]
                     convoys = find_convoys(self.turn, fleets)
 
                     fleets = set()
@@ -174,8 +174,8 @@ class OrderFormSet(BaseFormSet):
                             continue
                         if not (f2.instance.action == 'C' and
                                 f2.instance.assist_id == actor.id):
-                            fleets.discard(f2.instance.actor_id)
-                    fleets = Subregion.objects.filter(id__in=fleets)
+                            fleets.discard(subregion_key(f2.instance.actor))
+
                     if not any(subregion_key(actor) in A and subregion_key(target) in A
                                for F, A in find_convoys(self.turn, fleets)):
                         w = msgs['m-conv'].format(unit(actor), target)

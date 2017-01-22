@@ -57,12 +57,10 @@ def find_convoys(turn, fleets):
     from that cluster.  This is necessary to determine legal orders.
 
     """
-    index = {subregion_key(f): {subregion_key(f)} for f in fleets}
+    index = {f: {f} for f in fleets}
 
     # Calculate the connected sets of fleets
     for f1, f2 in combinations(fleets, 2):
-        f1, f2 = subregion_key(f1), subregion_key(f2)
-
         # If this pair is not adjacent, ignore it
         if f2 not in borders(f1):
             continue
@@ -87,7 +85,7 @@ def find_convoys(turn, fleets):
         coasts = {
             sr for f in gset
             for b in borders(f)
-            for sr in standard.territories.get(b[0], ())
+            for sr in standard.territories.get(territory(b), ())
             if sr[2] == 'L'
         }
         if coasts & armies:
@@ -285,7 +283,7 @@ class Game(models.Model):
 
                 # matching successful convoy orders
                 matching = [
-                    orders[T2]['actor'].id
+                    subregion_key(orders[T2]['actor'])
                     for T2, d2 in state.iteritems()
                     if d2
                     and orders[T2]['action'] == 'C'
@@ -295,15 +293,11 @@ class Game(models.Model):
                 ]
                 # matching successful and paradoxical convoy orders
                 p_matching = matching + [
-                    orders[T2]['actor'].id
+                    subregion_key(orders[T2]['actor'])
                     for T2 in paradox
                     if assist(t_key(T), order, t_key(T2), orders[T2])
                     and order['convoy']
                 ]
-
-                # FIXME refactor
-                matching = Subregion.objects.filter(id__in=matching)
-                p_matching = Subregion.objects.filter(id__in=p_matching)
 
                 # FIXME refactor
                 if any(subregion_key(order['actor']) in L
@@ -684,6 +678,7 @@ class Turn(models.Model):
             fleets = Subregion.objects.filter(
                 sr_type='S', unit__turn=self
             ).exclude(territory__subregion__sr_type='L').distinct()
+            fleets = [subregion_key(sr) for sr in fleets]
             for fset, lset in find_convoys(self, fleets):
                 if subregion_key(actor) in lset:
                     lset = set(keys_to_ids(lset))
@@ -731,6 +726,7 @@ class Turn(models.Model):
             territory__subregion__sr_type='L').exclude(
             # if we are issuing a support, we can't convoy.
             id=actor.id).distinct()
+        fleets = [subregion_key(sr) for sr in fleets]
 
         for fset, lset in find_convoys(self, fleets):
             for a in attackers:
@@ -754,15 +750,16 @@ class Turn(models.Model):
         if actor.sr_type != 'S':
             return {}
 
-        sr = Subregion.objects.all()
+        subr = Subregion.objects.all()
         fleets = Subregion.objects.filter(
             sr_type='S', unit__turn=self
         ).exclude(territory__subregion__sr_type='L').distinct()
+        fleets = [subregion_key(sr) for sr in fleets]
         for fset, lset in find_convoys(self, fleets):
             if subregion_key(actor) in fset:
                 lset = set(keys_to_ids(lset))
-                attackers = sr.filter(unit__turn=self, sr_type='L',
-                                      id__in=lset).distinct()
+                attackers = subr.filter(unit__turn=self, sr_type='L',
+                                        id__in=lset).distinct()
                 return {a.id: {x: False for x in lset - set([a.id])}
                         for a in attackers}
         return {}
@@ -951,11 +948,13 @@ class Turn(models.Model):
         for T, o in orders.iteritems():
             if o['action'] == 'M':
                 if subregion_key(o['target']) not in borders(subregion_key(o['actor'])):
-                    matching = [o2['actor'].id for T2, o2 in orders.iteritems()
-                                if o2['action'] == 'C' and
-                                o2['assist'] == o['actor'] and
-                                o2['target'] == o['target']]
-                    matching = Subregion.objects.filter(id__in=matching)
+                    matching = [
+                        subregion_key(o2['actor'])
+                        for T2, o2 in orders.iteritems()
+                        if o2['action'] == 'C'
+                        and o2['assist'] == o['actor']
+                        and o2['target'] == o['target']
+                    ]
                     if any(subregion_key(o['actor']) in L and subregion_key(o['target']) in L
                            for F, L in find_convoys(self, matching)):
                         continue
