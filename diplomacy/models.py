@@ -145,12 +145,12 @@ def detect_paradox(orders, dep):
             del stack[stack_pos:]
             if len(component) > 1:
                 result.update(c for c in component
-                              if orders[t_id(c)]['action'] == 'C')
+                              if orders[c]['action'] == 'C')
             for item in component:
                 low[item] = len(orders)
 
     for node in orders:
-        visit(t_key(node), orders, dep)
+        visit(node, orders, dep)
     return result
 
 # End of refactor wrapper functions
@@ -276,10 +276,10 @@ class Game(models.Model):
             depend = False
             act1, act2 = o1['action'], o2['action']
             if (act1, act2) in DEPENDENCIES:
-                depend = any(f(t_key(T1), o1, t_key(T2), o2) for f in DEPENDENCIES[(act1, act2)])
+                depend = any(f(T1, o1, T2, o2) for f in DEPENDENCIES[(act1, act2)])
 
             if depend:
-                dep[t_key(T1)].append(t_key(T2))
+                dep[T1].append(T2)
 
         return dep
 
@@ -304,19 +304,19 @@ class Game(models.Model):
 
                 # matching successful convoy orders
                 matching = [
-                    subregion_key(orders[t_id(T2)]['actor'])
+                    subregion_key(orders[T2]['actor'])
                     for T2, d2 in state.iteritems()
                     if d2
-                    and orders[t_id(T2)]['action'] == 'C'
-                    and assist(t_key(T), order, T2, orders[t_id(T2)])
-                    and (order['government'] == orders[t_id(T2)]['government']
+                    and orders[T2]['action'] == 'C'
+                    and assist(T, order, T2, orders[T2])
+                    and (order['government'] == orders[T2]['government']
                          or order['convoy'])
                 ]
                 # matching successful and paradoxical convoy orders
                 p_matching = matching + [
-                    subregion_key(orders[t_id(T2)]['actor'])
+                    subregion_key(orders[T2]['actor'])
                     for T2 in paradox
-                    if assist(t_key(T), order, T2, orders[t_id(T2)])
+                    if assist(T, order, T2, orders[T2])
                     and order['convoy']
                 ]
 
@@ -357,80 +357,80 @@ class Game(models.Model):
 
                         # other unit moves away
                         if (d2
-                            and orders[t_id(T2)]['action'] == 'M'
-                            and not head_to_head(t_key(T), order, T2, orders[t_id(T2)],
-                                                 convoy[T], convoy[t_id(T2)])):
+                            and orders[T2]['action'] == 'M'
+                            and not head_to_head(T, order, T2, orders[T2],
+                                                 convoy[T], convoy[T2])):
                             attack_str[T] = 1
                         # FIXME refactor
                         # other unit is also ours
                         elif Government.objects.filter(
                             unit__turn=turn,
-                            unit__subregion__territory__id__in=(T, t_id(T2))
+                            unit__subregion__territory__id__in=(t_id(T), t_id(T2))
                         ).distinct().count() == 1:
                             attack_str[T] = 0
 
                         # prevent strength
-                        if d2 and head_to_head(t_key(T), order, T2, orders[t_id(T2)],
-                                               convoy[T], convoy[t_id(T2)]):
+                        if d2 and head_to_head(T, order, T2, orders[T2],
+                                               convoy[T], convoy[T2]):
                             prevent_str[T] = 0
 
-                if t_key(T) in state:
-                    hold_str[T] = 0 if state[t_key(T)] else 1
+                if T in state:
+                    hold_str[T] = 0 if state[T] else 1
 
             if order['action'] in ('H', 'S', 'C'):
                 hold_str[T] = 1
 
         # calculate additions to strengths due to support orders
         for T, d in state.iteritems():
-            order = orders[t_id(T)]
+            order = orders[T]
 
             if not d or order['action'] != 'S':
                 continue
 
             if order['target'] is None:
-                hold_str[territory(order['assist'])] += 1
+                hold_str[territory(subregion_key(order['assist']))] += 1
             else:
-                if attack_str[territory(order['assist'])]:
+                if attack_str[territory(subregion_key(order['assist']))]:
                     T2 = territory(subregion_key(order['target']))
                     d2 = state.get(T2, False)
-                    if t_id(T2) not in orders:
-                        attack_str[territory(order['assist'])] += 1
+                    if T2 not in orders:
+                        attack_str[territory(subregion_key(order['assist']))] += 1
                     elif (d2
-                          and orders[t_id(T2)]['action'] == 'M'
-                          and not head_to_head(T, order, T2, orders[t_id(T2)],
-                                               convoy[t_id(T)], convoy[t_id(T2)])):
-                        attack_str[territory(order['assist'])] += 1
+                          and orders[T2]['action'] == 'M'
+                          and not head_to_head(T, order, T2, orders[T2],
+                                               convoy[T], convoy[T2])):
+                        attack_str[territory(subregion_key(order['assist']))] += 1
                     # FIXME refactor
                     elif Government.objects.filter(
                         unit__turn=turn,
                         unit__subregion__territory__id__in=(t_id(T), t_id(T2))
                     ).distinct().count() != 1:
-                        attack_str[order['assist'].territory_id] += 1
-                if defend_str[territory(order['assist'])]:
-                    defend_str[territory(order['assist'])] += 1
-                if prevent_str[territory(order['assist'])]:
-                    prevent_str[territory(order['assist'])] += 1
+                        attack_str[territory(subregion_key(order['assist']))] += 1
+                if defend_str[territory(subregion_key(order['assist']))]:
+                    defend_str[territory(subregion_key(order['assist']))] += 1
+                if prevent_str[territory(subregion_key(order['assist']))]:
+                    prevent_str[territory(subregion_key(order['assist']))] += 1
 
         # determine if the strength calculations are consistent with the state
         for T, d in state.iteritems():
-            order = orders[t_id(T)]
+            order = orders[T]
 
             if order['action'] == 'M':
-                target = territory(order['target'])
+                target = territory(subregion_key(order['target']))
                 move = True
                 if (target in orders
-                    and head_to_head(T, order, t_key(target), orders[target],
-                                     convoy[t_id(T)], convoy[target])
-                    and attack_str[t_id(T)] <= defend_str[target]):
+                    and head_to_head(T, order, target, orders[target],
+                                     convoy[T], convoy[target])
+                    and attack_str[T] <= defend_str[target]):
                     move = False
-                if attack_str[t_id(T)] <= hold_str[target]:
+                if attack_str[T] <= hold_str[target]:
                     move = False
-                if any(attack_str[t_id(T)] <= prevent_str[T2]
+                if any(attack_str[T] <= prevent_str[T2]
                        for T2, o2 in orders.iteritems()
-                       if t_id(T) != T2 and o2['action'] == 'M'
-                       and territory(o2['target']) == target):
+                       if T != T2 and o2['action'] == 'M'
+                       and territory(subregion_key(o2['target'])) == target):
                     move = False
-                if not path[t_id(T)]:
+                if not path[T]:
                     move = False
                 if T in fails:
                     move = False
@@ -439,13 +439,13 @@ class Game(models.Model):
                     return False
 
             if order['action'] == 'S':
-                target = territory(order['target'])
+                target = territory(subregion_key(order['target']))
                 attackers = set(T2 for T2, o2 in orders.iteritems()
                                 if o2['action'] == 'M'
                                 and territory(subregion_key(o2['target'])) == T)
                 cut = (T in fails
                        or (target in attackers
-                           and attack_str[target] > hold_str[t_id(T)])
+                           and attack_str[target] > hold_str[T])
                        or any(attack_str[T2] > 0 for T2 in attackers
                               if T2 != target))
                 if d ^ (not cut):
@@ -462,9 +462,9 @@ class Game(models.Model):
                 if attackers:
                     S, P, A = max((attack_str[T2], prevent_str[T2], T2)
                                   for T2 in attackers)
-                    if S > hold_str[t_id(T)] and not any(prevent_str[T2] >= S
-                                                         for T2 in attackers
-                                                         if T2 != A):
+                    if S > hold_str[T] and not any(prevent_str[T2] >= S
+                                                   for T2 in attackers
+                                                   if T2 != A):
                         hold = False
 
                 if (d != False) ^ hold:
@@ -486,9 +486,9 @@ class Game(models.Model):
         # For those orders not already in 'state', sort from least to
         # most remaining dependencies.
         remaining_deps = sorted(
-            (sum(1 for o in dep[t_key(T)] if o not in _state), t_key(T))
+            (sum(1 for o in dep[T] if o not in _state), T)
             for T in orders
-            if t_key(T) not in _state
+            if T not in _state
         )
         if not remaining_deps:
             return state
@@ -511,20 +511,20 @@ class Game(models.Model):
         target_count = defaultdict(int)
         for T, order in orders.iteritems():
             if order['action'] == 'M':
-                target_count[territory(order['target'])] += 1
+                target_count[territory(subregion_key(order['target']))] += 1
             else:
-                decisions.append((t_key(T), None))
+                decisions.append((T, None))
         for T, order in orders.iteritems():
             if order['action'] != 'M':
                 continue
-            if target_count[territory(order['target'])] == 1:
-                decisions.append((t_key(T), True))
+            if target_count[territory(subregion_key(order['target']))] == 1:
+                decisions.append((T, True))
             else:
-                decisions.append((t_key(T), False))
+                decisions.append((T, False))
         return decisions
 
     def resolve_adjusts(self, orders):
-        return [(t_key(T), order.get('action') is not None)
+        return [(T, order.get('action') is not None)
                 for T, order in orders.iteritems()]
 
     def activate(self):
@@ -558,7 +558,7 @@ class Game(models.Model):
 
         turn.consistency_check()
 
-        orders = {territory(o['actor']): o
+        orders = {territory(subregion_key(o['actor'])): o
                   for o in turn.normalize_orders()
                   if o['actor'] is not None}
 
@@ -986,7 +986,7 @@ class Turn(models.Model):
             elif o['action'] not in ('S', 'C'):
                 continue
             else:
-                assist = orders[territory(o['assist'])]
+                assist = orders[territory(subregion_key(o['assist']))]
                 if o['target'] is not None:
                     if (assist['action'] == 'M' and
                         assist['target'] == o['target']):
@@ -994,7 +994,7 @@ class Turn(models.Model):
                 else:
                     if assist['action'] in ('H', 'C', 'S'):
                         continue
-            results.add(t_key(T))
+            results.add(T)
 
         return results
 
@@ -1006,7 +1006,7 @@ class Turn(models.Model):
         for T, o in orders.iteritems():
             order = {k: v for k, v in o.iteritems() if k in keys}
             order['user_issued'] = o.get('id') is not None
-            if decisions.get(t_key(T)):
+            if decisions.get(T):
                 order['result'] = 'S'
             elif any(T in db for db in turn.disbands.itervalues()):
                 order['result'] = 'D'
@@ -1023,17 +1023,17 @@ class Turn(models.Model):
         retreat = self.prev.season in ('SR', 'FR')
 
         for a, d in decisions:
-            action = orders[t_id(a)].get('action')
+            action = orders[a].get('action')
             # units that are displaced must retreat or be disbanded
             if retreat and action is None:
                 del units[(a, retreat)]
-                self.disbands[orders[t_id(a)]['government'].id].add(a)
-                orders[t_id(a)]['action'] = 'D'
+                self.disbands[orders[a]['government'].id].add(a)
+                orders[a]['action'] = 'D'
                 continue
 
             if action == 'M':
-                target = orders[t_id(a)]['target']
-                T = territory(subregion_key(orders[t_id(a)]['actor']))
+                target = orders[a]['target']
+                T = territory(subregion_key(orders[a]['actor']))
                 if d: # move succeeded
                     units[(a, retreat)]['subregion'] = target
                     if not retreat:
@@ -1048,14 +1048,14 @@ class Turn(models.Model):
             if d and action == 'B':
                 units[(a, False)] = {
                     'turn': self,
-                    'government': orders[t_id(a)]['government'],
-                    'u_type': convert[orders[t_id(a)]['actor'].sr_type],
-                    'subregion': orders[t_id(a)]['actor']
+                    'government': orders[a]['government'],
+                    'u_type': convert[orders[a]['actor'].sr_type],
+                    'subregion': orders[a]['actor']
                 }
 
             if action == 'D':
                 del units[(a, retreat)]
-                self.disbands[orders[t_id(a)]['government'].id].add(a)
+                self.disbands[orders[a]['government'].id].add(a)
                 continue
 
     def _update_units_blocked(self, orders, decisions, units):
@@ -1068,13 +1068,13 @@ class Turn(models.Model):
                     dislodged=True,
                     displaced_from_id=( # only mark a location as disallowed for
                         None         # retreats if it wasn't via convoy
-                        if orders[t_id(self.displaced[a])].get('convoy')
+                        if orders[self.displaced[a]].get('convoy')
                         else t_id(self.displaced[a])
                     )
                 )
-            if orders[t_id(a)].get('action') != 'M':
+            if orders[a].get('action') != 'M':
                 continue
-            t = territory(subregion_key(orders[t_id(a)]['target']))
+            t = territory(subregion_key(orders[a]['target']))
             # if multiple moves to our target failed, we have a standoff.
             if len(self.failed[t]) > 1:
                 units[key]['standoff_from_id'] = t_id(t)
@@ -1136,9 +1136,9 @@ class Turn(models.Model):
                 if territory(subregion_key(u)) in self.disbands[g.id]:
                     continue
 
-                orders[u.territory_id] = {'government': g, 'actor': u,
-                                          'action': 'D', 'assist': None,
-                                          'target': None, 'via_convoy': False}
+                orders[territory(subregion_key(u))] = {'government': g, 'actor': u,
+                                                       'action': 'D', 'assist': None,
+                                                       'target': None, 'via_convoy': False}
                 del units[(territory(subregion_key(u)), False)]
                 self.disbands[g.id].add(territory(subregion_key(u)))
                 builds += 1
