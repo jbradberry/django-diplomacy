@@ -35,9 +35,31 @@ SUBREGION_CHOICES = (
 
 # Refactor wrapper functions
 
-def t_key(t_id):
-    t = Territory.objects.get(id=t_id)
-    return t.name
+def t_key_closure():
+    lookup_table = {}
+
+    def t_key(t_id):
+        if not lookup_table:
+            lookup_table.update((t.id, t.name) for t in Territory.objects.all())
+
+        return lookup_table[t_id]
+
+    return t_key
+
+t_key = t_key_closure()
+
+def t_id_closure():
+    lookup_table = {}
+
+    def t_id(t_key):
+        if not lookup_table:
+            lookup_table.update((t.name, t.id) for t in Territory.objects.all())
+
+        return lookup_table[t_key]
+
+    return t_id
+
+t_id = t_id_closure()
 
 def keys_to_ids(seq):
     subregion_mapping = {
@@ -99,7 +121,6 @@ def detect_paradox(orders, dep):
     find the paradoxical convoys.
 
     """
-    t_id = {t.name: t.id for t in Territory.objects.all()}
     dep = dict(dep)
 
     low = {}
@@ -115,17 +136,16 @@ def detect_paradox(orders, dep):
         stack_pos = len(stack)
         stack.append(node)
 
-        if t_id[node] in dep:
-            for w in dep[t_id[node]]:
-                visit(t_key(w), orders, dep)
-                low[node] = min(low[node], low[t_key(w)])
+        for w in dep.get(t_id(node), ()):
+            visit(t_key(w), orders, dep)
+            low[node] = min(low[node], low[t_key(w)])
 
         if low[node] == index:
             component = tuple(stack[stack_pos:])
             del stack[stack_pos:]
             if len(component) > 1:
                 result.update(c for c in component
-                              if orders[t_id[c]]['action'] == 'C')
+                              if orders[t_id(c)]['action'] == 'C')
             for item in component:
                 low[item] = len(orders)
 
@@ -264,8 +284,6 @@ class Game(models.Model):
         return dep
 
     def consistent(self, state, orders, fails, paradox):
-        t_id = {t.name: t.id for t in Territory.objects.all()}
-
         state = dict(state)
 
         turn = self.current_turn()
@@ -296,9 +314,9 @@ class Game(models.Model):
                 ]
                 # matching successful and paradoxical convoy orders
                 p_matching = matching + [
-                    subregion_key(orders[t_id[T2]]['actor'])
+                    subregion_key(orders[t_id(T2)]['actor'])
                     for T2 in paradox
-                    if assist(t_key(T), order, T2, orders[t_id[T2]])
+                    if assist(t_key(T), order, T2, orders[t_id(T2)])
                     and order['convoy']
                 ]
 
@@ -999,25 +1017,23 @@ class Turn(models.Model):
             self.canonicalorder_set.create(**order)
 
     def _update_units_changes(self, orders, decisions, units):
-        t_id = {t.name: t.id for t in Territory.objects.all()}
-
         self.disbands = defaultdict(set)
         self.displaced, self.failed = {}, defaultdict(list)
 
         retreat = self.prev.season in ('SR', 'FR')
 
         for a, d in decisions:
-            action = orders[t_id[a]].get('action')
+            action = orders[t_id(a)].get('action')
             # units that are displaced must retreat or be disbanded
             if retreat and action is None:
                 del units[(a, retreat)]
-                self.disbands[orders[t_id[a]]['government'].id].add(a)
-                orders[t_id[a]]['action'] = 'D'
+                self.disbands[orders[t_id(a)]['government'].id].add(a)
+                orders[t_id(a)]['action'] = 'D'
                 continue
 
             if action == 'M':
-                target = orders[t_id[a]]['target']
-                T = territory(subregion_key(orders[t_id[a]]['actor']))
+                target = orders[t_id(a)]['target']
+                T = territory(subregion_key(orders[t_id(a)]['actor']))
                 if d: # move succeeded
                     units[(a, retreat)]['subregion'] = target
                     if not retreat:
@@ -1032,19 +1048,17 @@ class Turn(models.Model):
             if d and action == 'B':
                 units[(a, False)] = {
                     'turn': self,
-                    'government': orders[t_id[a]]['government'],
-                    'u_type': convert[orders[t_id[a]]['actor'].sr_type],
-                    'subregion': orders[t_id[a]]['actor']
+                    'government': orders[t_id(a)]['government'],
+                    'u_type': convert[orders[t_id(a)]['actor'].sr_type],
+                    'subregion': orders[t_id(a)]['actor']
                 }
 
             if action == 'D':
                 del units[(a, retreat)]
-                self.disbands[orders[t_id[a]]['government'].id].add(a)
+                self.disbands[orders[t_id(a)]['government'].id].add(a)
                 continue
 
     def _update_units_blocked(self, orders, decisions, units):
-        t_id = {t.name: t.id for t in Territory.objects.all()}
-
         for a, d in decisions:
             key = (a, False)
             # if our location is marked as the target of a
@@ -1054,20 +1068,19 @@ class Turn(models.Model):
                     dislodged=True,
                     displaced_from_id=( # only mark a location as disallowed for
                         None         # retreats if it wasn't via convoy
-                        if orders[t_id[self.displaced[a]]].get('convoy')
-                        else t_id[self.displaced[a]]
+                        if orders[t_id(self.displaced[a])].get('convoy')
+                        else t_id(self.displaced[a])
                     )
                 )
-            if orders[t_id[a]].get('action') != 'M':
+            if orders[t_id(a)].get('action') != 'M':
                 continue
-            t = territory(subregion_key(orders[t_id[a]]['target']))
+            t = territory(subregion_key(orders[t_id(a)]['target']))
             # if multiple moves to our target failed, we have a standoff.
             if len(self.failed[t]) > 1:
-                units[key]['standoff_from_id'] = t_id[t]
+                units[key]['standoff_from_id'] = t_id(t)
 
     def _update_units_autodisband(self, orders, units):
         subr = Subregion.objects.all()
-        t_id = {s: s.territory_id for s in subr}
         for g in self.game.government_set.all():
             builds = g.builds_available(self.prev) + len(self.disbands[g.id])
             if builds >= 0:
@@ -1123,9 +1136,9 @@ class Turn(models.Model):
                 if territory(subregion_key(u)) in self.disbands[g.id]:
                     continue
 
-                orders[t_id[u]] = {'government': g, 'actor': u,
-                                   'action': 'D', 'assist': None,
-                                   'target': None, 'via_convoy': False}
+                orders[u.territory_id] = {'government': g, 'actor': u,
+                                          'action': 'D', 'assist': None,
+                                          'target': None, 'via_convoy': False}
                 del units[(territory(subregion_key(u)), False)]
                 self.disbands[g.id].add(territory(subregion_key(u)))
                 builds += 1
