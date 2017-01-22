@@ -1014,16 +1014,16 @@ class Turn(models.Model):
 
             if action == 'M':
                 target = orders[t_id[a]]['target']
-                T = orders[t_id[a]]['actor'].territory
+                T = territory(subregion_key(orders[t_id[a]]['actor']))
                 if d: # move succeeded
                     units[(a, retreat)]['subregion'] = target
                     if not retreat:
-                        self.displaced[target.territory_id] = T
+                        self.displaced[territory(subregion_key(target))] = T
                 elif retreat: # move is a failed retreat
                     del units[(a, retreat)]
                     continue
                 else: # move failed
-                    self.failed[territory(target)].append(T)
+                    self.failed[territory(subregion_key(target))].append(T)
 
             # successful build
             if d and action == 'B':
@@ -1046,21 +1046,21 @@ class Turn(models.Model):
             key = (a, False)
             # if our location is marked as the target of a
             # successful move and we failed to move, we are displaced.
-            if not d and t_id[a] in self.displaced:
+            if not d and a in self.displaced:
                 units[key].update(
                     dislodged=True,
-                    displaced_from=( # only mark a location as disallowed for
+                    displaced_from_id=( # only mark a location as disallowed for
                         None         # retreats if it wasn't via convoy
-                        if orders[self.displaced[t_id[a]].id].get('convoy')
-                        else self.displaced[t_id[a]]
+                        if orders[t_id[self.displaced[a]]].get('convoy')
+                        else t_id[self.displaced[a]]
                     )
                 )
             if orders[t_id[a]].get('action') != 'M':
                 continue
-            t = orders[t_id[a]]['target'].territory
+            t = territory(subregion_key(orders[t_id[a]]['target']))
             # if multiple moves to our target failed, we have a standoff.
-            if len(self.failed[t.id]) > 1:
-                units[key]['standoff_from'] = t
+            if len(self.failed[t]) > 1:
+                units[key]['standoff_from_id'] = t_id[t]
 
     def _update_units_autodisband(self, orders, units):
         subr = Subregion.objects.all()
