@@ -1003,7 +1003,7 @@ class Turn(models.Model):
             action = orders[a].get('action')
             # units that are displaced must retreat or be disbanded
             if retreat and action is None:
-                del units[(a, retreat)]
+                del units[(t_key(a), retreat)]
                 self.disbands[orders[a]['government'].id].add(a)
                 orders[a]['action'] = 'D'
                 continue
@@ -1012,31 +1012,32 @@ class Turn(models.Model):
                 target = orders[a]['target']
                 T = orders[a]['actor'].territory
                 if d: # move succeeded
-                    units[(a, retreat)]['subregion'] = target
+                    units[(t_key(a), retreat)]['subregion'] = target
                     if not retreat:
                         self.displaced[target.territory_id] = T
                 elif retreat: # move is a failed retreat
-                    del units[(a, retreat)]
+                    del units[(t_key(a), retreat)]
                     continue
                 else: # move failed
                     self.failed[territory(target)].append(T)
 
             # successful build
             if d and action == 'B':
-                units[(a, False)] = {'turn': self,
-                                     'government': orders[a]['government'],
-                                     'u_type':
-                                         convert[orders[a]['actor'].sr_type],
-                                     'subregion': orders[a]['actor']}
+                units[(t_key(a), False)] = {
+                    'turn': self,
+                    'government': orders[a]['government'],
+                    'u_type': convert[orders[a]['actor'].sr_type],
+                    'subregion': orders[a]['actor']
+                }
 
             if action == 'D':
-                del units[(a, retreat)]
+                del units[(t_key(a), retreat)]
                 self.disbands[orders[a]['government'].id].add(a)
                 continue
 
     def _update_units_blocked(self, orders, decisions, units):
         for a, d in decisions:
-            key = (a, False)
+            key = (t_key(a), False)
             # if our location is marked as the target of a
             # successful move and we failed to move, we are displaced.
             if not d and a in self.displaced:
@@ -1056,8 +1057,8 @@ class Turn(models.Model):
                 units[key]['standoff_from'] = t
 
     def _update_units_autodisband(self, orders, units):
-        sr = Subregion.objects.all()
-        t_id = {s: s.territory_id for s in sr}
+        subr = Subregion.objects.all()
+        t_id = {s: s.territory_id for s in subr}
         for g in self.game.government_set.all():
             builds = g.builds_available(self.prev) + len(self.disbands[g.id])
             if builds >= 0:
@@ -1071,21 +1072,21 @@ class Turn(models.Model):
 
             unit_distances = {
                 u: [None, u.sr_type == 'L', unicode(u)]
-                for u in sr.filter(unit__government=g, unit__turn=self.prev)
+                for u in subr.filter(unit__government=g, unit__turn=self.prev)
             }
 
             distance = 0
             examined = set(sc for sc in
-                           sr.filter(territory__power=g.power,
-                                     territory__is_supply=True,
-                                     sr_type='S'))
+                           subr.filter(territory__power=g.power,
+                                       territory__is_supply=True,
+                                       sr_type='S'))
             while any(not D[1] and D[0] is None
                       for D in unit_distances.itervalues()):
                 for u, D in unit_distances.iteritems():
                     if not D[1] and D[0] is None and u in examined:
                         D[0] = -distance  # We want them reversed by distance,
                 adj = set(                # but non-reversed by name.
-                    s for s in sr.filter(
+                    s for s in subr.filter(
                         borders__in=examined
                     ).exclude(id__in=[se.id for se in examined]).distinct()
                 )
@@ -1094,15 +1095,15 @@ class Turn(models.Model):
 
             distance = 0
             examined = set(sc for sc in
-                           sr.filter(territory__power=g.power,
-                                     territory__is_supply=True))
+                           subr.filter(territory__power=g.power,
+                                       territory__is_supply=True))
             while any(D[1] and D[0] is None
                       for D in unit_distances.itervalues()):
                 for u, D in unit_distances.iteritems():
                     if D[1] and D[0] is None and u in examined:
                         D[0] = -distance  # We want them reversed by distance,
                 adj = set(                # but non-reversed by name.
-                    s for s in sr.filter(
+                    s for s in subr.filter(
                         territory__subregion__borders__in=examined
                     ).exclude(id__in=[se.id for se in examined]).distinct()
                 )
@@ -1116,7 +1117,7 @@ class Turn(models.Model):
                 orders[t_id[u]] = {'government': g, 'actor': u,
                                    'action': 'D', 'assist': None,
                                    'target': None, 'via_convoy': False}
-                del units[(t_id[u], False)]
+                del units[(territory(subregion_key(u)), False)]
                 self.disbands[g.id].add(t_id[u])
                 builds += 1
                 if builds == 0:
@@ -1124,9 +1125,11 @@ class Turn(models.Model):
 
     def update_units(self, orders, decisions):
         units = {
-            (territory(u.subregion), x): {'turn': self, 'government': u.government,
-                                          'u_type': u.u_type, 'subregion': u.subregion,
-                                          'previous': u}
+            (territory(subregion_key(u.subregion)), x): {
+                'turn': self, 'government': u.government,
+                'u_type': u.u_type, 'subregion': u.subregion,
+                'previous': u
+            }
             for x in (True, False) # dislodged or not
             for u in self.prev.unit_set.filter(dislodged=x)
         }
@@ -1144,6 +1147,8 @@ class Turn(models.Model):
         for k, u in units.iteritems():
             Unit.objects.create(**u)
 
+    # FIXME refactor: this method should take data calculated by the
+    # engine and create the new ownership objects based on that.
     def update_ownership(self):
         for t in Territory.objects.filter(subregion__sr_type='L'):
             u = self.unit_set.filter(subregion__territory=t)
