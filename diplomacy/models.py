@@ -60,7 +60,7 @@ def find_convoys(turn, fleets):
         f1, f2 = subregion_key(f1), subregion_key(f2)
 
         # If this pair is not adjacent, ignore it
-        if f2 not in standard.mapping.get(f1, ()):
+        if f2 not in borders(f1):
             continue
 
         # If the sets for each of these fleets are not already the same set,
@@ -82,7 +82,7 @@ def find_convoys(turn, fleets):
     for gset in groups:
         coasts = {
             sr for f in gset
-            for b in standard.mapping.get(f, ())
+            for b in borders(f)
             for sr in standard.territories.get(b[0], ())
             if sr[2] == 'L'
         }
