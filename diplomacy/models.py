@@ -93,6 +93,45 @@ def find_convoys(turn, fleets):
 
     return convoyable
 
+def detect_paradox(orders, dep):
+    """
+    Implements Tarjan's strongly connected components algorithm to
+    find the paradoxical convoys.
+
+    """
+    dep = dict(dep)
+
+    low = {}
+    stack = []
+    result = set()
+
+    def visit(node, orders, dep):
+        if node in low:
+            return
+
+        index = len(low)
+        low[node] = index
+        stack_pos = len(stack)
+        stack.append(node)
+
+        if node in dep:
+            for w in dep[node]:
+                visit(w, orders, dep)
+                low[node] = min(low[node], low[w])
+
+        if low[node] == index:
+            component = tuple(stack[stack_pos:])
+            del stack[stack_pos:]
+            if len(component) > 1:
+                result.update(c for c in component
+                              if orders[c]['action'] == 'C')
+            for item in component:
+                low[item] = len(orders)
+
+    for node in orders:
+        visit(node, orders, dep)
+    return result
+
 # End of refactor wrapper functions
 
 def subregion_key(sr):
@@ -222,45 +261,6 @@ class Game(models.Model):
                 dep[T1].append(T2)
 
         return dep
-
-    def detect_paradox(self, orders, dep):
-        """
-        Implements Tarjan's strongly connected components algorithm to
-        find the paradoxical convoys.
-
-        """
-        dep = dict(dep)
-
-        low = {}
-        stack = []
-        result = set()
-
-        def visit(node, orders, dep):
-            if node in low:
-                return
-
-            index = len(low)
-            low[node] = index
-            stack_pos = len(stack)
-            stack.append(node)
-
-            if node in dep:
-                for w in dep[node]:
-                    visit(w, orders, dep)
-                    low[node] = min(low[node], low[w])
-
-            if low[node] == index:
-                component = tuple(stack[stack_pos:])
-                del stack[stack_pos:]
-                if len(component) > 1:
-                    result.update(c for c in component
-                                  if orders[c]['action'] == 'C')
-                for item in component:
-                    low[item] = len(orders)
-
-        for node in orders:
-            visit(node, orders, dep)
-        return result
 
     def consistent(self, state, orders, fails, paradox):
         state = dict(state)
@@ -543,7 +543,7 @@ class Game(models.Model):
             # FIXME: do something with civil disorder
             disorder = self.detect_civil_disorder(orders)
             dependencies = self.construct_dependencies(orders)
-            paradox_convoys = self.detect_paradox(orders, dependencies)
+            paradox_convoys = detect_paradox(orders, dependencies)
             fails = turn.immediate_fails(orders)
             decisions = self.resolve((), orders, dependencies,
                                      fails, paradox_convoys)
