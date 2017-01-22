@@ -35,6 +35,10 @@ SUBREGION_CHOICES = (
 
 # Refactor wrapper functions
 
+def t_key(t_id):
+    t = Territory.objects.get(id=t_id)
+    return t.name
+
 def keys_to_ids(seq):
     subregion_mapping = {
         subregion_key(sr): sr.id
@@ -101,42 +105,43 @@ def subregion_key(sr):
 def territory(sr):
     if sr is None:
         return None
-    return sr.territory_id
+    if isinstance(sr, Subregion):
+        return sr.territory_id
+    return sr[0]
 
 def assist(T1, o1, T2, o2):
-    return territory(o2['assist']) == T1
+    return territory(subregion_key(o2['assist'])) == T1
 
 def attack_us(T1, o1, T2, o2):
-    return territory(o2['target']) == T1
+    return territory(subregion_key(o2['target'])) == T1
 
 def attack_us_from_target(T1, o1, T2, o2):
-    return (territory(o2['assist']) == territory(o1['target']) and
-            territory(o2['target']) == T1)
+    return (territory(subregion_key(o2['assist'])) == territory(subregion_key(o1['target']))
+            and territory(subregion_key(o2['target'])) == T1)
 
 def head_to_head(T1, o1, T2, o2, c1=False, c2=False):
-    territory_mapping = {t.name: t.id for t in Territory.objects.all()}
-
     actor = o2['assist'] if o2['assist'] else o2['actor']
-    T2 = territory(actor)
-    if not any(territory_mapping[S[0]] == T2 for S in borders(subregion_key(o1['actor']))):
+    T2 = territory(subregion_key(actor))
+    if not any(territory(S) == T2 for S in borders(subregion_key(o1['actor']))):
         return False
-    if not any(territory_mapping[S[0]] == T1 for S in borders(subregion_key(actor))):
+    if not any(territory(S) == T1 for S in borders(subregion_key(actor))):
         return False
     if c1 or c2:
         return False
-    return territory(o2['target']) == T1 and territory(o1['target']) == T2
+    return (territory(subregion_key(o2['target'])) == T1
+            and territory(subregion_key(o1['target'])) == T2)
 
 def hostile_assist_hold(T1, o1, T2, o2):
-    return (territory(o2['assist']) == territory(o1['target'])
+    return (territory(subregion_key(o2['assist'])) == territory(subregion_key(o1['target']))
             and o2['target'] is None)
 
 def hostile_assist_compete(T1, o1, T2, o2):
-    return (territory(o2['assist']) != T1 and
-            territory(o2['target']) == territory(o1['target']))
+    return (territory(subregion_key(o2['assist'])) != T1 and
+            territory(subregion_key(o2['target'])) == territory(subregion_key(o1['target'])))
 
 def move_away(T1, o1, T2, o2):
-    return (territory(o1['target']) == T2 and
-            (territory(o2['target']) != T1 or o1['convoy'] or o2['convoy']))
+    return (territory(subregion_key(o1['target'])) == T2 and
+            (territory(subregion_key(o2['target'])) != T1 or o1['convoy'] or o2['convoy']))
 
 
 DEPENDENCIES = {('C', 'M'): (attack_us,),
@@ -213,7 +218,7 @@ class Game(models.Model):
             depend = False
             act1, act2 = o1['action'], o2['action']
             if (act1, act2) in DEPENDENCIES:
-                depend = any(f(T1, o1, T2, o2) for f in DEPENDENCIES[(act1, act2)])
+                depend = any(f(t_key(T1), o1, t_key(T2), o2) for f in DEPENDENCIES[(act1, act2)])
 
             if depend:
                 dep[T1].append(T2)
@@ -284,7 +289,7 @@ class Game(models.Model):
                     for T2, d2 in state.iteritems()
                     if d2
                     and orders[T2]['action'] == 'C'
-                    and assist(T, order, T2, orders[T2])
+                    and assist(t_key(T), order, t_key(T2), orders[T2])
                     and (order['government'] == orders[T2]['government']
                          or order['convoy'])
                 ]
@@ -292,7 +297,7 @@ class Game(models.Model):
                 p_matching = matching + [
                     orders[T2]['actor'].id
                     for T2 in paradox
-                    if assist(T, order, T2, orders[T2])
+                    if assist(t_key(T), order, t_key(T2), orders[T2])
                     and order['convoy']
                 ]
 
@@ -338,7 +343,7 @@ class Game(models.Model):
                         # other unit moves away
                         if (d2
                             and orders[T2]['action'] == 'M'
-                            and not head_to_head(T, order, T2, orders[T2],
+                            and not head_to_head(t_key(T), order, t_key(T2), orders[T2],
                                                  convoy[T], convoy[T2])):
                             attack_str[T] = 1
                         # FIXME refactor
@@ -350,7 +355,7 @@ class Game(models.Model):
                             attack_str[T] = 0
 
                         # prevent strength
-                        if d2 and head_to_head(T, order, T2, orders[T2],
+                        if d2 and head_to_head(t_key(T), order, t_key(T2), orders[T2],
                                                convoy[T], convoy[T2]):
                             prevent_str[T] = 0
 
@@ -377,7 +382,7 @@ class Game(models.Model):
                         attack_str[territory(order['assist'])] += 1
                     elif (d2
                           and orders[T2]['action'] == 'M'
-                          and not head_to_head(T, order, T2, orders[T2],
+                          and not head_to_head(t_key(T), order, t_key(T2), orders[T2],
                                                convoy[T], convoy[T2])):
                         attack_str[territory(order['assist'])] += 1
                     # FIXME refactor
@@ -399,7 +404,7 @@ class Game(models.Model):
                 target = territory(order['target'])
                 move = True
                 if (target in orders
-                    and head_to_head(T, order, target, orders[target],
+                    and head_to_head(t_key(T), order, t_key(target), orders[target],
                                      convoy[T], convoy[target])
                     and attack_str[T] <= defend_str[target]):
                     move = False
@@ -921,8 +926,8 @@ class Turn(models.Model):
                 # both overall and specifically by this user's government.
                 matching = [(g2, o2) for (g2, i2), o2 in orders.iteritems()
                             if o2['action'] == 'C' and
-                            assist(territory(o['actor']), o,
-                                   territory(o2['actor']), o2)]
+                            assist(territory(subregion_key(o['actor'])), o,
+                                   territory(subregion_key(o2['actor'])), o2)]
                 gvt_matching = [o2 for g2, o2 in matching if g2 == g]
 
                 if subregion_key(o['target']) in borders(subregion_key(o['actor'])):
