@@ -1117,14 +1117,14 @@ class Turn(models.Model):
                 distance += 1
 
             for u in sorted(unit_distances, key=lambda x: unit_distances[x]):
-                if t_id[u] in self.disbands[g.id]:
+                if territory(subregion_key(u)) in self.disbands[g.id]:
                     continue
 
                 orders[t_id[u]] = {'government': g, 'actor': u,
                                    'action': 'D', 'assist': None,
                                    'target': None, 'via_convoy': False}
                 del units[(territory(subregion_key(u)), False)]
-                self.disbands[g.id].add(t_id[u])
+                self.disbands[g.id].add(territory(subregion_key(u)))
                 builds += 1
                 if builds == 0:
                     break
