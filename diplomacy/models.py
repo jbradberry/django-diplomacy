@@ -340,6 +340,39 @@ def consistent(state, orders, fails, paradox, turn):
 
     return True
 
+def resolve(state, orders, dep, fails, paradox, turn):
+    _state = set(T for T, d in state)
+
+    # Only bother calculating whether the hypothetical solution is
+    # consistent if all orders within it have no remaining
+    # unresolved dependencies.
+    if all(all(o in _state for o in dep[T]) for T, d in state):
+        if not consistent(state, orders, fails, paradox, turn):
+            return None
+
+    # For those orders not already in 'state', sort from least to
+    # most remaining dependencies.
+    remaining_deps = sorted(
+        (sum(1 for o in dep[T] if o not in _state), T)
+        for T in orders
+        if T not in _state
+    )
+    if not remaining_deps:
+        return state
+    # Go with the order with the fewest remaining deps.
+    q, T = remaining_deps[0]
+
+    # Unresolved dependencies might be circular, so it isn't
+    # obvious how to resolve them.  Try both ways, with preference
+    # for 'success'.
+    resolutions = (None, False) if T in paradox else (True, False)
+    for S in resolutions:
+        result = resolve(state+((T, S),), orders, dep, fails, paradox, turn)
+        if result:
+            return result
+
+    return None
+
 # End of refactor wrapper functions
 
 def subregion_key(sr):
@@ -470,41 +503,6 @@ class Game(models.Model):
 
         return dep
 
-    def resolve(self, state, orders, dep, fails, paradox):
-        turn = self.current_turn()
-
-        _state = set(T for T, d in state)
-
-        # Only bother calculating whether the hypothetical solution is
-        # consistent if all orders within it have no remaining
-        # unresolved dependencies.
-        if all(all(o in _state for o in dep[T]) for T, d in state):
-            if not consistent(state, orders, fails, paradox, turn):
-                return None
-
-        # For those orders not already in 'state', sort from least to
-        # most remaining dependencies.
-        remaining_deps = sorted(
-            (sum(1 for o in dep[T] if o not in _state), T)
-            for T in orders
-            if T not in _state
-        )
-        if not remaining_deps:
-            return state
-        # Go with the order with the fewest remaining deps.
-        q, T = remaining_deps[0]
-
-        # Unresolved dependencies might be circular, so it isn't
-        # obvious how to resolve them.  Try both ways, with preference
-        # for 'success'.
-        resolutions = (None, False) if T in paradox else (True, False)
-        for S in resolutions:
-            result = self.resolve(state+((T, S),), orders, dep, fails, paradox)
-            if result:
-                return result
-
-        return None
-
     def resolve_retreats(self, orders):
         decisions = []
         target_count = defaultdict(int)
@@ -567,8 +565,7 @@ class Game(models.Model):
             dependencies = self.construct_dependencies(orders)
             paradox_convoys = detect_paradox(orders, dependencies)
             fails = turn.immediate_fails(orders)
-            decisions = self.resolve((), orders, dependencies,
-                                     fails, paradox_convoys)
+            decisions = resolve((), orders, dependencies, fails, paradox_convoys, turn)
         elif turn.season in ('SR', 'FR'):
             decisions = self.resolve_retreats(orders)
         else:
