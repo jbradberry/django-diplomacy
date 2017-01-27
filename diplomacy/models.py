@@ -153,6 +153,193 @@ def detect_paradox(orders, dep):
         visit(node, orders, dep)
     return result
 
+def consistent(state, orders, fails, paradox, turn):
+    state = dict(state)
+
+    hold_str = defaultdict(int)
+    attack_str = defaultdict(int)
+    defend_str = defaultdict(int)
+    prevent_str = defaultdict(int)
+
+    path = {}
+    convoy = defaultdict(lambda: False) # True if this unit is successfully
+                                        # convoyed, False otherwise.
+
+    # determine if moves have a valid path
+    for T, order in orders.iteritems():
+        if order['action'] == 'M':
+            defend_str[T], path[T], P = 1, False, False
+
+            # matching successful convoy orders
+            matching = [
+                subregion_key(orders[T2]['actor'])
+                for T2, d2 in state.iteritems()
+                if d2
+                and orders[T2]['action'] == 'C'
+                and assist(T, order, T2, orders[T2])
+                and (order['government'] == orders[T2]['government']
+                     or order['convoy'])
+            ]
+            # matching successful and paradoxical convoy orders
+            p_matching = matching + [
+                subregion_key(orders[T2]['actor'])
+                for T2 in paradox
+                if assist(T, order, T2, orders[T2])
+                and order['convoy']
+            ]
+
+            # FIXME refactor
+            if any(subregion_key(order['actor']) in L
+                   and subregion_key(order['target']) in L
+                   for F, L in find_convoys(turn, matching)):
+                # We have a valid convoy path if there is a chain
+                # of successful convoys between our endpoints.
+                path[T] = True
+
+            # FIXME refactor
+            if (not path[T] and
+                any(subregion_key(order['actor']) in L
+                    and subregion_key(order['target']) in L
+                    for F, L in find_convoys(turn, p_matching))):
+                # But if there is a path when paradoxical convoys
+                # are included, we have a paradox.
+                P = True
+
+            convoy[T] = path[T]
+            if (not order['convoy']
+                and subregion_key(order['target']) in borders(subregion_key(order['actor']))):
+                # if we are adjacent to the target, we can have a
+                # path even without a successful convoy, but only
+                # if we don't have a paradox
+                path[T] = not P
+
+    # calculate base hold, attack, and prevent strengths
+    for T, order in orders.iteritems():
+        if order['action'] == 'M':
+            if path[T]:
+                prevent_str[T], attack_str[T] = 1, 1
+
+                if territory(subregion_key(order['target'])) in state:
+                    T2 = territory(subregion_key(order['target']))
+                    d2 = state[T2]
+
+                    # other unit moves away
+                    if (d2
+                        and orders[T2]['action'] == 'M'
+                        and not head_to_head(T, order, T2, orders[T2],
+                                             convoy[T], convoy[T2])):
+                        attack_str[T] = 1
+                    # FIXME refactor
+                    # other unit is also ours
+                    elif Government.objects.filter(
+                        unit__turn=turn,
+                        unit__subregion__territory__id__in=(t_id(T), t_id(T2))
+                    ).distinct().count() == 1:
+                        attack_str[T] = 0
+
+                    # prevent strength
+                    if d2 and head_to_head(T, order, T2, orders[T2],
+                                           convoy[T], convoy[T2]):
+                        prevent_str[T] = 0
+
+            if T in state:
+                hold_str[T] = 0 if state[T] else 1
+
+        if order['action'] in ('H', 'S', 'C'):
+            hold_str[T] = 1
+
+    # calculate additions to strengths due to support orders
+    for T, d in state.iteritems():
+        order = orders[T]
+
+        if not d or order['action'] != 'S':
+            continue
+
+        if order['target'] is None:
+            hold_str[territory(subregion_key(order['assist']))] += 1
+        else:
+            if attack_str[territory(subregion_key(order['assist']))]:
+                T2 = territory(subregion_key(order['target']))
+                d2 = state.get(T2, False)
+                if T2 not in orders:
+                    attack_str[territory(subregion_key(order['assist']))] += 1
+                elif (d2
+                      and orders[T2]['action'] == 'M'
+                      and not head_to_head(T, order, T2, orders[T2],
+                                           convoy[T], convoy[T2])):
+                    attack_str[territory(subregion_key(order['assist']))] += 1
+                # FIXME refactor
+                elif Government.objects.filter(
+                    unit__turn=turn,
+                    unit__subregion__territory__id__in=(t_id(T), t_id(T2))
+                ).distinct().count() != 1:
+                    attack_str[territory(subregion_key(order['assist']))] += 1
+            if defend_str[territory(subregion_key(order['assist']))]:
+                defend_str[territory(subregion_key(order['assist']))] += 1
+            if prevent_str[territory(subregion_key(order['assist']))]:
+                prevent_str[territory(subregion_key(order['assist']))] += 1
+
+    # determine if the strength calculations are consistent with the state
+    for T, d in state.iteritems():
+        order = orders[T]
+
+        if order['action'] == 'M':
+            target = territory(subregion_key(order['target']))
+            move = True
+            if (target in orders
+                and head_to_head(T, order, target, orders[target],
+                                 convoy[T], convoy[target])
+                and attack_str[T] <= defend_str[target]):
+                move = False
+            if attack_str[T] <= hold_str[target]:
+                move = False
+            if any(attack_str[T] <= prevent_str[T2]
+                   for T2, o2 in orders.iteritems()
+                   if T != T2 and o2['action'] == 'M'
+                   and territory(subregion_key(o2['target'])) == target):
+                move = False
+            if not path[T]:
+                move = False
+            if T in fails:
+                move = False
+
+            if d ^ move:
+                return False
+
+        if order['action'] == 'S':
+            target = territory(subregion_key(order['target']))
+            attackers = set(T2 for T2, o2 in orders.iteritems()
+                            if o2['action'] == 'M'
+                            and territory(subregion_key(o2['target'])) == T)
+            cut = (T in fails
+                   or (target in attackers
+                       and attack_str[target] > hold_str[T])
+                   or any(attack_str[T2] > 0 for T2 in attackers
+                          if T2 != target))
+            if d ^ (not cut):
+                return False
+
+        if order['action'] in ('H', 'C'):
+            hold = True
+            if T in fails:
+                hold = False
+
+            attackers = set(T2 for T2, o2 in orders.iteritems()
+                            if o2['action'] == 'M'
+                            and territory(subregion_key(o2['target'])) == T)
+            if attackers:
+                S, P, A = max((attack_str[T2], prevent_str[T2], T2)
+                              for T2 in attackers)
+                if S > hold_str[T] and not any(prevent_str[T2] >= S
+                                               for T2 in attackers
+                                               if T2 != A):
+                    hold = False
+
+            if (d != False) ^ hold:
+                return False
+
+    return True
+
 # End of refactor wrapper functions
 
 def subregion_key(sr):
@@ -283,204 +470,16 @@ class Game(models.Model):
 
         return dep
 
-    def consistent(self, state, orders, fails, paradox):
-        state = dict(state)
-
+    def resolve(self, state, orders, dep, fails, paradox):
         turn = self.current_turn()
 
-        hold_str = defaultdict(int)
-        attack_str = defaultdict(int)
-        defend_str = defaultdict(int)
-        prevent_str = defaultdict(int)
-
-        path = {}
-        convoy = defaultdict(lambda: False) # True if this unit is successfully
-                                            # convoyed, False otherwise.
-
-        # determine if moves have a valid path
-        for T, order in orders.iteritems():
-            if order['action'] == 'M':
-                defend_str[T], path[T], P = 1, False, False
-
-                # matching successful convoy orders
-                matching = [
-                    subregion_key(orders[T2]['actor'])
-                    for T2, d2 in state.iteritems()
-                    if d2
-                    and orders[T2]['action'] == 'C'
-                    and assist(T, order, T2, orders[T2])
-                    and (order['government'] == orders[T2]['government']
-                         or order['convoy'])
-                ]
-                # matching successful and paradoxical convoy orders
-                p_matching = matching + [
-                    subregion_key(orders[T2]['actor'])
-                    for T2 in paradox
-                    if assist(T, order, T2, orders[T2])
-                    and order['convoy']
-                ]
-
-                # FIXME refactor
-                if any(subregion_key(order['actor']) in L
-                       and subregion_key(order['target']) in L
-                       for F, L in find_convoys(turn, matching)):
-                    # We have a valid convoy path if there is a chain
-                    # of successful convoys between our endpoints.
-                    path[T] = True
-
-                # FIXME refactor
-                if (not path[T] and
-                    any(subregion_key(order['actor']) in L
-                        and subregion_key(order['target']) in L
-                        for F, L in find_convoys(turn, p_matching))):
-                    # But if there is a path when paradoxical convoys
-                    # are included, we have a paradox.
-                    P = True
-
-                convoy[T] = path[T]
-                if (not order['convoy']
-                    and subregion_key(order['target']) in borders(subregion_key(order['actor']))):
-                    # if we are adjacent to the target, we can have a
-                    # path even without a successful convoy, but only
-                    # if we don't have a paradox
-                    path[T] = not P
-
-        # calculate base hold, attack, and prevent strengths
-        for T, order in orders.iteritems():
-            if order['action'] == 'M':
-                if path[T]:
-                    prevent_str[T], attack_str[T] = 1, 1
-
-                    if territory(subregion_key(order['target'])) in state:
-                        T2 = territory(subregion_key(order['target']))
-                        d2 = state[T2]
-
-                        # other unit moves away
-                        if (d2
-                            and orders[T2]['action'] == 'M'
-                            and not head_to_head(T, order, T2, orders[T2],
-                                                 convoy[T], convoy[T2])):
-                            attack_str[T] = 1
-                        # FIXME refactor
-                        # other unit is also ours
-                        elif Government.objects.filter(
-                            unit__turn=turn,
-                            unit__subregion__territory__id__in=(t_id(T), t_id(T2))
-                        ).distinct().count() == 1:
-                            attack_str[T] = 0
-
-                        # prevent strength
-                        if d2 and head_to_head(T, order, T2, orders[T2],
-                                               convoy[T], convoy[T2]):
-                            prevent_str[T] = 0
-
-                if T in state:
-                    hold_str[T] = 0 if state[T] else 1
-
-            if order['action'] in ('H', 'S', 'C'):
-                hold_str[T] = 1
-
-        # calculate additions to strengths due to support orders
-        for T, d in state.iteritems():
-            order = orders[T]
-
-            if not d or order['action'] != 'S':
-                continue
-
-            if order['target'] is None:
-                hold_str[territory(subregion_key(order['assist']))] += 1
-            else:
-                if attack_str[territory(subregion_key(order['assist']))]:
-                    T2 = territory(subregion_key(order['target']))
-                    d2 = state.get(T2, False)
-                    if T2 not in orders:
-                        attack_str[territory(subregion_key(order['assist']))] += 1
-                    elif (d2
-                          and orders[T2]['action'] == 'M'
-                          and not head_to_head(T, order, T2, orders[T2],
-                                               convoy[T], convoy[T2])):
-                        attack_str[territory(subregion_key(order['assist']))] += 1
-                    # FIXME refactor
-                    elif Government.objects.filter(
-                        unit__turn=turn,
-                        unit__subregion__territory__id__in=(t_id(T), t_id(T2))
-                    ).distinct().count() != 1:
-                        attack_str[territory(subregion_key(order['assist']))] += 1
-                if defend_str[territory(subregion_key(order['assist']))]:
-                    defend_str[territory(subregion_key(order['assist']))] += 1
-                if prevent_str[territory(subregion_key(order['assist']))]:
-                    prevent_str[territory(subregion_key(order['assist']))] += 1
-
-        # determine if the strength calculations are consistent with the state
-        for T, d in state.iteritems():
-            order = orders[T]
-
-            if order['action'] == 'M':
-                target = territory(subregion_key(order['target']))
-                move = True
-                if (target in orders
-                    and head_to_head(T, order, target, orders[target],
-                                     convoy[T], convoy[target])
-                    and attack_str[T] <= defend_str[target]):
-                    move = False
-                if attack_str[T] <= hold_str[target]:
-                    move = False
-                if any(attack_str[T] <= prevent_str[T2]
-                       for T2, o2 in orders.iteritems()
-                       if T != T2 and o2['action'] == 'M'
-                       and territory(subregion_key(o2['target'])) == target):
-                    move = False
-                if not path[T]:
-                    move = False
-                if T in fails:
-                    move = False
-
-                if d ^ move:
-                    return False
-
-            if order['action'] == 'S':
-                target = territory(subregion_key(order['target']))
-                attackers = set(T2 for T2, o2 in orders.iteritems()
-                                if o2['action'] == 'M'
-                                and territory(subregion_key(o2['target'])) == T)
-                cut = (T in fails
-                       or (target in attackers
-                           and attack_str[target] > hold_str[T])
-                       or any(attack_str[T2] > 0 for T2 in attackers
-                              if T2 != target))
-                if d ^ (not cut):
-                    return False
-
-            if order['action'] in ('H', 'C'):
-                hold = True
-                if T in fails:
-                    hold = False
-
-                attackers = set(T2 for T2, o2 in orders.iteritems()
-                                if o2['action'] == 'M'
-                                and territory(subregion_key(o2['target'])) == T)
-                if attackers:
-                    S, P, A = max((attack_str[T2], prevent_str[T2], T2)
-                                  for T2 in attackers)
-                    if S > hold_str[T] and not any(prevent_str[T2] >= S
-                                                   for T2 in attackers
-                                                   if T2 != A):
-                        hold = False
-
-                if (d != False) ^ hold:
-                    return False
-
-        return True
-
-    def resolve(self, state, orders, dep, fails, paradox):
         _state = set(T for T, d in state)
 
         # Only bother calculating whether the hypothetical solution is
         # consistent if all orders within it have no remaining
         # unresolved dependencies.
         if all(all(o in _state for o in dep[T]) for T, d in state):
-            # FIXME refactor?
-            if not self.consistent(state, orders, fails, paradox):
+            if not consistent(state, orders, fails, paradox, turn):
                 return None
 
         # For those orders not already in 'state', sort from least to
