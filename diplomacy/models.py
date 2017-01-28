@@ -153,7 +153,7 @@ def detect_paradox(orders, dep):
         visit(node, orders, dep)
     return result
 
-def consistent(state, orders, fails, paradox, turn):
+def consistent(state, orders, fails, paradox, turn, units):
     state = dict(state)
 
     hold_str = defaultdict(int)
@@ -229,12 +229,8 @@ def consistent(state, orders, fails, paradox, turn):
                         and not head_to_head(T, order, T2, orders[T2],
                                              convoy[T], convoy[T2])):
                         attack_str[T] = 1
-                    # FIXME refactor
                     # other unit is also ours
-                    elif Government.objects.filter(
-                        unit__turn=turn,
-                        unit__subregion__territory__id__in=(t_id(T), t_id(T2))
-                    ).distinct().count() == 1:
+                    elif units[T]['government'] == units[T2]['government']:
                         attack_str[T] = 0
 
                     # prevent strength
@@ -268,11 +264,8 @@ def consistent(state, orders, fails, paradox, turn):
                       and not head_to_head(T, order, T2, orders[T2],
                                            convoy[T], convoy[T2])):
                     attack_str[territory(subregion_key(order['assist']))] += 1
-                # FIXME refactor
-                elif Government.objects.filter(
-                    unit__turn=turn,
-                    unit__subregion__territory__id__in=(t_id(T), t_id(T2))
-                ).distinct().count() != 1:
+                # other unit is not ours
+                elif units[T]['government'] != units[T2]['government']:
                     attack_str[territory(subregion_key(order['assist']))] += 1
             if defend_str[territory(subregion_key(order['assist']))]:
                 defend_str[territory(subregion_key(order['assist']))] += 1
@@ -340,14 +333,14 @@ def consistent(state, orders, fails, paradox, turn):
 
     return True
 
-def resolve(state, orders, dep, fails, paradox, turn):
+def resolve(state, orders, dep, fails, paradox, turn, units):
     _state = set(T for T, d in state)
 
     # Only bother calculating whether the hypothetical solution is
     # consistent if all orders within it have no remaining
     # unresolved dependencies.
     if all(all(o in _state for o in dep[T]) for T, d in state):
-        if not consistent(state, orders, fails, paradox, turn):
+        if not consistent(state, orders, fails, paradox, turn, units):
             return None
 
     # For those orders not already in 'state', sort from least to
@@ -367,7 +360,7 @@ def resolve(state, orders, dep, fails, paradox, turn):
     # for 'success'.
     resolutions = (None, False) if T in paradox else (True, False)
     for S in resolutions:
-        result = resolve(state+((T, S),), orders, dep, fails, paradox, turn)
+        result = resolve(state+((T, S),), orders, dep, fails, paradox, turn, units)
         if result:
             return result
 
@@ -559,13 +552,15 @@ class Game(models.Model):
                   for o in turn.normalize_orders()
                   if o['actor'] is not None}
 
+        units = turn.get_units()
+
         if turn.season in ('S', 'F'):
             # FIXME: do something with civil disorder
             disorder = self.detect_civil_disorder(orders)
             dependencies = self.construct_dependencies(orders)
             paradox_convoys = detect_paradox(orders, dependencies)
             fails = turn.immediate_fails(orders)
-            decisions = resolve((), orders, dependencies, fails, paradox_convoys, turn)
+            decisions = resolve((), orders, dependencies, fails, paradox_convoys, turn, units)
         elif turn.season in ('SR', 'FR'):
             decisions = self.resolve_retreats(orders)
         else:
@@ -615,6 +610,16 @@ class Turn(models.Model):
         later = self.game.turn_set.filter(number=self.number + 1)
         if later:
             return later.get()
+
+    def get_units(self):
+        return {
+            territory(subregion_key(u.subregion)): {
+                'government': u.government.power.name,
+                'u_type': u.u_type,
+                'subregion': subregion_key(u.subregion),
+            }
+            for u in self.unit_set.all()
+        }
 
     def recent_orders(self):
         seasons = {'S': ['F', 'FR', 'FA'],
