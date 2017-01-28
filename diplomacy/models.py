@@ -689,8 +689,6 @@ class Turn(models.Model):
 
         unit = self.unit_set.filter(subregion=actor)
         target = Subregion.objects.filter(borders=actor)
-        sr_mapping = {sr.id: subregion_key(sr)
-                      for sr in Subregion.objects.select_related('territory')}
 
         if self.season in ('SR', 'FR'):
             # only dislodged units retreat
@@ -733,7 +731,7 @@ class Turn(models.Model):
             return {}
         return {
             empty: {x: (x in convoyable
-                        and any(sr_mapping[x] == b for b in borders(subregion_key(actor))))
+                        and any(x == subregion_id(b) for b in borders(subregion_key(actor))))
                     for x in target}
         }
 
@@ -1194,18 +1192,23 @@ class Turn(models.Model):
     # FIXME refactor: this method should take data calculated by the
     # engine and create the new ownership objects based on that.
     def update_ownership(self):
+        governments = {
+            own.territory_id: own.government_id
+            for own in self.prev.ownership_set.all()
+        }
+
         for t in Territory.objects.filter(subregion__sr_type='L'):
             u = self.unit_set.filter(subregion__territory=t)
 
-            try:
-                if self.season == 'FA' and u.exists():
-                    gvt = u[0].government
-                else:
-                    gvt = self.prev.ownership_set.get(territory=t).government
-            except ObjectDoesNotExist:
+            if self.season == 'FA' and u:
+                gvt = u[0].government_id
+            else:
+                gvt = governments.get(t.id)
+
+            if gvt is None:
                 continue
 
-            self.ownership_set.create(government=gvt, territory=t)
+            self.ownership_set.create(government_id=gvt, territory=t)
 
 
 def turn_create(sender, **kwargs):
