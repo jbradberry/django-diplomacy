@@ -625,7 +625,8 @@ class Turn(models.Model):
                 'u_type': u.u_type,
                 'subregion': subregion_key(u.subregion),
             }
-            for u in self.unit_set.select_related('subregion__territory')
+            for u in self.unit_set.select_related('subregion__territory',
+                                                  'government__power')
         }
 
     def recent_orders(self):
@@ -649,7 +650,7 @@ class Turn(models.Model):
         orders = defaultdict(partial(defaultdict, list))
 
         for t in turns:
-            for o in t.canonicalorder_set.all():
+            for o in t.canonicalorder_set.select_related('government__power'):
                 p = unicode(o.government.power)
                 u = t.unit_set.filter(government=o.government,
                                       subregion=o.actor)
