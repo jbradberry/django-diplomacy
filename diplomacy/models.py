@@ -608,15 +608,23 @@ class Turn(models.Model):
 
     @property
     def prev(self):
+        if getattr(self, '_prev', None):
+            return self._prev
+
         earlier = self.game.turn_set.filter(number=self.number - 1)
         if earlier:
-            return earlier.get()
+            self._prev = earlier.get()
+            return self._prev
 
     @property
     def next(self):
+        if getattr(self, '_next', None):
+            return self._next
+
         later = self.game.turn_set.filter(number=self.number + 1)
         if later:
-            return later.get()
+            self._next = later.get()
+            return self._next
 
     def get_units(self):
         return {
