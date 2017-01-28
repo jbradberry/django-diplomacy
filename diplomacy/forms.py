@@ -162,7 +162,8 @@ class OrderFormSet(BaseFormSet):
                         sr_type='S', unit__turn=self.turn
                     ).exclude(territory__subregion__sr_type='L').distinct()
                     fleets = [subregion_key(sr) for sr in fleets]
-                    convoys = find_convoys(self.turn, fleets)
+                    units = self.turn.get_units()
+                    convoys = find_convoys(units, fleets)
 
                     fleets = set()
                     for F, A in convoys:
@@ -177,7 +178,7 @@ class OrderFormSet(BaseFormSet):
                             fleets.discard(subregion_key(f2.instance.actor))
 
                     if not any(subregion_key(actor) in A and subregion_key(target) in A
-                               for F, A in find_convoys(self.turn, fleets)):
+                               for F, A in find_convoys(units, fleets)):
                         w = msgs['m-conv'].format(unit(actor), target)
                         warnings.append(w)
 

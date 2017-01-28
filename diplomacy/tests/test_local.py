@@ -31,7 +31,7 @@ class CorrectnessHelperTest(TestCase):
             sr_type='S', unit__turn=T
         ).exclude(territory__subregion__sr_type='L').distinct()
         fleets = [models.subregion_key(sr) for sr in fleets]
-        legal = models.find_convoys(T, fleets)
+        legal = models.find_convoys(T.get_units(), fleets)
 
         full_sr = models.Subregion.objects.select_related('territory')
 

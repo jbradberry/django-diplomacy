@@ -72,7 +72,7 @@ def keys_to_ids(seq):
 def borders(sr_key):
     return standard.mapping.get(sr_key, ())
 
-def find_convoys(turn, fleets):
+def find_convoys(units, fleets):
     """
     Generates pairs consisting of a cluster of adjacent non-coastal
     fleets, and the coastal territories that are reachable via convoy
@@ -96,10 +96,8 @@ def find_convoys(turn, fleets):
     groups = {frozenset(S) for S in index.itervalues()}
 
     armies = {
-        subregion_key(sr)
-        for sr in Subregion.objects.select_related('territory').filter(
-            sr_type='L', unit__turn=turn, territory__subregion__sr_type='S'
-        )
+        u['subregion'] for u in units.itervalues()
+        if u['u_type'] == 'A'
     }
 
     convoyable = []
@@ -153,7 +151,7 @@ def detect_paradox(orders, dep):
         visit(node, orders, dep)
     return result
 
-def consistent(state, orders, fails, paradox, turn, units):
+def consistent(state, orders, fails, paradox, units):
     state = dict(state)
 
     hold_str = defaultdict(int)
@@ -191,7 +189,7 @@ def consistent(state, orders, fails, paradox, turn, units):
             # FIXME refactor
             if any(subregion_key(order['actor']) in L
                    and subregion_key(order['target']) in L
-                   for F, L in find_convoys(turn, matching)):
+                   for F, L in find_convoys(units, matching)):
                 # We have a valid convoy path if there is a chain
                 # of successful convoys between our endpoints.
                 path[T] = True
@@ -200,7 +198,7 @@ def consistent(state, orders, fails, paradox, turn, units):
             if (not path[T] and
                 any(subregion_key(order['actor']) in L
                     and subregion_key(order['target']) in L
-                    for F, L in find_convoys(turn, p_matching))):
+                    for F, L in find_convoys(units, p_matching))):
                 # But if there is a path when paradoxical convoys
                 # are included, we have a paradox.
                 P = True
@@ -333,14 +331,14 @@ def consistent(state, orders, fails, paradox, turn, units):
 
     return True
 
-def resolve(state, orders, dep, fails, paradox, turn, units):
+def resolve(state, orders, dep, fails, paradox, units):
     _state = set(T for T, d in state)
 
     # Only bother calculating whether the hypothetical solution is
     # consistent if all orders within it have no remaining
     # unresolved dependencies.
     if all(all(o in _state for o in dep[T]) for T, d in state):
-        if not consistent(state, orders, fails, paradox, turn, units):
+        if not consistent(state, orders, fails, paradox, units):
             return None
 
     # For those orders not already in 'state', sort from least to
@@ -360,7 +358,7 @@ def resolve(state, orders, dep, fails, paradox, turn, units):
     # for 'success'.
     resolutions = (None, False) if T in paradox else (True, False)
     for S in resolutions:
-        result = resolve(state+((T, S),), orders, dep, fails, paradox, turn, units)
+        result = resolve(state+((T, S),), orders, dep, fails, paradox, units)
         if result:
             return result
 
@@ -560,7 +558,7 @@ class Game(models.Model):
             dependencies = self.construct_dependencies(orders)
             paradox_convoys = detect_paradox(orders, dependencies)
             fails = turn.immediate_fails(orders)
-            decisions = resolve((), orders, dependencies, fails, paradox_convoys, turn, units)
+            decisions = resolve((), orders, dependencies, fails, paradox_convoys, units)
         elif turn.season in ('SR', 'FR'):
             decisions = self.resolve_retreats(orders)
         else:
@@ -703,7 +701,7 @@ class Turn(models.Model):
                 sr_type='S', unit__turn=self
             ).exclude(territory__subregion__sr_type='L').distinct()
             fleets = [subregion_key(sr) for sr in fleets]
-            for fset, lset in find_convoys(self, fleets):
+            for fset, lset in find_convoys(self.get_units(), fleets):
                 if subregion_key(actor) in lset:
                     lset = set(keys_to_ids(lset))
                     target.update(lset)
@@ -752,7 +750,7 @@ class Turn(models.Model):
             id=actor.id).distinct()
         fleets = [subregion_key(sr) for sr in fleets]
 
-        for fset, lset in find_convoys(self, fleets):
+        for fset, lset in find_convoys(self.get_units(), fleets):
             for a in attackers:
                 if subregion_key(a) not in lset:
                     continue
@@ -779,7 +777,7 @@ class Turn(models.Model):
             sr_type='S', unit__turn=self
         ).exclude(territory__subregion__sr_type='L').distinct()
         fleets = [subregion_key(sr) for sr in fleets]
-        for fset, lset in find_convoys(self, fleets):
+        for fset, lset in find_convoys(self.get_units(), fleets):
             if subregion_key(actor) in fset:
                 lset = set(keys_to_ids(lset))
                 attackers = subr.filter(unit__turn=self, sr_type='L',
@@ -980,7 +978,7 @@ class Turn(models.Model):
                         and o2['target'] == o['target']
                     ]
                     if any(subregion_key(o['actor']) in L and subregion_key(o['target']) in L
-                           for F, L in find_convoys(self, matching)):
+                           for F, L in find_convoys(self.get_units(), matching)):
                         continue
                 else:
                     continue
