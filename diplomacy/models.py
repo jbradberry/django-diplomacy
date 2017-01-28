@@ -61,13 +61,22 @@ def t_id_closure():
 
 t_id = t_id_closure()
 
-def keys_to_ids(seq):
-    subregion_mapping = {
-        subregion_key(sr): sr.id
-        for sr in Subregion.objects.select_related('territory')
-    }
+def subregion_id_closure():
+    lookup_table = {}
 
-    return [subregion_mapping[sr] for sr in seq]
+    def subregion_id(sr_key):
+        if not lookup_table:
+            lookup_table.update((subregion_key(sr), sr.id)
+                                for sr in Subregion.objects.select_related('territory'))
+
+        return lookup_table[sr_key]
+
+    return subregion_id
+
+subregion_id = subregion_id_closure()
+
+def keys_to_ids(seq):
+    return [subregion_id(sr_key) for sr_key in seq]
 
 def borders(sr_key):
     return standard.mapping.get(sr_key, ())
@@ -616,7 +625,7 @@ class Turn(models.Model):
                 'u_type': u.u_type,
                 'subregion': subregion_key(u.subregion),
             }
-            for u in self.unit_set.all()
+            for u in self.unit_set.select_related('subregion__territory')
         }
 
     def recent_orders(self):
@@ -671,7 +680,8 @@ class Turn(models.Model):
 
         unit = self.unit_set.filter(subregion=actor)
         target = Subregion.objects.filter(borders=actor)
-        sr_mapping = {sr.id: subregion_key(sr) for sr in Subregion.objects.all()}
+        sr_mapping = {sr.id: subregion_key(sr)
+                      for sr in Subregion.objects.select_related('territory')}
 
         if self.season in ('SR', 'FR'):
             # only dislodged units retreat
@@ -699,7 +709,9 @@ class Turn(models.Model):
             target = set(target)
             fleets = Subregion.objects.filter(
                 sr_type='S', unit__turn=self
-            ).exclude(territory__subregion__sr_type='L').distinct()
+            ).exclude(
+                territory__subregion__sr_type='L'
+            ).select_related('territory').distinct()
             fleets = [subregion_key(sr) for sr in fleets]
             for fset, lset in find_convoys(self.get_units(), fleets):
                 if subregion_key(actor) in lset:
@@ -914,7 +926,9 @@ class Turn(models.Model):
         # the given order is legal.  Illegal orders are dropped.
         for gvt, post in most_recent.iteritems():
             i = 0
-            for o in post.orders.all():
+            for o in post.orders.select_related('actor__territory',
+                                                'assist__territory',
+                                                'target__territory'):
                 if self.is_legal(o):
                     if self.season == 'FA':
                         index = i
