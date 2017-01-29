@@ -816,22 +816,29 @@ class Turn(models.Model):
     def valid_convoy(self, actor, empty=None):
         if self.season not in ('S', 'F'):
             return {}
-        if self.unit_set.filter(subregion=actor).count() != 1:
+
+        actor_key = subregion_key(actor)
+        units = self.get_units()
+        if not unit_in(actor_key, units):
             return {}
-        if actor.sr_type != 'S':
+        if actor_key[2] != 'S':
             return {}
 
-        subr = Subregion.objects.all()
-        fleets = Subregion.objects.filter(
-            sr_type='S', unit__turn=self
-        ).exclude(territory__subregion__sr_type='L').distinct()
-        fleets = [subregion_key(sr) for sr in fleets]
-        for fset, lset in find_convoys(self.get_units(), fleets):
-            if subregion_key(actor) in fset:
+        fleets = [
+            u['subregion'] for S in units.itervalues() for u in S
+            if u['u_type'] == 'F'
+            and not any(p[2] == 'L' for p in territory_parts(territory(u['subregion'])))
+        ]
+
+        for fset, lset in find_convoys(units, fleets):
+            if actor_key in fset:
+                attackers = {
+                    u['subregion'] for S in units.itervalues() for u in S
+                    if u['u_type'] == 'A'
+                    and u['subregion'] in lset
+                }
                 lset = set(keys_to_ids(lset))
-                attackers = subr.filter(unit__turn=self, sr_type='L',
-                                        id__in=lset).distinct()
-                return {a.id: {x: False for x in lset - set([a.id])}
+                return {subregion_id(a): {x: False for x in lset - {subregion_id(a)}}
                         for a in attackers}
         return {}
 
