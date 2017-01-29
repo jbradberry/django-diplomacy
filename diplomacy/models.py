@@ -84,6 +84,12 @@ def borders(sr_key):
 def territory_parts(t_key):
     return standard.territories.get(t_key, ())
 
+def unit_in(u_key, units):
+    T = territory(u_key)
+    if T not in units:
+        return False
+    return any(u['subregion'] == u_key for u in units[T])
+
 def find_convoys(units, fleets):
     """
     Generates pairs consisting of a cluster of adjacent non-coastal
@@ -108,7 +114,8 @@ def find_convoys(units, fleets):
     groups = {frozenset(S) for S in index.itervalues()}
 
     armies = {
-        u['subregion'] for u in units.itervalues()
+        u['subregion'] for S in units.itervalues()
+        for u in S
         if u['u_type'] == 'A'
     }
 
@@ -240,7 +247,7 @@ def consistent(state, orders, fails, paradox, units):
                                              convoy[T], convoy[T2])):
                         attack_str[T] = 1
                     # other unit is also ours
-                    elif units[T]['government'] == units[T2]['government']:
+                    elif units[T][0]['government'] == units[T2][0]['government']:
                         attack_str[T] = 0
 
                     # prevent strength
@@ -275,7 +282,7 @@ def consistent(state, orders, fails, paradox, units):
                                            convoy[T], convoy[T2])):
                     attack_str[territory(subregion_key(order['assist']))] += 1
                 # other unit is not ours
-                elif units[T]['government'] != units[T2]['government']:
+                elif units[T][0]['government'] != units[T2][0]['government']:
                     attack_str[territory(subregion_key(order['assist']))] += 1
             if defend_str[territory(subregion_key(order['assist']))]:
                 defend_str[territory(subregion_key(order['assist']))] += 1
@@ -630,15 +637,22 @@ class Turn(models.Model):
             return self._next
 
     def get_units(self):
-        return {
-            territory(subregion_key(u.subregion)): {
+        units = defaultdict(list)
+        for u in self.unit_set.select_related('subregion__territory',
+                                              'displaced_from',
+                                              'standoff_from',
+                                              'government__power'):
+            units[territory(subregion_key(u.subregion))].append({
                 'government': u.government.power.name,
                 'u_type': u.u_type,
                 'subregion': subregion_key(u.subregion),
-            }
-            for u in self.unit_set.select_related('subregion__territory',
-                                                  'government__power')
-        }
+                'previous': subregion_key(getattr(u.previous, 'subregion', None)),
+                'dislodged': u.dislodged,
+                'displaced_from': getattr(u.displaced_from, 'name', ''),
+                'standoff_from': getattr(u.standoff_from, 'name', ''),
+            })
+
+        return units
 
     def recent_orders(self):
         seasons = {'S': ['F', 'FR', 'FA'],
@@ -683,7 +697,7 @@ class Turn(models.Model):
         if self.season in ('S', 'F'):
             actor_key = subregion_key(actor)
             units = self.get_units()
-            if units.get(territory(actor_key), {}).get('subregion') == actor_key:
+            if unit_in(actor_key, units):
                 return {empty: {empty: False}}
         return {}
 
@@ -747,7 +761,7 @@ class Turn(models.Model):
 
         units = self.get_units()
         actor_key = subregion_key(actor)
-        if units.get(territory(actor_key), {}).get('subregion') != actor_key:
+        if not unit_in(actor_key, units):
             return {}
 
         adj = {sr for b in borders(actor_key)
@@ -757,7 +771,7 @@ class Turn(models.Model):
         results = {
             subregion_id(a): {empty: False}
             for a in adj
-            if units.get(territory(a), {}).get('subregion') == a
+            if unit_in(a, units)
         }
 
         # support to attack
@@ -765,7 +779,7 @@ class Turn(models.Model):
             b for a in adj
             for b in borders(a)
             if b != actor_key
-            and units.get(territory(b), {}).get('subregion') == b
+            and unit_in(b, units)
         }
         for a in attackers:
             reachable = keys_to_ids(adj & set(borders(a)))
@@ -773,12 +787,14 @@ class Turn(models.Model):
 
         # support to convoyed attack
         attackers = {
-            u['subregion'] for u in units.itervalues()
+            u['subregion'] for S in units.itervalues()
+            for u in S
             if u['u_type'] == 'A'
             and u['subregion'] != actor_key
         }
         fleets = [
-            u['subregion'] for u in units.itervalues()
+            u['subregion'] for S in units.itervalues()
+            for u in S
             if u['u_type'] == 'F'
             and not any(p[2] == 'L' for p in territory_parts(u['subregion']))
             and u['subregion'] != actor_key  # if we are issuing a support, we can't convoy.
