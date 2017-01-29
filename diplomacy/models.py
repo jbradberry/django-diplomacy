@@ -681,7 +681,9 @@ class Turn(models.Model):
     # FIXME refactor
     def valid_hold(self, actor, empty=None):
         if self.season in ('S', 'F'):
-            if self.unit_set.filter(subregion=actor).count() == 1:
+            actor_key = subregion_key(actor)
+            units = self.get_units()
+            if units.get(territory(actor_key), {}).get('subregion') == actor_key:
                 return {empty: {empty: False}}
         return {}
 
