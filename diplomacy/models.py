@@ -81,6 +81,9 @@ def keys_to_ids(seq):
 def borders(sr_key):
     return standard.mapping.get(sr_key, ())
 
+def territory_parts(t_key):
+    return standard.territories.get(t_key, ())
+
 def find_convoys(units, fleets):
     """
     Generates pairs consisting of a cluster of adjacent non-coastal
@@ -739,45 +742,54 @@ class Turn(models.Model):
     def valid_support(self, actor, empty=None):
         if self.season not in ('S', 'F'):
             return {}
-        if self.unit_set.filter(subregion=actor).count() != 1:
+
+        units = self.get_units()
+        actor_key = subregion_key(actor)
+        if units.get(territory(actor_key), {}).get('subregion') != actor_key:
             return {}
 
-        sr = Subregion.objects.all()
-        adj = sr.filter(territory__subregion__borders=actor).distinct()
+        adj = {sr for b in borders(actor_key)
+               for sr in territory_parts(territory(b))}
 
         # support to hold
-        results = {a.id: {empty: False}
-                   for a in adj.filter(unit__turn=self)}
-
-        adj = set(subregion_key(a) for a in adj)
+        results = {
+            subregion_id(a): {empty: False}
+            for a in adj
+            if units.get(territory(a), {}).get('subregion') == a
+        }
 
         # support to attack
-        attackers = sr.filter(borders__territory__subregion__borders=actor,
-                              unit__turn=self
-                              ).exclude(id=actor.id).distinct()
+        attackers = {
+            b for a in adj
+            for b in borders(a)
+            if b != actor_key
+            and units.get(territory(b), {}).get('subregion') == b
+        }
         for a in attackers:
-            reachable = keys_to_ids(adj & set(borders(subregion_key(a))))
-            results.setdefault(a.id, {}).update((x, False) for x in reachable)
+            reachable = keys_to_ids(adj & set(borders(a)))
+            results.setdefault(subregion_id(a), {}).update((x, False) for x in reachable)
 
         # support to convoyed attack
-        attackers = sr.filter(unit__turn=self, sr_type='L'
-                              ).exclude(id=actor.id).distinct()
-        fleets = Subregion.objects.filter(
-            sr_type='S', unit__turn=self).exclude(
-            territory__subregion__sr_type='L').exclude(
-            # if we are issuing a support, we can't convoy.
-            id=actor.id).distinct()
-        fleets = [subregion_key(sr) for sr in fleets]
-
-        for fset, lset in find_convoys(self.get_units(), fleets):
+        attackers = {
+            u['subregion'] for u in units.itervalues()
+            if u['u_type'] == 'A'
+            and u['subregion'] != actor_key
+        }
+        fleets = [
+            u['subregion'] for u in units.itervalues()
+            if u['u_type'] == 'F'
+            and not any(p[2] == 'L' for p in territory_parts(u['subregion']))
+            and u['subregion'] != actor_key  # if we are issuing a support, we can't convoy.
+        ]
+        for fset, lset in find_convoys(units, fleets):
             for a in attackers:
-                if subregion_key(a) not in lset:
+                if a not in lset:
                     continue
-                if not (adj & lset - {subregion_key(a)}):
+                if not (adj & lset - {a}):
                     continue
-                results.setdefault(a.id, {}).update(
+                results.setdefault(subregion_id(a), {}).update(
                     (x, False)
-                    for x in keys_to_ids(adj & lset - {subregion_key(a)})
+                    for x in keys_to_ids(adj & lset - {a})
                 )
 
         return results
