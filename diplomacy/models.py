@@ -706,41 +706,41 @@ class Turn(models.Model):
         if self.season == 'FA':
             return {}
 
-        unit = self.unit_set.filter(subregion=actor)
-        target = Subregion.objects.filter(borders=actor)
+        actor_key = subregion_key(actor)
+        units = self.get_units()
+        actor_set = units.get(territory(actor_key), [])
+
+        target = borders(actor_key)
 
         if self.season in ('SR', 'FR'):
             # only dislodged units retreat
-            unit = unit.filter(dislodged=True)
-            target = target.exclude(
-                # only go to empty territories ...
-                territory__subregion__unit__turn=self
-            ).exclude(
-                # that we weren't displaced from ...
-                territory__in=[
-                    u.displaced_from for u in unit if u.displaced_from]
-            ).exclude(
-                # and that isn't empty because of a standoff.
-                territory__in=[
-                    u.standoff_from for u in
-                    self.unit_set.filter(standoff_from__isnull=False)]
-            ).distinct()
+            actor_set = [a for a in actor_set if a['dislodged']]
 
-        if unit.count() != 1:
+            target = [
+                t for t in target
+                # only go to empty territories ...
+                if territory(t) not in units
+                # that weren't the source of a displacing attack ...
+                and all(territory(t) != a['displaced_from'] for a in actor_set)
+                # and that isn't empty because of a standoff.
+                and all(territory(t) != u['standoff_from'] for S in units.itervalues() for u in S)
+            ]
+
+        if len(actor_set) != 1:
             return {}
-        target = [t.id for t in target]
+        target = [subregion_id(t) for t in target]
 
         convoyable = set()
-        if self.season in ('S', 'F') and unit.get().u_type == 'A':
+        # Is the unit a convoyable army?  If so, include places it can convoy to.
+        if self.season in ('S', 'F') and any(a['u_type'] == 'A' for a in actor_set):
             target = set(target)
-            fleets = Subregion.objects.filter(
-                sr_type='S', unit__turn=self
-            ).exclude(
-                territory__subregion__sr_type='L'
-            ).select_related('territory').distinct()
-            fleets = [subregion_key(sr) for sr in fleets]
-            for fset, lset in find_convoys(self.get_units(), fleets):
-                if subregion_key(actor) in lset:
+            fleets = [
+                u['subregion'] for S in units.itervalues() for u in S
+                if u['u_type'] == 'F'
+                and not any(p[2] == 'L' for p in territory_parts(territory(u['subregion'])))
+            ]
+            for fset, lset in find_convoys(units, fleets):
+                if actor_key in lset:
                     lset = set(keys_to_ids(lset))
                     target.update(lset)
                     convoyable.update(lset)
