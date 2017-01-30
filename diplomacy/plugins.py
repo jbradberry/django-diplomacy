@@ -45,7 +45,12 @@ class TurnGeneration(object):
         empire = obj.government_set.filter(user=user)
         if not empire:
             return False
-        return empire.supply_centers(turn) or empire.units(turn)
+        return (
+            any(o['government'] == empire.power.name and o['is_supply']
+                for o in turn.get_ownership().itervalues())
+            or any(u['government'] == empire.power.name
+                   for S in turn.get_units().itervalues() for u in S)
+        )
 
     def is_ready(self, generator):
         readys = set(r.agent.pk for r in generator.readies.all())

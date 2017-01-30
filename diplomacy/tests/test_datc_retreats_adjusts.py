@@ -800,8 +800,8 @@ class Building(TestCase):
         create_units(units, T)
 
         self.assertEqual(T.unit_set.count(), 2)
-        gvt = models.Government.objects.get(power__name="Germany")
-        self.assertEqual(gvt.builds_available(T), 1)
+        builds_available = T.builds()
+        self.assertEqual(builds_available.get('Germany', 0), 1)
 
         orders = {"Germany": ("A Warsaw B",
                               "A Kiel B",

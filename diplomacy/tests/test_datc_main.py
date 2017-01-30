@@ -578,8 +578,8 @@ class CoastalIssues(TestCase):
         orders = {"Russia": ("F St. Petersburg B",)}
         create_orders(orders, T)
 
-        gvt = models.Government.objects.get(power__name="Russia")
-        self.assertEqual(gvt.builds_available(), 4)
+        builds_available = T.builds()
+        self.assertEqual(builds_available.get('Russia', 0), 4)
         o = models.Order.objects.get()
         self.assertIsNone(o.actor)
         self.assertTrue(T.is_legal(o))
