@@ -47,7 +47,7 @@ class TurnGeneration(object):
             return False
         return (
             any(o['government'] == empire.power.name and o['is_supply']
-                for o in turn.get_ownership().itervalues())
+                for o in turn.get_ownership())
             or any(u['government'] == empire.power.name
                    for u in turn.get_units())
         )

@@ -646,17 +646,15 @@ class Turn(models.Model):
         ]
 
     def get_ownership(self):
-        return {
-            o.territory.name: {
-                'territory': o.territory.name,
-                'government': o.government.power.name,
-                'is_supply': o.territory.is_supply,
-            }
+        return [
+            {'territory': o.territory.name,
+             'government': o.government.power.name,
+             'is_supply': o.territory.is_supply}
             for o in self.ownership_set.select_related('territory', 'government__power')
-        }
+        ]
 
     def supplycenters(self):
-        counts = Counter(o['government'] for o in self.get_ownership().itervalues()
+        counts = Counter(o['government'] for o in self.get_ownership()
                          if o['is_supply'])
         return dict(counts)
 
@@ -858,7 +856,8 @@ class Turn(models.Model):
 
         actor_key = subregion_key(actor)
 
-        current_government = owns.get(territory(actor_key), {}).get('government')
+        owns_index = {o['territory']: o for o in owns}
+        current_government = owns_index.get(territory(actor_key), {}).get('government')
         home_government, is_supply = '', False
         if territory(actor_key) in standard.definition:
             home_government, is_supply = standard.definition[territory(actor_key)][:2]
@@ -931,8 +930,9 @@ class Turn(models.Model):
             if unit and unit[0]['government'] != order['government'].power.name:
                 return False
         elif order['action'] == 'B':
-            if (owns.get(territory(actor_key), {}).get('government')
-                != order['government'].power.name):
+            if not any(o['territory'] == territory(actor_key)
+                       and o['government'] == order['government'].power.name
+                       for o in owns):
                 return False
 
         actions = {'H': self.valid_hold,
