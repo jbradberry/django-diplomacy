@@ -49,7 +49,7 @@ class TurnGeneration(object):
             any(o['government'] == empire.power.name and o['is_supply']
                 for o in turn.get_ownership().itervalues())
             or any(u['government'] == empire.power.name
-                   for S in turn.get_units().itervalues() for u in S)
+                   for u in turn.get_units())
         )
 
     def is_ready(self, generator):

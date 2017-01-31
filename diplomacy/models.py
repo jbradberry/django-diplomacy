@@ -85,10 +85,7 @@ def territory_parts(t_key):
     return standard.territories.get(t_key, ())
 
 def unit_in(u_key, units):
-    T = territory(u_key)
-    if T not in units:
-        return False
-    return any(u['subregion'] == u_key for u in units[T])
+    return any(u['subregion'] == u_key for u in units)
 
 def find_convoys(units, fleets):
     """
@@ -113,11 +110,7 @@ def find_convoys(units, fleets):
 
     groups = {frozenset(S) for S in index.itervalues()}
 
-    armies = {
-        u['subregion'] for S in units.itervalues()
-        for u in S
-        if u['u_type'] == 'A'
-    }
+    armies = {u['subregion'] for u in units if u['u_type'] == 'A'}
 
     convoyable = []
     for gset in groups:
@@ -172,6 +165,7 @@ def detect_paradox(orders, dep):
 
 def consistent(state, orders, fails, paradox, units):
     state = dict(state)
+    unit_index = {territory(u['subregion']): u for u in units}
 
     hold_str = defaultdict(int)
     attack_str = defaultdict(int)
@@ -247,7 +241,7 @@ def consistent(state, orders, fails, paradox, units):
                                              convoy[T], convoy[T2])):
                         attack_str[T] = 1
                     # other unit is also ours
-                    elif units[T][0]['government'] == units[T2][0]['government']:
+                    elif unit_index[T]['government'] == unit_index[T2]['government']:
                         attack_str[T] = 0
 
                     # prevent strength
@@ -282,7 +276,7 @@ def consistent(state, orders, fails, paradox, units):
                                            convoy[T], convoy[T2])):
                     attack_str[territory(subregion_key(order['assist']))] += 1
                 # other unit is not ours
-                elif units[T][0]['government'] != units[T2][0]['government']:
+                elif unit_index[T]['government'] != unit_index[T2]['government']:
                     attack_str[territory(subregion_key(order['assist']))] += 1
             if defend_str[territory(subregion_key(order['assist']))]:
                 defend_str[territory(subregion_key(order['assist']))] += 1
@@ -637,22 +631,19 @@ class Turn(models.Model):
             return self._next
 
     def get_units(self):
-        units = defaultdict(list)
-        for u in self.unit_set.select_related('subregion__territory',
-                                              'displaced_from',
-                                              'standoff_from',
-                                              'government__power'):
-            units[territory(subregion_key(u.subregion))].append({
-                'government': u.government.power.name,
-                'u_type': u.u_type,
-                'subregion': subregion_key(u.subregion),
-                'previous': subregion_key(getattr(u.previous, 'subregion', None)),
-                'dislodged': u.dislodged,
-                'displaced_from': getattr(u.displaced_from, 'name', ''),
-                'standoff_from': getattr(u.standoff_from, 'name', ''),
-            })
-
-        return units
+        return [
+            {'government': u.government.power.name,
+             'u_type': u.u_type,
+             'subregion': subregion_key(u.subregion),
+             'previous': subregion_key(getattr(u.previous, 'subregion', None)),
+             'dislodged': u.dislodged,
+             'displaced_from': getattr(u.displaced_from, 'name', ''),
+             'standoff_from': getattr(u.standoff_from, 'name', '')}
+            for u in self.unit_set.select_related('subregion__territory',
+                                                  'displaced_from',
+                                                  'standoff_from',
+                                                  'government__power')
+        ]
 
     def get_ownership(self):
         return {
@@ -673,9 +664,8 @@ class Turn(models.Model):
         builds = defaultdict(int)
         builds.update(self.supplycenters())
 
-        for S in self.get_units().itervalues():
-            for u in S:
-                builds[u['government']] -= 1
+        for u in self.get_units():
+            builds[u['government']] -= 1
 
         return builds
 
@@ -731,7 +721,7 @@ class Turn(models.Model):
             return {}
 
         actor_key = subregion_key(actor)
-        actor_set = units.get(territory(actor_key), [])
+        actor_set = [u for u in units if territory(u['subregion']) == territory(actor_key)]
 
         target = borders(actor_key)
 
@@ -742,11 +732,11 @@ class Turn(models.Model):
             target = [
                 t for t in target
                 # only go to empty territories ...
-                if territory(t) not in units
+                if not any(territory(e['subregion']) == territory(t) for e in units)
                 # that weren't the source of a displacing attack ...
                 and all(territory(t) != a['displaced_from'] for a in actor_set)
                 # and that isn't empty because of a standoff.
-                and all(territory(t) != u['standoff_from'] for S in units.itervalues() for u in S)
+                and all(territory(t) != u['standoff_from'] for u in units)
             ]
 
         if len(actor_set) != 1:
@@ -758,7 +748,7 @@ class Turn(models.Model):
         if self.season in ('S', 'F') and any(a['u_type'] == 'A' for a in actor_set):
             target = set(target)
             fleets = [
-                u['subregion'] for S in units.itervalues() for u in S
+                u['subregion'] for u in units
                 if u['u_type'] == 'F'
                 and not any(p[2] == 'L' for p in territory_parts(territory(u['subregion'])))
             ]
@@ -809,14 +799,12 @@ class Turn(models.Model):
 
         # support to convoyed attack
         attackers = {
-            u['subregion'] for S in units.itervalues()
-            for u in S
+            u['subregion'] for u in units
             if u['u_type'] == 'A'
             and u['subregion'] != actor_key
         }
         fleets = [
-            u['subregion'] for S in units.itervalues()
-            for u in S
+            u['subregion'] for u in units
             if u['u_type'] == 'F'
             and not any(p[2] == 'L' for p in territory_parts(u['subregion']))
             and u['subregion'] != actor_key  # if we are issuing a support, we can't convoy.
@@ -846,7 +834,7 @@ class Turn(models.Model):
             return {}
 
         fleets = [
-            u['subregion'] for S in units.itervalues() for u in S
+            u['subregion'] for u in units
             if u['u_type'] == 'F'
             and not any(p[2] == 'L' for p in territory_parts(territory(u['subregion'])))
         ]
@@ -854,7 +842,7 @@ class Turn(models.Model):
         for fset, lset in find_convoys(units, fleets):
             if actor_key in fset:
                 attackers = {
-                    u['subregion'] for S in units.itervalues() for u in S
+                    u['subregion'] for u in units
                     if u['u_type'] == 'A'
                     and u['subregion'] in lset
                 }
@@ -879,7 +867,7 @@ class Turn(models.Model):
         if not (is_supply and self.builds().get(current_government, 0) > 0):
             return {}
         # Only can build if the territory is currently unoccupied.
-        if units.get(territory(actor_key)):
+        if any(territory(u['subregion']) == territory(actor_key) for u in units):
             return {}
         # And only if the territory is one of this government's "home" territories.
         if current_government == home_government:
@@ -892,7 +880,7 @@ class Turn(models.Model):
             return {}
 
         actor_key = subregion_key(actor)
-        unit = units.get(territory(actor_key), ())
+        unit = [u for u in units if territory(u['subregion']) == territory(actor_key)]
         if self.season in ('SR', 'FR'):
             if not any(u['dislodged'] for u in unit):
                 return {}
@@ -922,8 +910,7 @@ class Turn(models.Model):
                 return False
             unit = ()
         else:
-            unit = [u for u in units.get(territory(actor_key), ())
-                    if u['subregion'] == actor_key]
+            unit = [u for u in units if u['subregion'] == actor_key]
 
         if order['actor'] is None or order['action'] is None:
             return (self.season == 'FA' and
