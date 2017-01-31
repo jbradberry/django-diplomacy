@@ -87,6 +87,11 @@ def territory_parts(t_key):
 def unit_in(u_key, units):
     return any(u['subregion'] == u_key for u in units)
 
+def supplycenters(owns):
+    counts = Counter(o['government'] for o in owns
+                     if o['is_supply'])
+    return counts
+
 def find_convoys(units, fleets):
     """
     Generates pairs consisting of a cluster of adjacent non-coastal
@@ -653,14 +658,9 @@ class Turn(models.Model):
             for o in self.ownership_set.select_related('territory', 'government__power')
         ]
 
-    def supplycenters(self):
-        counts = Counter(o['government'] for o in self.get_ownership()
-                         if o['is_supply'])
-        return dict(counts)
-
     def builds(self):
         builds = defaultdict(int)
-        builds.update(self.supplycenters())
+        builds.update(supplycenters(self.get_ownership()))
 
         for u in self.get_units():
             builds[u['government']] -= 1
