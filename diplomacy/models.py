@@ -92,6 +92,15 @@ def supplycenters(owns):
                      if o['is_supply'])
     return counts
 
+def builds_available(units, owns):
+    builds = defaultdict(int)
+    builds.update(supplycenters(owns))
+
+    for u in units:
+        builds[u['government']] -= 1
+
+    return builds
+
 def find_convoys(units, fleets):
     """
     Generates pairs consisting of a cluster of adjacent non-coastal
@@ -658,15 +667,6 @@ class Turn(models.Model):
             for o in self.ownership_set.select_related('territory', 'government__power')
         ]
 
-    def builds(self):
-        builds = defaultdict(int)
-        builds.update(supplycenters(self.get_ownership()))
-
-        for u in self.get_units():
-            builds[u['government']] -= 1
-
-        return builds
-
     def recent_orders(self):
         seasons = {'S': ['F', 'FR', 'FA'],
                    'SR': ['S'],
@@ -863,7 +863,7 @@ class Turn(models.Model):
             home_government, is_supply = standard.definition[territory(actor_key)][:2]
 
         # It has to be a supply center and the current government has to have builds available.
-        if not (is_supply and self.builds().get(current_government, 0) > 0):
+        if not (is_supply and builds_available(units, owns).get(current_government, 0) > 0):
             return {}
         # Only can build if the territory is currently unoccupied.
         if any(territory(u['subregion']) == territory(actor_key) for u in units):
@@ -883,7 +883,7 @@ class Turn(models.Model):
         if self.season in ('SR', 'FR'):
             if not any(u['dislodged'] for u in unit):
                 return {}
-        elif self.builds().get(unit[0]['government'], 0) >= 0:
+        elif builds_available(units, owns).get(unit[0]['government'], 0) >= 0:
             return {}
         return {empty: {empty: False}}
 
@@ -902,7 +902,7 @@ class Turn(models.Model):
         actor_key = subregion_key(order['actor'])
         units = self.get_units()
         owns = self.get_ownership()
-        builds_available = self.builds()  # FIXME
+        builds = builds_available(units, owns)
 
         if order['actor'] is None:
             if self.season != 'FA':
@@ -913,7 +913,7 @@ class Turn(models.Model):
 
         if order['actor'] is None or order['action'] is None:
             return (self.season == 'FA' and
-                    builds_available.get(order['government'].power.name, 0) > 0)
+                    builds.get(order['government'].power.name, 0) > 0)
         if order['action'] != 'B' and not unit:
             return False
 
@@ -958,14 +958,14 @@ class Turn(models.Model):
         # Construct the set of default orders.  This set is exhaustive, no units
         # outside or number of builds in excess will be permitted.
         if self.season == 'FA':
-            builds_available = self.builds()
+            builds = builds_available(self.get_units(), self.get_ownership())
             orders = {
                 (g.id, s): {'government': g, 'turn': self,
                             'actor': None, 'action': None,
                             'assist': None, 'target': None,
                             'via_convoy': False, 'convoy': False}
                 for g in gvts
-                for s in xrange(abs(builds_available.get(g.power.name, 0)))
+                for s in xrange(abs(builds.get(g.power.name, 0)))
             }
         else:
             action = 'H' if self.season in ('S', 'F') else None
@@ -1161,11 +1161,11 @@ class Turn(models.Model):
 
     def _update_units_autodisband(self, orders, units):
         subr = Subregion.objects.all()
-        builds_available = self.prev.builds()
+        builds = builds_available(self.prev.get_units(), self.prev.get_ownership())
 
         for g in self.game.government_set.all():
-            builds = builds_available.get(g.power.name, 0) + len(self.disbands[g.id])
-            if builds >= 0:
+            our_builds = builds.get(g.power.name, 0) + len(self.disbands[g.id])
+            if our_builds >= 0:
                 continue
 
             # If we've reached this point, we have more units than allowed.
@@ -1223,8 +1223,8 @@ class Turn(models.Model):
                                                        'target': None, 'via_convoy': False}
                 del units[(territory(subregion_key(u)), False)]
                 self.disbands[g.id].add(territory(subregion_key(u)))
-                builds += 1
-                if builds == 0:
+                our_builds += 1
+                if our_builds == 0:
                     break
 
     def update_units(self, orders, decisions):
@@ -1330,9 +1330,9 @@ class Government(models.Model):
         if turn is None:
             return Subregion.objects.none()
 
-        builds_available = turn.builds()
+        builds = builds_available(turn.get_units(), turn.get_ownership())
 
-        if turn.season == 'FA' and builds_available.get(self.power.name, 0) > 0:
+        if turn.season == 'FA' and builds.get(self.power.name, 0) > 0:
             actors = Subregion.objects.filter(
                 territory__is_supply=True,
                 territory__power__government=self, # home supply center
@@ -1352,9 +1352,9 @@ class Government(models.Model):
         return actors
 
     def slots(self, turn):
-        builds_available = turn.builds()
+        builds = builds_available(turn.get_units(), turn.get_ownership())
         if getattr(turn, 'season', '') == 'FA':
-            return abs(builds_available.get(self.power.name, 0))
+            return abs(builds.get(self.power.name, 0))
         return self.actors(turn).count()
 
     def filter_orders(self):
@@ -1362,13 +1362,13 @@ class Government(models.Model):
         season = turn.season
         units = turn.get_units()
         owns = turn.get_ownership()
-        builds_available = self.builds()  # FIXME
+        builds = builds_available(units, owns)
 
         actions = {'S': ('H', 'M', 'S', 'C'),
                    'F': ('H', 'M', 'S', 'C'),
                    'SR': ('M', 'D'),
                    'FR': ('M', 'D'),
-                   'FA': ('B',) if builds_available.get(self.power.name, 0) > 0 else ('D',)}
+                   'FA': ('B',) if builds.get(self.power.name, 0) > 0 else ('D',)}
         helper = {'H': turn.valid_hold,
                   'M': turn.valid_move,
                   'S': turn.valid_support,
@@ -1384,7 +1384,7 @@ class Government(models.Model):
                     continue
                 tree.setdefault(a.id, {})[x] = result
 
-        if season == 'FA' and builds > 0:
+        if season == 'FA' and builds.get(self.power.name, 0) > 0:
             tree[u''] = {u'': {u'': {u'': False}}}
 
         return tree

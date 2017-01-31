@@ -3,7 +3,8 @@ from collections import defaultdict
 from django.forms import Form, CharField, Textarea, ValidationError
 from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
 
-from .models import Order, Subregion, Unit, territory, borders, find_convoys, subregion_key
+from .models import (Order, Subregion, Unit, territory, borders, find_convoys, subregion_key,
+                     builds_available)
 from .helpers import unit
 
 
@@ -67,7 +68,8 @@ class OrderForm(ModelForm):
         actor = self.cleaned_data.get('actor')
         if turn.season == 'FA':
             # Fall Adjustment builds are optional.
-            if self.government.builds_available() > 0 and actor is None:
+            builds = builds_available(turn.get_units(), turn.get_ownership())
+            if builds.get(self.government.power.name, 0) > 0 and actor is None:
                 return {}
         else:
             if actor != self.initial['actor']:
@@ -206,7 +208,9 @@ class OrderFormSet(BaseFormSet):
             actors.add(actor)
 
         if self.season == 'FA':
-            builds = self.government.builds_available()
+            builds = builds_available(
+                self.turn.get_units(), self.turn.get_ownership()
+            ).get(self.government.power.name)
             if builds >= 0 and len(actors) > builds:
                 raise ValidationError("You may not build more units than"
                                       " you have supply centers.")
