@@ -718,21 +718,19 @@ class Turn(models.Model):
                       for power, adict in orders.iteritems())
 
     # FIXME refactor
-    def valid_hold(self, actor, empty=None):
+    def valid_hold(self, actor, units, owns, empty=None):
         if self.season in ('S', 'F'):
             actor_key = subregion_key(actor)
-            units = self.get_units()
             if unit_in(actor_key, units):
                 return {empty: {empty: False}}
         return {}
 
     # FIXME refactor
-    def valid_move(self, actor, empty=None):
+    def valid_move(self, actor, units, owns, empty=None):
         if self.season == 'FA':
             return {}
 
         actor_key = subregion_key(actor)
-        units = self.get_units()
         actor_set = units.get(territory(actor_key), [])
 
         target = borders(actor_key)
@@ -780,11 +778,10 @@ class Turn(models.Model):
         }
 
     # FIXME refactor
-    def valid_support(self, actor, empty=None):
+    def valid_support(self, actor, units, owns, empty=None):
         if self.season not in ('S', 'F'):
             return {}
 
-        units = self.get_units()
         actor_key = subregion_key(actor)
         if not unit_in(actor_key, units):
             return {}
@@ -838,12 +835,11 @@ class Turn(models.Model):
         return results
 
     # FIXME refactor
-    def valid_convoy(self, actor, empty=None):
+    def valid_convoy(self, actor, units, owns, empty=None):
         if self.season not in ('S', 'F'):
             return {}
 
         actor_key = subregion_key(actor)
-        units = self.get_units()
         if not unit_in(actor_key, units):
             return {}
         if actor_key[2] != 'S':
@@ -868,13 +864,11 @@ class Turn(models.Model):
         return {}
 
     # FIXME refactor
-    def valid_build(self, actor, empty=None):
+    def valid_build(self, actor, units, owns, empty=None):
         if not self.season == 'FA':
             return {}
 
         actor_key = subregion_key(actor)
-        units = self.get_units()
-        owns = self.get_ownership()
 
         current_government = owns.get(territory(actor_key), {}).get('government')
         home_government, is_supply = '', False
@@ -893,12 +887,11 @@ class Turn(models.Model):
         return {}
 
     # FIXME refactor
-    def valid_disband(self, actor, empty=None):
+    def valid_disband(self, actor, units, owns, empty=None):
         if self.season in ('S', 'F'):
             return {}
 
         actor_key = subregion_key(actor)
-        units = self.get_units()
         unit = units.get(territory(actor_key), ())
         if self.season in ('SR', 'FR'):
             if not any(u['dislodged'] for u in unit):
@@ -919,37 +912,40 @@ class Turn(models.Model):
                      'actor': order.actor, 'action': order.action,
                      'assist': order.assist, 'target': order.target}
 
-        builds_available = self.builds()
+        actor_key = subregion_key(order['actor'])
+        units = self.get_units()
+        owns = self.get_ownership()
+        builds_available = self.builds()  # FIXME
 
         if order['actor'] is None:
             if self.season != 'FA':
                 return False
-            units = Unit.objects.none()
+            unit = ()
         else:
-            units = order['actor'].unit_set.filter(turn=self)
+            unit = [u for u in units.get(territory(actor_key), ())
+                    if u['subregion'] == actor_key]
 
         if order['actor'] is None or order['action'] is None:
             return (self.season == 'FA' and
                     builds_available.get(order['government'].power.name, 0) > 0)
-        if order['action'] != 'B' and not units.exists():
+        if order['action'] != 'B' and not unit:
             return False
 
         if self.season in ('S', 'F'):
-            if units.get().government != order['government']:
+            if unit[0]['government'] != order['government'].power.name:
                 return False
         elif self.season in ('SR', 'FR'):
-            units = units.filter(dislodged=True)
-            if not units.exists():
+            unit = [u for u in unit if u['dislodged']]
+            if not unit:
                 return False
-            if units.get().government != order['government']:
+            if unit[0]['government'] != order['government'].power.name:
                 return False
         elif order['action'] == 'D':
-            if units and units.get().government != order['government']:
+            if unit and unit[0]['government'] != order['government'].power.name:
                 return False
         elif order['action'] == 'B':
-            if not self.ownership_set.filter(
-                territory__subregion=order['actor'],
-                government=order['government']).exists():
+            if (owns.get(territory(actor_key), {}).get('government')
+                != order['government'].power.name):
                 return False
 
         actions = {'H': self.valid_hold,
@@ -958,7 +954,7 @@ class Turn(models.Model):
                    'C': self.valid_convoy,
                    'B': self.valid_build,
                    'D': self.valid_disband}
-        tree = actions[order['action']](order['actor'])
+        tree = actions[order['action']](order['actor'], units, owns)
         if not tree or getattr(order['assist'], 'id', None) not in tree:
             return False
         tree = tree[getattr(order['assist'], 'id', None)]
@@ -1377,13 +1373,15 @@ class Government(models.Model):
     def filter_orders(self):
         turn = self.game.current_turn()
         season = turn.season
-        builds = self.builds_available()
+        units = turn.get_units()
+        owns = turn.get_ownership()
+        builds_available = self.builds()  # FIXME
 
         actions = {'S': ('H', 'M', 'S', 'C'),
                    'F': ('H', 'M', 'S', 'C'),
                    'SR': ('M', 'D'),
                    'FR': ('M', 'D'),
-                   'FA': ('B',) if builds > 0 else ('D',)}
+                   'FA': ('B',) if builds_available.get(self.power.name, 0) > 0 else ('D',)}
         helper = {'H': turn.valid_hold,
                   'M': turn.valid_move,
                   'S': turn.valid_support,
@@ -1394,7 +1392,7 @@ class Government(models.Model):
         tree = {}
         for a in self.actors(turn):
             for x in actions[turn.season]:
-                result = helper[x](a, u'')
+                result = helper[x](a, units, owns, u'')
                 if not result:
                     continue
                 tree.setdefault(a.id, {})[x] = result
