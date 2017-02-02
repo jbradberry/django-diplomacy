@@ -35,8 +35,10 @@ class Retreating(TestCase):
                             "F Aegean Sea S F Ionian Sea - Greece")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -46,10 +48,12 @@ class Retreating(TestCase):
                   "Turkey": ("F Greece M Albania",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T, action='M'):
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
         self.assertFalse(
-            T.is_legal(models.Order.objects.get(post__turn=T, action='S')))
+            T.is_legal(models.Order.objects.get(post__turn=T, action='S'), units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -87,8 +91,10 @@ class Retreating(TestCase):
                              "F Holland H")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -98,10 +104,12 @@ class Retreating(TestCase):
                              "F Holland S F Edinburgh - North Sea")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T, action='M'):
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
         self.assertFalse(
-            T.is_legal(models.Order.objects.get(post__turn=T, action='S')))
+            T.is_legal(models.Order.objects.get(post__turn=T, action='S'), units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -145,8 +153,10 @@ class Retreating(TestCase):
                               "A Ruhr M Holland")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -155,8 +165,10 @@ class Retreating(TestCase):
                               "F North Sea C A Holland - Yorkshire")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertFalse(T.is_legal(o))
+            self.assertFalse(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -187,8 +199,10 @@ class Retreating(TestCase):
                               "A Ruhr M Holland")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -197,12 +211,14 @@ class Retreating(TestCase):
                               "F North Sea M Norwegian Sea")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         o = models.Order.objects.get(
             post__turn=T, actor__territory__name="Holland")
-        self.assertTrue(T.is_legal(o))
+        self.assertTrue(T.is_legal(o, units, owns))
         o = models.Order.objects.get(
             post__turn=T, actor__territory__name="North Sea")
-        self.assertFalse(T.is_legal(o))
+        self.assertFalse(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -235,8 +251,10 @@ class Retreating(TestCase):
                   "Turkey": ("F Ankara H",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -244,8 +262,10 @@ class Retreating(TestCase):
         orders = {"Turkey": ("F Ankara M Black Sea",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertFalse(T.is_legal(o))
+            self.assertFalse(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -273,8 +293,10 @@ class Retreating(TestCase):
                   "Italy": ("A Vienna H",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -282,8 +304,10 @@ class Retreating(TestCase):
         orders = {"Italy": ("A Vienna M Bohemia",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         self.assertFalse(
-            T.is_legal(models.Order.objects.get(post__turn=T)))
+            T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -307,8 +331,10 @@ class Retreating(TestCase):
                             "A Bohemia H")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -317,8 +343,10 @@ class Retreating(TestCase):
                             "A Vienna M Tyrolia")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -346,8 +374,10 @@ class Retreating(TestCase):
                              "F Holland H")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -360,8 +390,10 @@ class Retreating(TestCase):
                              "F Holland M North Sea")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -403,8 +435,10 @@ class Retreating(TestCase):
                   "Russia": ("A Prussia M Berlin",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -415,8 +449,10 @@ class Retreating(TestCase):
         orders = {"Germany": ("F Kiel M Berlin",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -446,8 +482,10 @@ class Retreating(TestCase):
                              "A Silesia S A Warsaw - Prussia")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -459,16 +497,18 @@ class Retreating(TestCase):
                   "Germany": ("A Prussia M Berlin",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         self.assertFalse(
             T.is_legal(
                 models.Order.objects.get(
                     post__turn=T,
-                    post__government__power__name="England")))
+                    post__government__power__name="England"), units, owns))
         self.assertTrue(
             T.is_legal(
                 models.Order.objects.get(
                     post__turn=T,
-                    post__government__power__name="Germany")))
+                    post__government__power__name="Germany"), units, owns))
         T.game.generate()
         T = T.game.current_turn()
 
@@ -500,8 +540,10 @@ class Retreating(TestCase):
                   "Italy": ("A Marseilles H",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -518,7 +560,9 @@ class Retreating(TestCase):
         orders = {"Italy": ("A Marseilles M Gascony",)}
         create_orders(orders, T)
 
-        self.assertTrue(T.is_legal(models.Order.objects.get(post__turn=T)))
+        units = T.get_units()
+        owns = T.get_ownership()
+        self.assertTrue(T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -556,8 +600,10 @@ class Retreating(TestCase):
                        "A Clyde S A Edinburgh - Liverpool")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -579,7 +625,9 @@ class Retreating(TestCase):
         orders = {"England": ("A Liverpool M Edinburgh",)}
         create_orders(orders, T)
 
-        self.assertTrue(T.is_legal(models.Order.objects.get(post__turn=T)))
+        units = T.get_units()
+        owns = T.get_ownership()
+        self.assertTrue(T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -607,8 +655,10 @@ class Retreating(TestCase):
                              "A Brest S A Paris - Picardy")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -625,7 +675,9 @@ class Retreating(TestCase):
         orders = {"England": ("A Picardy M London",)}
         create_orders(orders, T)
 
-        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
+        units = T.get_units()
+        owns = T.get_ownership()
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -650,8 +702,10 @@ class Retreating(TestCase):
                               "A Marseilles M Burgundy")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -675,8 +729,10 @@ class Retreating(TestCase):
                   "France": ("A Burgundy M Belgium",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -699,8 +755,10 @@ class Retreating(TestCase):
                              "F Mid-Atlantic Ocean S F Spain (SC) - Portugal")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -717,7 +775,9 @@ class Retreating(TestCase):
         orders = {"England": ("F Portugal M Spain (NC)",)}
         create_orders(orders, T)
 
-        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
+        units = T.get_units()
+        owns = T.get_ownership()
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         orders = {"England": ("F Portugal M Mid-Atlantic Ocean",)}
         create_orders(orders, T)
@@ -726,7 +786,7 @@ class Retreating(TestCase):
             T.is_legal(
                 models.Order.objects.get(
                     post__turn=T,
-                    target__territory__name="Mid-Atlantic Ocean"))
+                    target__territory__name="Mid-Atlantic Ocean"), units, owns)
         )
 
         orders = {"England": ("F Portugal M Spain (SC)",)}
@@ -736,7 +796,7 @@ class Retreating(TestCase):
             T.is_legal(
                 models.Order.objects.get(
                     post__turn=T, target__territory__name="Spain",
-                    target__subname="SC"))
+                    target__subname="SC"), units, owns)
         )
 
     def test_contested_for_both_coasts(self):
@@ -755,8 +815,10 @@ class Retreating(TestCase):
                        "F Tyrrhenian Sea M Western Mediterranean")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -773,7 +835,9 @@ class Retreating(TestCase):
         orders = {"France": ("F Western Mediterranean M Spain (SC)",)}
         create_orders(orders, T)
 
-        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
+        units = T.get_units()
+        owns = T.get_ownership()
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -810,13 +874,15 @@ class Building(TestCase):
 
         self.assertEqual(models.Order.objects.filter(post__turn=T).count(), 3)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T,
                                              actor__territory__name="Warsaw"):
-            self.assertFalse(T.is_legal(o))
+            self.assertFalse(T.is_legal(o, units, owns))
 
         for o in models.Order.objects.filter(
                 post__turn=T).exclude(actor__territory__name="Warsaw"):
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -844,7 +910,9 @@ class Building(TestCase):
         orders = {"Russia": ("F Moscow B",)}
         create_orders(orders, T)
 
-        self.assertTrue(T.is_legal(models.Order.objects.get(post__turn=T)))
+        units = T.get_units()
+        owns = T.get_ownership()
+        self.assertTrue(T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -865,7 +933,9 @@ class Building(TestCase):
         orders = {"Germany": ("A Berlin B",)}
         create_orders(orders, T)
 
-        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
+        units = T.get_units()
+        owns = T.get_ownership()
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -882,7 +952,9 @@ class Building(TestCase):
         orders = {"Russia": ("F St. Petersburg (NC) B",)}
         create_orders(orders, T)
 
-        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
+        units = T.get_units()
+        owns = T.get_ownership()
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -905,7 +977,9 @@ class Building(TestCase):
         orders = {"Germany": ("A Berlin B",)}
         create_orders(orders, T)
 
-        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
+        units = T.get_units()
+        owns = T.get_ownership()
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -923,7 +997,9 @@ class Building(TestCase):
         orders = {"Germany": ("A Warsaw B",)}
         create_orders(orders, T)
 
-        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T)))
+        units = T.get_units()
+        owns = T.get_ownership()
+        self.assertFalse(T.is_legal(models.Order.objects.get(post__turn=T), units, owns))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -939,8 +1015,10 @@ class Building(TestCase):
                              "A Moscow B")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -975,13 +1053,15 @@ class CivilDisorderAndDisbands(TestCase):
                              "A Paris D")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(
                 post__turn=T).exclude(actor__territory__name="Gulf of Lyon"):
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         for o in models.Order.objects.filter(
                 post__turn=T, actor__territory__name="Gulf of Lyon"):
-            self.assertFalse(T.is_legal(o))
+            self.assertFalse(T.is_legal(o, units, owns))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -1008,8 +1088,10 @@ class CivilDisorderAndDisbands(TestCase):
                              "A Paris D")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()

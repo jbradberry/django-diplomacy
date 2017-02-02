@@ -889,7 +889,7 @@ class Turn(models.Model):
         pass
 
     # FIXME refactor
-    def is_legal(self, order):
+    def is_legal(self, order, units, owns):
         if isinstance(order, Order):
             order = {'government': order.post.government,
                      'turn': order.post.turn,
@@ -897,8 +897,6 @@ class Turn(models.Model):
                      'assist': order.assist, 'target': order.target}
 
         actor_key = subregion_key(order['actor'])
-        units = self.get_units()
-        owns = self.get_ownership()
         builds = builds_available(units, owns)
 
         if order['actor'] is None:
@@ -951,11 +949,13 @@ class Turn(models.Model):
     # the turn generation engine should be separate.
     def normalize_orders(self, gvt=None):
         gvts = (gvt,) if gvt else self.game.government_set.all()
+        units = self.get_units()
+        owns = self.get_ownership()
 
         # Construct the set of default orders.  This set is exhaustive, no units
         # outside or number of builds in excess will be permitted.
         if self.season == 'FA':
-            builds = builds_available(self.get_units(), self.get_ownership())
+            builds = builds_available(units, owns)
             orders = {
                 (g.id, s): {'government': g, 'turn': self,
                             'actor': None, 'action': None,
@@ -993,7 +993,7 @@ class Turn(models.Model):
             for o in post.orders.select_related('actor__territory',
                                                 'assist__territory',
                                                 'target__territory'):
-                if self.is_legal(o):
+                if self.is_legal(o, units, owns):
                     if self.season == 'FA':
                         index = i
                         i += 1
@@ -1075,6 +1075,7 @@ class Turn(models.Model):
 
         return results
 
+    # FIXME refactor
     def create_canonical_orders(self, orders, decisions, turn):
         decisions = dict(decisions)
         keys = set(('government', 'actor', 'action',

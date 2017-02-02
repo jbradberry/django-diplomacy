@@ -28,8 +28,10 @@ class Convoys(TestCase):
                              "F Black Sea C A Greece - Sevastopol")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(not T.is_legal(o))
+            self.assertTrue(not T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -51,8 +53,10 @@ class Convoys(TestCase):
                   "France": ("A Paris M Brest",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -81,8 +85,10 @@ class Convoys(TestCase):
                   "France": ("A Paris M Brest",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -110,8 +116,10 @@ class Convoys(TestCase):
                   "Germany": ("F Skagerrak M North Sea",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -149,8 +157,10 @@ class Convoys(TestCase):
                               "F Denmark S F Skagerrak - North Sea")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -196,8 +206,10 @@ class Convoys(TestCase):
                              "A Burgundy S A Picardy - Belgium")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -242,8 +254,10 @@ class Convoys(TestCase):
                               "F Skagerrak M North Sea")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -268,8 +282,10 @@ class Convoys(TestCase):
         orders = {"England": ("F North Sea M Holland",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         order = models.Order.objects.get(post__turn=T)
-        self.assertTrue(T.is_legal(order))
+        self.assertTrue(T.is_legal(order, units, owns))
 
     def test_dislodged_convoy_does_not_cause_a_bounce(self):
         # DATC 6.F.8
@@ -285,8 +301,10 @@ class Convoys(TestCase):
                               "A Belgium M Holland")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -328,8 +346,10 @@ class Convoys(TestCase):
                        "F Mid-Atlantic Ocean M English Channel")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -368,8 +388,10 @@ class Convoys(TestCase):
                        "F Mid-Atlantic Ocean M English Channel")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -409,8 +431,10 @@ class Convoys(TestCase):
                        "F Mid-Atlantic Ocean M English Channel")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -448,8 +472,10 @@ class Convoys(TestCase):
                              "F Mid-Atlantic Ocean M Irish Sea")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -487,8 +513,10 @@ class Convoys(TestCase):
                               "F Denmark M North Sea")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -523,8 +551,10 @@ class Convoys(TestCase):
                              "F English Channel C A Brest - London")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -564,8 +594,10 @@ class Convoys(TestCase):
                             "A North Africa M Wales")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -608,8 +640,10 @@ class Convoys(TestCase):
                               "F Belgium M English Channel")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -658,8 +692,10 @@ class Convoys(TestCase):
                               "F Belgium M English Channel")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -707,8 +743,10 @@ class Convoys(TestCase):
                               "F Skagerrak M North Sea")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -748,8 +786,10 @@ class Convoys(TestCase):
                             "F Rome M Tyrrhenian Sea")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -793,8 +833,10 @@ class Convoys(TestCase):
                        "F Eastern Mediterranean M Ionian Sea")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -837,8 +879,10 @@ class Convoys(TestCase):
                               "F Clyde S F North Atlantic Ocean")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -886,8 +930,10 @@ class Convoys(TestCase):
                              "F North Sea C A Norway - Belgium")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -949,8 +995,10 @@ class Convoys(TestCase):
                              "F North Sea C A Norway - Belgium")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1008,8 +1056,10 @@ class Convoys(TestCase):
                              "F North Sea C A Norway - Belgium")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1071,8 +1121,10 @@ class ConvoyingToAdjacent(TestCase):
                   "Russia": ("A Sweden M Norway",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1102,8 +1154,10 @@ class ConvoyingToAdjacent(TestCase):
                   "Germany": ("F Skagerrak C A Norway - Sweden",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1134,8 +1188,10 @@ class ConvoyingToAdjacent(TestCase):
                   "England": ("F English Channel C A Picardy - Belgium",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1175,8 +1231,10 @@ class ConvoyingToAdjacent(TestCase):
                              "A Belgium M Picardy")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1224,8 +1282,10 @@ class ConvoyingToAdjacent(TestCase):
                              "F Ionian Sea C A Apulia - Rome")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1261,8 +1321,10 @@ class ConvoyingToAdjacent(TestCase):
                        "F North Atlantic Ocean C A Liverpool - Edinburgh")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1292,11 +1354,15 @@ class ConvoyingToAdjacent(TestCase):
                              "F Gulf of Bothnia C A Sweden - Norway")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.exclude(actor__territory__name=
                                               "Gulf of Bothnia"):
-            self.assertTrue(T.is_legal(o))
-        self.assertTrue(not T.is_legal(models.Order.objects.get(
-                    actor__territory__name="Gulf of Bothnia")))
+            self.assertTrue(T.is_legal(o, units, owns))
+        self.assertFalse(
+            T.is_legal(
+                models.Order.objects.get(actor__territory__name="Gulf of Bothnia"), units, owns)
+        )
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1323,8 +1389,10 @@ class ConvoyingToAdjacent(TestCase):
                               "A Holland M Kiel")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1354,8 +1422,10 @@ class ConvoyingToAdjacent(TestCase):
                   "Russia": ("A Sweden M Norway",)}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1392,8 +1462,10 @@ class ConvoyingToAdjacent(TestCase):
                              "F North Sea S F Norwegian Sea - Norway")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1428,8 +1500,10 @@ class ConvoyingToAdjacent(TestCase):
                              "F Barents Sea S A Sweden - Norway")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1470,8 +1544,10 @@ class ConvoyingToAdjacent(TestCase):
                               "F Irish Sea C A Edinburgh - Liverpool")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1501,8 +1577,10 @@ class ConvoyingToAdjacent(TestCase):
                             "F Albania M Trieste")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1539,8 +1617,10 @@ class ConvoyingToAdjacent(TestCase):
                   }
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1578,8 +1658,10 @@ class ConvoyingToAdjacent(TestCase):
                              "A Belgium M London *")} # via convoy
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1617,8 +1699,10 @@ class ConvoyingToAdjacent(TestCase):
                              "F Norwegian Sea S A Sweden - Norway")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1660,8 +1744,10 @@ class ConvoyingToAdjacent(TestCase):
                              "F Norwegian Sea S A Sweden - Norway")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1704,8 +1790,10 @@ class ConvoyingToAdjacent(TestCase):
                              "A Wales S A Belgium - London")}
         create_orders(orders, T)
 
+        units = T.get_units()
+        owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o))
+            self.assertTrue(T.is_legal(o, units, owns))
 
         T.game.generate()
         T = T.game.current_turn()

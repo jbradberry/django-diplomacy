@@ -65,10 +65,12 @@ class OrderForm(ModelForm):
 
     def clean(self):
         turn = self.government.game.current_turn()
+        units = turn.get_units()
+        owns = turn.get_ownership()
         actor = self.cleaned_data.get('actor')
         if turn.season == 'FA':
             # Fall Adjustment builds are optional.
-            builds = builds_available(turn.get_units(), turn.get_ownership())
+            builds = builds_available(units, owns)
             if builds.get(self.government.power.name, 0) > 0 and actor is None:
                 return {}
         else:
@@ -77,7 +79,7 @@ class OrderForm(ModelForm):
 
         order = self.initial.copy()
         order.update(self.cleaned_data)
-        if not turn.is_legal(order):
+        if not turn.is_legal(order, units, owns):
             raise ValidationError("Illegal order.")
 
         return self.cleaned_data
