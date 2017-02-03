@@ -2,6 +2,7 @@ from django.test import TestCase
 
 from .helpers import create_units, create_orders
 from .. import models
+from ..models import is_legal
 
 
 class Convoys(TestCase):
@@ -31,7 +32,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(not T.is_legal(o, units, owns))
+            self.assertTrue(not is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -56,7 +57,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -88,7 +89,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -119,7 +120,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -160,7 +161,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -209,7 +210,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -257,7 +258,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -285,7 +286,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         order = models.Order.objects.get(post__turn=T)
-        self.assertTrue(T.is_legal(order, units, owns))
+        self.assertTrue(is_legal(order, units, owns, T.season))
 
     def test_dislodged_convoy_does_not_cause_a_bounce(self):
         # DATC 6.F.8
@@ -304,7 +305,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -349,7 +350,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -391,7 +392,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -434,7 +435,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -475,7 +476,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -516,7 +517,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -554,7 +555,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -597,7 +598,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -643,7 +644,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -695,7 +696,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -746,7 +747,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -789,7 +790,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -836,7 +837,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -882,7 +883,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -933,7 +934,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -998,7 +999,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1059,7 +1060,7 @@ class Convoys(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1124,7 +1125,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1157,7 +1158,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1191,7 +1192,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1234,7 +1235,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1285,7 +1286,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1324,7 +1325,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1358,11 +1359,11 @@ class ConvoyingToAdjacent(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.exclude(actor__territory__name=
                                               "Gulf of Bothnia"):
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
         self.assertFalse(
-            T.is_legal(
-                models.Order.objects.get(actor__territory__name="Gulf of Bothnia"), units, owns)
-        )
+            is_legal(
+                models.Order.objects.get(actor__territory__name="Gulf of Bothnia"),
+                units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1392,7 +1393,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1425,7 +1426,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1465,7 +1466,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1503,7 +1504,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1547,7 +1548,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1580,7 +1581,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1620,7 +1621,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1661,7 +1662,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1702,7 +1703,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1747,7 +1748,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1793,7 +1794,7 @@ class ConvoyingToAdjacent(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(T.is_legal(o, units, owns))
+            self.assertTrue(is_legal(o, units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()

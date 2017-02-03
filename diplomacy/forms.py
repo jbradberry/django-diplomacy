@@ -4,7 +4,7 @@ from django.forms import Form, CharField, Textarea, ValidationError
 from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
 
 from .models import (Order, Subregion, Unit, territory, borders, find_convoys, subregion_key,
-                     builds_available)
+                     builds_available, is_legal)
 from .helpers import unit
 
 
@@ -79,7 +79,7 @@ class OrderForm(ModelForm):
 
         order = self.initial.copy()
         order.update(self.cleaned_data)
-        if not turn.is_legal(order, units, owns):
+        if not is_legal(order, units, owns, turn.season):
             raise ValidationError("Illegal order.")
 
         return self.cleaned_data

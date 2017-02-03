@@ -277,6 +277,61 @@ def valid_disband(actor, units, owns, season, empty=None):
         return {}
     return {empty: {empty: False}}
 
+def is_legal(order, units, owns, season):
+    if isinstance(order, Order):
+        order = {'government': order.post.government,
+                 'turn': order.post.turn,
+                 'actor': order.actor, 'action': order.action,
+                 'assist': order.assist, 'target': order.target}
+
+    actor_key = subregion_key(order['actor'])
+    builds = builds_available(units, owns)
+
+    if order['actor'] is None:
+        if season != 'FA':
+            return False
+        unit = ()
+    else:
+        unit = [u for u in units if u['subregion'] == actor_key]
+
+    if order['actor'] is None or order['action'] is None:
+        return (season == 'FA' and
+                builds.get(order['government'].power.name, 0) > 0)
+    if order['action'] != 'B' and not unit:
+        return False
+
+    if season in ('S', 'F'):
+        if unit[0]['government'] != order['government'].power.name:
+            return False
+    elif season in ('SR', 'FR'):
+        unit = [u for u in unit if u['dislodged']]
+        if not unit:
+            return False
+        if unit[0]['government'] != order['government'].power.name:
+            return False
+    elif order['action'] == 'D':
+        if unit and unit[0]['government'] != order['government'].power.name:
+            return False
+    elif order['action'] == 'B':
+        if not any(o['territory'] == territory(actor_key)
+                   and o['government'] == order['government'].power.name
+                   for o in owns):
+            return False
+
+    actions = {'H': valid_hold,
+               'M': valid_move,
+               'S': valid_support,
+               'C': valid_convoy,
+               'B': valid_build,
+               'D': valid_disband}
+    tree = actions[order['action']](order['actor'], units, owns, season)
+    if not tree or getattr(order['assist'], 'id', None) not in tree:
+        return False
+    tree = tree[getattr(order['assist'], 'id', None)]
+    if getattr(order['target'], 'id', None) not in tree:
+        return False
+    return True
+
 def find_convoys(units, fleets):
     """
     Generates pairs consisting of a cluster of adjacent non-coastal
@@ -888,62 +943,6 @@ class Turn(models.Model):
     def consistency_check(self):
         pass
 
-    # FIXME refactor
-    def is_legal(self, order, units, owns):
-        if isinstance(order, Order):
-            order = {'government': order.post.government,
-                     'turn': order.post.turn,
-                     'actor': order.actor, 'action': order.action,
-                     'assist': order.assist, 'target': order.target}
-
-        actor_key = subregion_key(order['actor'])
-        builds = builds_available(units, owns)
-
-        if order['actor'] is None:
-            if self.season != 'FA':
-                return False
-            unit = ()
-        else:
-            unit = [u for u in units if u['subregion'] == actor_key]
-
-        if order['actor'] is None or order['action'] is None:
-            return (self.season == 'FA' and
-                    builds.get(order['government'].power.name, 0) > 0)
-        if order['action'] != 'B' and not unit:
-            return False
-
-        if self.season in ('S', 'F'):
-            if unit[0]['government'] != order['government'].power.name:
-                return False
-        elif self.season in ('SR', 'FR'):
-            unit = [u for u in unit if u['dislodged']]
-            if not unit:
-                return False
-            if unit[0]['government'] != order['government'].power.name:
-                return False
-        elif order['action'] == 'D':
-            if unit and unit[0]['government'] != order['government'].power.name:
-                return False
-        elif order['action'] == 'B':
-            if not any(o['territory'] == territory(actor_key)
-                       and o['government'] == order['government'].power.name
-                       for o in owns):
-                return False
-
-        actions = {'H': valid_hold,
-                   'M': valid_move,
-                   'S': valid_support,
-                   'C': valid_convoy,
-                   'B': valid_build,
-                   'D': valid_disband}
-        tree = actions[order['action']](order['actor'], units, owns, self.season)
-        if not tree or getattr(order['assist'], 'id', None) not in tree:
-            return False
-        tree = tree[getattr(order['assist'], 'id', None)]
-        if getattr(order['target'], 'id', None) not in tree:
-            return False
-        return True
-
     # FIXME refactor: The responsibility of this method should be to provide a
     # list of Order instances.  Converting these to a list of dicts for use in
     # the turn generation engine should be separate.
@@ -993,7 +992,7 @@ class Turn(models.Model):
             for o in post.orders.select_related('actor__territory',
                                                 'assist__territory',
                                                 'target__territory'):
-                if self.is_legal(o, units, owns):
+                if is_legal(o, units, owns, self.season):
                     if self.season == 'FA':
                         index = i
                         i += 1
