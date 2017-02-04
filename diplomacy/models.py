@@ -1271,8 +1271,9 @@ class Turn(models.Model):
 
         self.prev.create_canonical_orders(orders, decisions, self)
 
-        for k, u in units.iteritems():
-            Unit.objects.create(**u)
+        Unit.objects.bulk_create([
+            Unit(**u) for u in units.itervalues()
+        ])
 
 
 def turn_create(sender, **kwargs):
