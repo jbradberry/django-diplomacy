@@ -874,7 +874,7 @@ class Game(models.Model):
         turn = self.turn_set.create(number=turn.number+1)
 
         # beginning of Turn.update_units
-        units = {
+        units_index = {
             (territory(subregion_key(u.subregion)), u.dislodged): {
                 'turn': turn, 'government': u.government,
                 'u_type': u.u_type, 'subregion': u.subregion,
@@ -885,13 +885,138 @@ class Game(models.Model):
 
         disbands = defaultdict(set)
         displaced, failed = {}, defaultdict(list)
-        turn._update_units_changes(orders, decisions, units, disbands, displaced, failed)
+        # beginning of Turn._update_units_changes
+        retreat = turn.prev.season in ('SR', 'FR')
+
+        for a, d in decisions:
+            action = orders[a].get('action')
+            # units that are displaced must retreat or be disbanded
+            if retreat and action is None:
+                del units_index[(a, retreat)]
+                disbands[orders[a]['government'].id].add(a)
+                orders[a]['action'] = 'D'
+                continue
+
+            if action == 'M':
+                target = orders[a]['target']
+                T = territory(subregion_key(orders[a]['actor']))
+                if d: # move succeeded
+                    units_index[(a, retreat)]['subregion'] = target
+                    if not retreat:
+                        displaced[territory(subregion_key(target))] = T
+                elif retreat: # move is a failed retreat
+                    del units_index[(a, retreat)]
+                    continue
+                else: # move failed
+                    failed[territory(subregion_key(target))].append(T)
+
+            # successful build
+            if d and action == 'B':
+                units_index[(a, False)] = {
+                    'turn': turn,
+                    'government': orders[a]['government'],
+                    'u_type': convert[orders[a]['actor'].sr_type],
+                    'subregion': orders[a]['actor']
+                }
+
+            if action == 'D':
+                del units_index[(a, retreat)]
+                disbands[orders[a]['government'].id].add(a)
+                continue
+        # end of Turn._update_units_changes
 
         if turn.prev.season in ('S', 'F'):
-            turn._update_units_blocked(orders, decisions, units, displaced, failed)
+            # beginning of Turn._update_units_blocked
+            for a, d in decisions:
+                key = (a, False)
+                # if our location is marked as the target of a
+                # successful move and we failed to move, we are displaced.
+                if not d and a in displaced:
+                    units_index[key].update(
+                        dislodged=True,
+                        displaced_from_id=( # only mark a location as disallowed for
+                            None         # retreats if it wasn't via convoy
+                            if orders[displaced[a]].get('convoy')
+                            else t_id(displaced[a])
+                        )
+                    )
+                if orders[a].get('action') != 'M':
+                    continue
+                t = territory(subregion_key(orders[a]['target']))
+                # if multiple moves to our target failed, we have a standoff.
+                if len(failed[t]) > 1:
+                    units_index[key]['standoff_from_id'] = t_id(t)
+            # end of Turn._update_units_blocked
 
         if turn.prev.season == 'FA':
-            turn._update_units_autodisband(orders, units, disbands)
+            # beginning of Turn._update_units_autodisband
+            subr = Subregion.objects.all()
+            builds = builds_available(units, owns)
+
+            for g in self.government_set.all():
+                our_builds = builds.get(g.power.name, 0) + len(disbands[g.id])
+                if our_builds >= 0:
+                    continue
+
+                # If we've reached this point, we have more units than allowed.
+                # Disband inward from the outermost unit.  For ties, disband fleets
+                # first then armies, and do in alphabetical order from there, if
+                # necessary.  Fleets may only count distance via water, but
+                # armies may count both land and water as one space each.
+
+                unit_distances = {
+                    u: [None, u.sr_type == 'L', unicode(u)]
+                    for u in subr.filter(unit__government=g, unit__turn=turn.prev)
+                }
+
+                distance = 0
+                examined = set(sc for sc in
+                               subr.filter(territory__power=g.power,
+                                           territory__is_supply=True,
+                                           sr_type='S'))
+                while any(not D[1] and D[0] is None
+                          for D in unit_distances.itervalues()):
+                    for u, D in unit_distances.iteritems():
+                        if not D[1] and D[0] is None and u in examined:
+                            D[0] = -distance  # We want them reversed by distance,
+                    adj = set(                # but non-reversed by name.
+                        s for s in subr.filter(
+                            borders__in=examined
+                        ).exclude(id__in=[se.id for se in examined]).distinct()
+                    )
+                    examined |= adj
+                    distance += 1
+
+                distance = 0
+                examined = set(sc for sc in
+                               subr.filter(territory__power=g.power,
+                                           territory__is_supply=True))
+                while any(D[1] and D[0] is None
+                          for D in unit_distances.itervalues()):
+                    for u, D in unit_distances.iteritems():
+                        if D[1] and D[0] is None and u in examined:
+                            D[0] = -distance  # We want them reversed by distance,
+                    adj = set(                # but non-reversed by name.
+                        s for s in subr.filter(
+                            territory__subregion__borders__in=examined
+                        ).exclude(id__in=[se.id for se in examined]).distinct()
+                    )
+                    examined |= adj
+                    distance += 1
+
+                for u in sorted(unit_distances, key=lambda x: unit_distances[x]):
+                    if territory(subregion_key(u)) in disbands[g.id]:
+                        continue
+
+                    orders[territory(subregion_key(u))] = {'government': g, 'actor': u,
+                                                           'action': 'D', 'assist': None,
+                                                           'target': None, 'via_convoy': False}
+                    del units_index[(territory(subregion_key(u)), False)]
+                    disbands[g.id].add(territory(subregion_key(u)))
+                    our_builds += 1
+                    if our_builds == 0:
+                        break
+            # end of Turn._update_units_autodisband
 
         # beginning of Turn.create_canonical_orders
         decisions_index = dict(decisions)
@@ -918,7 +1043,7 @@ class Game(models.Model):
         # end of Turn.create_canonical_orders
 
         Unit.objects.bulk_create([
-            Unit(**u) for u in units.itervalues()
+            Unit(**u) for u in units_index.itervalues()
         ])
         # end of Turn.update_units
 
@@ -1147,134 +1272,6 @@ class Turn(models.Model):
                     o['convoy'] = bool(matching)
 
         return [v for k, v in sorted(orders.iteritems())]
-
-    def _update_units_changes(self, orders, decisions, units, disbands, displaced, failed):
-        retreat = self.prev.season in ('SR', 'FR')
-
-        for a, d in decisions:
-            action = orders[a].get('action')
-            # units that are displaced must retreat or be disbanded
-            if retreat and action is None:
-                del units[(a, retreat)]
-                disbands[orders[a]['government'].id].add(a)
-                orders[a]['action'] = 'D'
-                continue
-
-            if action == 'M':
-                target = orders[a]['target']
-                T = territory(subregion_key(orders[a]['actor']))
-                if d: # move succeeded
-                    units[(a, retreat)]['subregion'] = target
-                    if not retreat:
-                        displaced[territory(subregion_key(target))] = T
-                elif retreat: # move is a failed retreat
-                    del units[(a, retreat)]
-                    continue
-                else: # move failed
-                    failed[territory(subregion_key(target))].append(T)
-
-            # successful build
-            if d and action == 'B':
-                units[(a, False)] = {
-                    'turn': self,
-                    'government': orders[a]['government'],
-                    'u_type': convert[orders[a]['actor'].sr_type],
-                    'subregion': orders[a]['actor']
-                }
-
-            if action == 'D':
-                del units[(a, retreat)]
-                disbands[orders[a]['government'].id].add(a)
-                continue
-
-    def _update_units_blocked(self, orders, decisions, units, displaced, failed):
-        for a, d in decisions:
-            key = (a, False)
-            # if our location is marked as the target of a
-            # successful move and we failed to move, we are displaced.
-            if not d and a in displaced:
-                units[key].update(
-                    dislodged=True,
-                    displaced_from_id=( # only mark a location as disallowed for
-                        None         # retreats if it wasn't via convoy
-                        if orders[displaced[a]].get('convoy')
-                        else t_id(displaced[a])
-                    )
-                )
-            if orders[a].get('action') != 'M':
-                continue
-            t = territory(subregion_key(orders[a]['target']))
-            # if multiple moves to our target failed, we have a standoff.
-            if len(failed[t]) > 1:
-                units[key]['standoff_from_id'] = t_id(t)
-
-    def _update_units_autodisband(self, orders, units, disbands):
-        subr = Subregion.objects.all()
-        builds = builds_available(self.prev.get_units(), self.prev.get_ownership())
-
-        for g in self.game.government_set.all():
-            our_builds = builds.get(g.power.name, 0) + len(disbands[g.id])
-            if our_builds >= 0:
-                continue
-
-            # If we've reached this point, we have more units than allowed.
-            # Disband inward from the outermost unit.  For ties, disband fleets
-            # first then armies, and do in alphabetical order from there, if
-            # necessary.  Fleets may only count distance via water, but
-            # armies may count both land and water as one space each.
-
-            unit_distances = {
-                u: [None, u.sr_type == 'L', unicode(u)]
-                for u in subr.filter(unit__government=g, unit__turn=self.prev)
-            }
-
-            distance = 0
-            examined = set(sc for sc in
-                           subr.filter(territory__power=g.power,
-                                       territory__is_supply=True,
-                                       sr_type='S'))
-            while any(not D[1] and D[0] is None
-                      for D in unit_distances.itervalues()):
-                for u, D in unit_distances.iteritems():
-                    if not D[1] and D[0] is None and u in examined:
-                        D[0] = -distance  # We want them reversed by distance,
-                adj = set(                # but non-reversed by name.
-                    s for s in subr.filter(
-                        borders__in=examined
-                    ).exclude(id__in=[se.id for se in examined]).distinct()
-                )
-                examined |= adj
-                distance += 1
-
-            distance = 0
-            examined = set(sc for sc in
-                           subr.filter(territory__power=g.power,
-                                       territory__is_supply=True))
-            while any(D[1] and D[0] is None
-                      for D in unit_distances.itervalues()):
-                for u, D in unit_distances.iteritems():
-                    if D[1] and D[0] is None and u in examined:
-                        D[0] = -distance  # We want them reversed by distance,
-                adj = set(                # but non-reversed by name.
-                    s for s in subr.filter(
-                        territory__subregion__borders__in=examined
-                    ).exclude(id__in=[se.id for se in examined]).distinct()
-                )
-                examined |= adj
-                distance += 1
-
-            for u in sorted(unit_distances, key=lambda x: unit_distances[x]):
-                if territory(subregion_key(u)) in disbands[g.id]:
-                    continue
-
-                orders[territory(subregion_key(u))] = {'government': g, 'actor': u,
-                                                       'action': 'D', 'assist': None,
-                                                       'target': None, 'via_convoy': False}
-                del units[(territory(subregion_key(u)), False)]
-                disbands[g.id].add(territory(subregion_key(u)))
-                our_builds += 1
-                if our_builds == 0:
-                    break
 
 
 def turn_create(sender, **kwargs):
