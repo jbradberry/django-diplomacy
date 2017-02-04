@@ -948,7 +948,6 @@ class Game(models.Model):
 
         if turn.prev.season == 'FA':
             # beginning of Turn._update_units_autodisband
-            subr = Subregion.objects.all()
             builds = builds_available(units, owns)
 
             for g in self.government_set.all():
@@ -963,55 +962,60 @@ class Game(models.Model):
                 # armies may count both land and water as one space each.
 
                 unit_distances = {
-                    u: [None, u.sr_type == 'L', unicode(u)]
-                    for u in subr.filter(unit__government=g, unit__turn=turn.prev)
+                    u['subregion']: [None, u['u_type'] == 'A', territory(u['subregion'])]
+                    for u in units
+                    if u['government'] == g.power.name
                 }
 
                 distance = 0
-                examined = set(sc for sc in
-                               subr.filter(territory__power=g.power,
-                                           territory__is_supply=True,
-                                           sr_type='S'))
-                while any(not D[1] and D[0] is None
-                          for D in unit_distances.itervalues()):
+                examined = {
+                    sr for T, (power, sc, _) in standard.definition.iteritems()
+                    for sr in standard.territories[T]
+                    if sr[2] == 'S' and sc
+                    and power == g.power.name
+                }
+                while any(not army and D is None
+                          for D, army, name in unit_distances.itervalues()):
                     for u, D in unit_distances.iteritems():
                         if not D[1] and D[0] is None and u in examined:
-                            D[0] = -distance  # We want them reversed by distance,
-                    adj = set(                # but non-reversed by name.
-                        s for s in subr.filter(
-                            borders__in=examined
-                        ).exclude(id__in=[se.id for se in examined]).distinct()
-                    )
+                            # We want them reversed by distance, but
+                            # non-reversed by name.
+                            D[0] = -distance
+                    adj = {b for sr in examined for b in borders(sr)}
                     examined |= adj
                     distance += 1
 
                 distance = 0
-                examined = set(sc for sc in
-                               subr.filter(territory__power=g.power,
-                                           territory__is_supply=True))
-                while any(D[1] and D[0] is None
-                          for D in unit_distances.itervalues()):
+                examined = {
+                    sr for T, (power, sc, _) in standard.definition.iteritems()
+                    for sr in standard.territories[T]
+                    if sc and power == g.power.name
+                }
+                while any(army and D is None
+                          for D, army, name in unit_distances.itervalues()):
                     for u, D in unit_distances.iteritems():
                         if D[1] and D[0] is None and u in examined:
-                            D[0] = -distance  # We want them reversed by distance,
-                    adj = set(                # but non-reversed by name.
-                        s for s in subr.filter(
-                            territory__subregion__borders__in=examined
-                        ).exclude(id__in=[se.id for se in examined]).distinct()
-                    )
+                            # We want them reversed by distance, but
+                            # non-reversed by name.
+                            D[0] = -distance
+                    adj = {
+                        a for sr in examined
+                        for b in borders(sr)
+                        for a in standard.territories[territory(b)]
+                    }
                     examined |= adj
                     distance += 1
 
                 for u in sorted(unit_distances, key=lambda x: unit_distances[x]):
-                    if territory(subregion_key(u)) in disbands[g.id]:
+                    if territory(u) in disbands[g.id]:
                         continue
 
-                    orders[territory(subregion_key(u))] = {
-                        'government': g, 'actor': subregion_key(u),
+                    orders[territory(u)] = {
+                        'government': g, 'actor': u,
                         'action': 'D', 'assist': None,
                         'target': None, 'via_convoy': False}
-                    del units_index[(territory(subregion_key(u)), False)]
-                    disbands[g.id].add(territory(subregion_key(u)))
+                    del units_index[(territory(u), False)]
+                    disbands[g.id].add(territory(u))
                     our_builds += 1
                     if our_builds == 0:
                         break
