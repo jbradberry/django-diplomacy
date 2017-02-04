@@ -872,7 +872,31 @@ class Game(models.Model):
             return False
 
         turn = self.turn_set.create(number=turn.number+1)
-        turn.update_units(orders, decisions)
+
+        # beginning of Turn.update_units
+        units = {
+            (territory(subregion_key(u.subregion)), u.dislodged): {
+                'turn': turn, 'government': u.government,
+                'u_type': u.u_type, 'subregion': u.subregion,
+                'previous': u
+            }
+            for u in turn.prev.unit_set.select_related('government', 'subregion')
+        }
+
+        turn._update_units_changes(orders, decisions, units)
+
+        if turn.prev.season in ('S', 'F'):
+            turn._update_units_blocked(orders, decisions, units)
+
+        if turn.prev.season == 'FA':
+            turn._update_units_autodisband(orders, units)
+
+        turn.prev.create_canonical_orders(orders, decisions, turn)
+
+        Unit.objects.bulk_create([
+            Unit(**u) for u in units.itervalues()
+        ])
+        # end of Turn.update_units
 
         units = turn.get_units()
 
@@ -1249,31 +1273,6 @@ class Turn(models.Model):
                 our_builds += 1
                 if our_builds == 0:
                     break
-
-    def update_units(self, orders, decisions):
-        units = {
-            (territory(subregion_key(u.subregion)), x): {
-                'turn': self, 'government': u.government,
-                'u_type': u.u_type, 'subregion': u.subregion,
-                'previous': u
-            }
-            for x in (True, False) # dislodged or not
-            for u in self.prev.unit_set.filter(dislodged=x)
-        }
-
-        self._update_units_changes(orders, decisions, units)
-
-        if self.prev.season in ('S', 'F'):
-            self._update_units_blocked(orders, decisions, units)
-
-        if self.prev.season == 'FA':
-            self._update_units_autodisband(orders, units)
-
-        self.prev.create_canonical_orders(orders, decisions, self)
-
-        Unit.objects.bulk_create([
-            Unit(**u) for u in units.itervalues()
-        ])
 
 
 def turn_create(sender, **kwargs):
