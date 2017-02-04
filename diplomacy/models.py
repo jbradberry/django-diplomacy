@@ -883,15 +883,17 @@ class Game(models.Model):
             for u in turn.prev.unit_set.select_related('government', 'subregion')
         }
 
-        turn._update_units_changes(orders, decisions, units)
+        disbands = defaultdict(set)
+        displaced, failed = {}, defaultdict(list)
+        turn._update_units_changes(orders, decisions, units, disbands, displaced, failed)
 
         if turn.prev.season in ('S', 'F'):
-            turn._update_units_blocked(orders, decisions, units)
+            turn._update_units_blocked(orders, decisions, units, displaced, failed)
 
         if turn.prev.season == 'FA':
-            turn._update_units_autodisband(orders, units)
+            turn._update_units_autodisband(orders, units, disbands)
 
-        turn.prev.create_canonical_orders(orders, decisions, turn)
+        turn.prev.create_canonical_orders(orders, decisions, disbands, displaced)
 
         Unit.objects.bulk_create([
             Unit(**u) for u in units.itervalues()
@@ -1125,7 +1127,7 @@ class Turn(models.Model):
         return [v for k, v in sorted(orders.iteritems())]
 
     # FIXME refactor
-    def create_canonical_orders(self, orders, decisions, turn):
+    def create_canonical_orders(self, orders, decisions, disbands, displaced):
         decisions = dict(decisions)
         keys = set(('government', 'actor', 'action',
                     'assist', 'target', 'via_convoy'))
@@ -1135,18 +1137,15 @@ class Turn(models.Model):
             order['user_issued'] = o.get('id') is not None
             if decisions.get(T):
                 order['result'] = 'S'
-            elif any(T in db for db in turn.disbands.itervalues()):
+            elif any(T in db for db in disbands.itervalues()):
                 order['result'] = 'D'
-            elif T in turn.displaced:
+            elif T in displaced:
                 order['result'] = 'B'
             else:
                 order['result'] = 'F'
             self.canonicalorder_set.create(**order)
 
-    def _update_units_changes(self, orders, decisions, units):
-        self.disbands = defaultdict(set)
-        self.displaced, self.failed = {}, defaultdict(list)
-
+    def _update_units_changes(self, orders, decisions, units, disbands, displaced, failed):
         retreat = self.prev.season in ('SR', 'FR')
 
         for a, d in decisions:
@@ -1154,7 +1153,7 @@ class Turn(models.Model):
             # units that are displaced must retreat or be disbanded
             if retreat and action is None:
                 del units[(a, retreat)]
-                self.disbands[orders[a]['government'].id].add(a)
+                disbands[orders[a]['government'].id].add(a)
                 orders[a]['action'] = 'D'
                 continue
 
@@ -1164,12 +1163,12 @@ class Turn(models.Model):
                 if d: # move succeeded
                     units[(a, retreat)]['subregion'] = target
                     if not retreat:
-                        self.displaced[territory(subregion_key(target))] = T
+                        displaced[territory(subregion_key(target))] = T
                 elif retreat: # move is a failed retreat
                     del units[(a, retreat)]
                     continue
                 else: # move failed
-                    self.failed[territory(subregion_key(target))].append(T)
+                    failed[territory(subregion_key(target))].append(T)
 
             # successful build
             if d and action == 'B':
@@ -1182,36 +1181,36 @@ class Turn(models.Model):
 
             if action == 'D':
                 del units[(a, retreat)]
-                self.disbands[orders[a]['government'].id].add(a)
+                disbands[orders[a]['government'].id].add(a)
                 continue
 
-    def _update_units_blocked(self, orders, decisions, units):
+    def _update_units_blocked(self, orders, decisions, units, displaced, failed):
         for a, d in decisions:
             key = (a, False)
             # if our location is marked as the target of a
             # successful move and we failed to move, we are displaced.
-            if not d and a in self.displaced:
+            if not d and a in displaced:
                 units[key].update(
                     dislodged=True,
                     displaced_from_id=( # only mark a location as disallowed for
                         None         # retreats if it wasn't via convoy
-                        if orders[self.displaced[a]].get('convoy')
-                        else t_id(self.displaced[a])
+                        if orders[displaced[a]].get('convoy')
+                        else t_id(displaced[a])
                     )
                 )
             if orders[a].get('action') != 'M':
                 continue
             t = territory(subregion_key(orders[a]['target']))
             # if multiple moves to our target failed, we have a standoff.
-            if len(self.failed[t]) > 1:
+            if len(failed[t]) > 1:
                 units[key]['standoff_from_id'] = t_id(t)
 
-    def _update_units_autodisband(self, orders, units):
+    def _update_units_autodisband(self, orders, units, disbands):
         subr = Subregion.objects.all()
         builds = builds_available(self.prev.get_units(), self.prev.get_ownership())
 
         for g in self.game.government_set.all():
-            our_builds = builds.get(g.power.name, 0) + len(self.disbands[g.id])
+            our_builds = builds.get(g.power.name, 0) + len(disbands[g.id])
             if our_builds >= 0:
                 continue
 
@@ -1262,14 +1261,14 @@ class Turn(models.Model):
                 distance += 1
 
             for u in sorted(unit_distances, key=lambda x: unit_distances[x]):
-                if territory(subregion_key(u)) in self.disbands[g.id]:
+                if territory(subregion_key(u)) in disbands[g.id]:
                     continue
 
                 orders[territory(subregion_key(u))] = {'government': g, 'actor': u,
                                                        'action': 'D', 'assist': None,
                                                        'target': None, 'via_convoy': False}
                 del units[(territory(subregion_key(u)), False)]
-                self.disbands[g.id].add(territory(subregion_key(u)))
+                disbands[g.id].add(territory(subregion_key(u)))
                 our_builds += 1
                 if our_builds == 0:
                     break
