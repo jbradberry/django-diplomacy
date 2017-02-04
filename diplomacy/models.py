@@ -893,7 +893,24 @@ class Game(models.Model):
         if turn.prev.season == 'FA':
             turn._update_units_autodisband(orders, units, disbands)
 
-        turn.prev.create_canonical_orders(orders, decisions, disbands, displaced)
+        # beginning of Turn.create_canonical_orders
+        decisions_index = dict(decisions)
+        keys = set(('government', 'actor', 'action',
+                    'assist', 'target', 'via_convoy'))
+
+        for T, o in orders.iteritems():
+            order = {k: v for k, v in o.iteritems() if k in keys}
+            order['user_issued'] = o.get('id') is not None
+            if decisions_index.get(T):
+                order['result'] = 'S'
+            elif any(T in db for db in disbands.itervalues()):
+                order['result'] = 'D'
+            elif T in displaced:
+                order['result'] = 'B'
+            else:
+                order['result'] = 'F'
+            turn.prev.canonicalorder_set.create(**order)
+        # end of Turn.create_canonical_orders
 
         Unit.objects.bulk_create([
             Unit(**u) for u in units.itervalues()
@@ -1125,25 +1142,6 @@ class Turn(models.Model):
                     o['convoy'] = bool(matching)
 
         return [v for k, v in sorted(orders.iteritems())]
-
-    # FIXME refactor
-    def create_canonical_orders(self, orders, decisions, disbands, displaced):
-        decisions = dict(decisions)
-        keys = set(('government', 'actor', 'action',
-                    'assist', 'target', 'via_convoy'))
-
-        for T, o in orders.iteritems():
-            order = {k: v for k, v in o.iteritems() if k in keys}
-            order['user_issued'] = o.get('id') is not None
-            if decisions.get(T):
-                order['result'] = 'S'
-            elif any(T in db for db in disbands.itervalues()):
-                order['result'] = 'D'
-            elif T in displaced:
-                order['result'] = 'B'
-            else:
-                order['result'] = 'F'
-            self.canonicalorder_set.create(**order)
 
     def _update_units_changes(self, orders, decisions, units, disbands, displaced, failed):
         retreat = self.prev.season in ('SR', 'FR')
