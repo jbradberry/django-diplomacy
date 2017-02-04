@@ -584,6 +584,47 @@ def consistent(state, orders, fails, paradox, units):
 
     return True
 
+def detect_civil_disorder(orders):
+    user_issued = set(o['government'] for o in orders.itervalues()
+                      if 'id' in o)
+    automated = set(o['government'] for o in orders.itervalues()
+                    if 'id' not in o)
+    return automated - user_issued
+
+def construct_dependencies(orders):
+    dep = defaultdict(list)
+    for (T1, o1), (T2, o2) in permutations(orders.iteritems(), 2):
+        depend = False
+        act1, act2 = o1['action'], o2['action']
+        if (act1, act2) in DEPENDENCIES:
+            depend = any(f(T1, o1, T2, o2) for f in DEPENDENCIES[(act1, act2)])
+
+        if depend:
+            dep[T1].append(T2)
+
+    return dep
+
+def resolve_retreats(orders):
+    decisions = []
+    target_count = defaultdict(int)
+    for T, order in orders.iteritems():
+        if order['action'] == 'M':
+            target_count[territory(order['target'])] += 1
+        else:
+            decisions.append((T, None))
+    for T, order in orders.iteritems():
+        if order['action'] != 'M':
+            continue
+        if target_count[territory(order['target'])] == 1:
+            decisions.append((T, True))
+        else:
+            decisions.append((T, False))
+    return decisions
+
+def resolve_adjusts(orders):
+    return [(T, order.get('action') is not None)
+            for T, order in orders.iteritems()]
+
 def resolve(state, orders, dep, fails, paradox, units):
     _state = set(T for T, d in state)
 
@@ -728,47 +769,6 @@ class Game(models.Model):
         if self.turn_set.exists():
             return self.turn_set.latest()
 
-    def detect_civil_disorder(self, orders):
-        user_issued = set(o['government'] for o in orders.itervalues()
-                          if 'id' in o)
-        automated = set(o['government'] for o in orders.itervalues()
-                        if 'id' not in o)
-        return automated - user_issued
-
-    def construct_dependencies(self, orders):
-        dep = defaultdict(list)
-        for (T1, o1), (T2, o2) in permutations(orders.iteritems(), 2):
-            depend = False
-            act1, act2 = o1['action'], o2['action']
-            if (act1, act2) in DEPENDENCIES:
-                depend = any(f(T1, o1, T2, o2) for f in DEPENDENCIES[(act1, act2)])
-
-            if depend:
-                dep[T1].append(T2)
-
-        return dep
-
-    def resolve_retreats(self, orders):
-        decisions = []
-        target_count = defaultdict(int)
-        for T, order in orders.iteritems():
-            if order['action'] == 'M':
-                target_count[territory(order['target'])] += 1
-            else:
-                decisions.append((T, None))
-        for T, order in orders.iteritems():
-            if order['action'] != 'M':
-                continue
-            if target_count[territory(order['target'])] == 1:
-                decisions.append((T, True))
-            else:
-                decisions.append((T, False))
-        return decisions
-
-    def resolve_adjusts(self, orders):
-        return [(T, order.get('action') is not None)
-                for T, order in orders.iteritems()]
-
     def activate(self):
         if self.state != 'S' or self.turn_set.exists():
             return False
@@ -815,15 +815,15 @@ class Game(models.Model):
 
         if turn.season in ('S', 'F'):
             # FIXME: do something with civil disorder
-            disorder = self.detect_civil_disorder(orders)
-            dependencies = self.construct_dependencies(fixed_orders)
+            disorder = detect_civil_disorder(orders)
+            dependencies = construct_dependencies(fixed_orders)
             paradox_convoys = detect_paradox(orders, dependencies)
             fails = turn.immediate_fails(orders)
             decisions = resolve((), fixed_orders, dependencies, fails, paradox_convoys, units)
         elif turn.season in ('SR', 'FR'):
-            decisions = self.resolve_retreats(fixed_orders)
+            decisions = resolve_retreats(fixed_orders)
         else:
-            decisions = self.resolve_adjusts(fixed_orders)
+            decisions = resolve_adjusts(fixed_orders)
         if decisions is None:
             return False
 
