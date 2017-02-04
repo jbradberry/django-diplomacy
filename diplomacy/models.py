@@ -818,7 +818,7 @@ class Game(models.Model):
             disorder = detect_civil_disorder(orders)
             dependencies = construct_dependencies(fixed_orders)
             paradox_convoys = detect_paradox(orders, dependencies)
-            fails = turn.immediate_fails(orders, units)
+            fails = turn.immediate_fails(fixed_orders, units)
             decisions = resolve((), fixed_orders, dependencies, fails, paradox_convoys, units)
         elif turn.season in ('SR', 'FR'):
             decisions = resolve_retreats(fixed_orders)
@@ -1046,15 +1046,15 @@ class Turn(models.Model):
         results = set()
         for T, o in orders.iteritems():
             if o['action'] == 'M':
-                if subregion_key(o['target']) not in borders(subregion_key(o['actor'])):
+                if o['target'] not in borders(o['actor']):
                     matching = [
-                        subregion_key(o2['actor'])
+                        o2['actor']
                         for T2, o2 in orders.iteritems()
                         if o2['action'] == 'C'
                         and o2['assist'] == o['actor']
                         and o2['target'] == o['target']
                     ]
-                    if any(subregion_key(o['actor']) in L and subregion_key(o['target']) in L
+                    if any(o['actor'] in L and o['target'] in L
                            for F, L in find_convoys(units, matching)):
                         continue
                 else:
@@ -1062,7 +1062,7 @@ class Turn(models.Model):
             elif o['action'] not in ('S', 'C'):
                 continue
             else:
-                assist = orders[territory(subregion_key(o['assist']))]
+                assist = orders[territory(o['assist'])]
                 if o['target'] is not None:
                     if (assist['action'] == 'M' and
                         assist['target'] == o['target']):
