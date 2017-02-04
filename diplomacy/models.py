@@ -69,7 +69,7 @@ def subregion_id_closure():
             lookup_table.update((subregion_key(sr), sr.id)
                                 for sr in Subregion.objects.select_related('territory'))
 
-        return lookup_table[sr_key]
+        return lookup_table.get(sr_key)
 
     return subregion_id
 
@@ -843,15 +843,13 @@ class Game(models.Model):
 
         turn.consistency_check()
 
-        orders = {territory(subregion_key(o['actor'])): o
-                  for o in turn.normalize_orders()
-                  if o['actor'] is not None}
-        fixed_orders = {
-            T: {
+        orders = {
+            territory(subregion_key(o['actor'])): {
                 k: subregion_key(v) if k in ('actor', 'assist', 'target') else v
                 for k, v in o.iteritems()
             }
-            for T, o in orders.iteritems()
+            for o in turn.normalize_orders()
+            if o['actor'] is not None
         }
 
         units = turn.get_units()
@@ -859,15 +857,15 @@ class Game(models.Model):
 
         if turn.season in ('S', 'F'):
             # FIXME: do something with civil disorder
-            disorder = detect_civil_disorder(fixed_orders)
-            dependencies = construct_dependencies(fixed_orders)
-            paradox_convoys = detect_paradox(fixed_orders, dependencies)
-            fails = immediate_fails(fixed_orders, units)
-            decisions = resolve((), fixed_orders, dependencies, fails, paradox_convoys, units)
+            disorder = detect_civil_disorder(orders)
+            dependencies = construct_dependencies(orders)
+            paradox_convoys = detect_paradox(orders, dependencies)
+            fails = immediate_fails(orders, units)
+            decisions = resolve((), orders, dependencies, fails, paradox_convoys, units)
         elif turn.season in ('SR', 'FR'):
-            decisions = resolve_retreats(fixed_orders)
+            decisions = resolve_retreats(orders)
         else:
-            decisions = resolve_adjusts(fixed_orders)
+            decisions = resolve_adjusts(orders)
         if decisions is None:
             return False
 
@@ -877,10 +875,10 @@ class Game(models.Model):
         units_index = {
             (territory(subregion_key(u.subregion)), u.dislodged): {
                 'turn': turn, 'government': u.government,
-                'u_type': u.u_type, 'subregion': u.subregion,
+                'u_type': u.u_type, 'subregion_id': u.subregion_id,
                 'previous': u
             }
-            for u in turn.prev.unit_set.select_related('government', 'subregion')
+            for u in turn.prev.unit_set.select_related('government')
         }
 
         disbands = defaultdict(set)
@@ -899,24 +897,24 @@ class Game(models.Model):
 
             if action == 'M':
                 target = orders[a]['target']
-                T = territory(subregion_key(orders[a]['actor']))
+                T = territory(orders[a]['actor'])
                 if d: # move succeeded
-                    units_index[(a, retreat)]['subregion'] = target
+                    units_index[(a, retreat)]['subregion_id'] = subregion_id(target)
                     if not retreat:
-                        displaced[territory(subregion_key(target))] = T
+                        displaced[territory(target)] = T
                 elif retreat: # move is a failed retreat
                     del units_index[(a, retreat)]
                     continue
                 else: # move failed
-                    failed[territory(subregion_key(target))].append(T)
+                    failed[territory(target)].append(T)
 
             # successful build
             if d and action == 'B':
                 units_index[(a, False)] = {
                     'turn': turn,
                     'government': orders[a]['government'],
-                    'u_type': convert[orders[a]['actor'].sr_type],
-                    'subregion': orders[a]['actor']
+                    'u_type': convert[orders[a]['actor'][2]],
+                    'subregion_id': subregion_id(orders[a]['actor'])
                 }
 
             if action == 'D':
@@ -942,10 +940,10 @@ class Game(models.Model):
                     )
                 if orders[a].get('action') != 'M':
                     continue
-                t = territory(subregion_key(orders[a]['target']))
+                T = territory(orders[a]['target'])
                 # if multiple moves to our target failed, we have a standoff.
-                if len(failed[t]) > 1:
-                    units_index[key]['standoff_from_id'] = t_id(t)
+                if len(failed[T]) > 1:
+                    units_index[key]['standoff_from_id'] = t_id(T)
             # end of Turn._update_units_blocked
 
         if turn.prev.season == 'FA':
@@ -1008,9 +1006,10 @@ class Game(models.Model):
                     if territory(subregion_key(u)) in disbands[g.id]:
                         continue
 
-                    orders[territory(subregion_key(u))] = {'government': g, 'actor': u,
-                                                           'action': 'D', 'assist': None,
-                                                           'target': None, 'via_convoy': False}
+                    orders[territory(subregion_key(u))] = {
+                        'government': g, 'actor': subregion_key(u),
+                        'action': 'D', 'assist': None,
+                        'target': None, 'via_convoy': False}
                     del units_index[(territory(subregion_key(u)), False)]
                     disbands[g.id].add(territory(subregion_key(u)))
                     our_builds += 1
@@ -1020,13 +1019,20 @@ class Game(models.Model):
 
         # beginning of Turn.create_canonical_orders
         decisions_index = dict(decisions)
-        keys = set(('government', 'actor', 'action',
-                    'assist', 'target', 'via_convoy'))
 
         canonical_orders = []
         for T, o in orders.iteritems():
-            order = {k: v for k, v in o.iteritems() if k in keys}
-            order['user_issued'] = o.get('id') is not None
+            order = {
+                'turn': turn.prev,
+                'government': o['government'],
+                'actor_id': subregion_id(o['actor']),
+                'action': o['action'],
+                'assist_id': subregion_id(o['assist']),
+                'target_id': subregion_id(o['target']),
+                'via_convoy': o['via_convoy'],
+                'user_issued': o.get('id') is not None,
+            }
+
             if decisions_index.get(T):
                 order['result'] = 'S'
             elif any(T in db for db in disbands.itervalues()):
@@ -1035,9 +1041,7 @@ class Game(models.Model):
                 order['result'] = 'B'
             else:
                 order['result'] = 'F'
-            canonical_orders.append(
-                CanonicalOrder(turn=turn.prev, **order)
-            )
+            canonical_orders.append(CanonicalOrder(**order))
 
         CanonicalOrder.objects.bulk_create(canonical_orders)
         # end of Turn.create_canonical_orders
