@@ -847,9 +847,9 @@ class Game(models.Model):
 
         if turn.season in ('S', 'F'):
             # FIXME: do something with civil disorder
-            disorder = detect_civil_disorder(orders)
+            disorder = detect_civil_disorder(fixed_orders)
             dependencies = construct_dependencies(fixed_orders)
-            paradox_convoys = detect_paradox(orders, dependencies)
+            paradox_convoys = detect_paradox(fixed_orders, dependencies)
             fails = immediate_fails(fixed_orders, units)
             decisions = resolve((), fixed_orders, dependencies, fails, paradox_convoys, units)
         elif turn.season in ('SR', 'FR'):
