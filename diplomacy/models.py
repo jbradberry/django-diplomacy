@@ -818,7 +818,7 @@ class Game(models.Model):
             disorder = detect_civil_disorder(orders)
             dependencies = construct_dependencies(fixed_orders)
             paradox_convoys = detect_paradox(orders, dependencies)
-            fails = turn.immediate_fails(orders)
+            fails = turn.immediate_fails(orders, units)
             decisions = resolve((), fixed_orders, dependencies, fails, paradox_convoys, units)
         elif turn.season in ('SR', 'FR'):
             decisions = resolve_retreats(fixed_orders)
@@ -1042,7 +1042,7 @@ class Turn(models.Model):
         return [v for k, v in sorted(orders.iteritems())]
 
     # FIXME refactor
-    def immediate_fails(self, orders):
+    def immediate_fails(self, orders, units):
         results = set()
         for T, o in orders.iteritems():
             if o['action'] == 'M':
@@ -1055,7 +1055,7 @@ class Turn(models.Model):
                         and o2['target'] == o['target']
                     ]
                     if any(subregion_key(o['actor']) in L and subregion_key(o['target']) in L
-                           for F, L in find_convoys(self.get_units(), matching)):
+                           for F, L in find_convoys(units, matching)):
                         continue
                 else:
                     continue
