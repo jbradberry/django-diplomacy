@@ -898,6 +898,7 @@ class Game(models.Model):
         keys = set(('government', 'actor', 'action',
                     'assist', 'target', 'via_convoy'))
 
+        canonical_orders = []
         for T, o in orders.iteritems():
             order = {k: v for k, v in o.iteritems() if k in keys}
             order['user_issued'] = o.get('id') is not None
@@ -909,7 +910,11 @@ class Game(models.Model):
                 order['result'] = 'B'
             else:
                 order['result'] = 'F'
-            turn.prev.canonicalorder_set.create(**order)
+            canonical_orders.append(
+                CanonicalOrder(turn=turn.prev, **order)
+            )
+
+        CanonicalOrder.objects.bulk_create(canonical_orders)
         # end of Turn.create_canonical_orders
 
         Unit.objects.bulk_create([
