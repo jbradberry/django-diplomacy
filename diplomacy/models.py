@@ -690,6 +690,17 @@ def resolve(state, orders, dep, fails, paradox, units):
 
     return None
 
+def update_ownership(units, owns):
+    current = {o['territory']: o for o in owns}
+    current.update(
+        (territory(u['subregion']),
+         {'territory': territory(u['subregion']), 'government': u['government']})
+        for u in units
+        if u['u_type'] == 'A'
+    )
+
+    return list(current.itervalues())
+
 # End of refactor wrapper functions
 
 def subregion_key(sr):
@@ -844,6 +855,7 @@ class Game(models.Model):
         }
 
         units = turn.get_units()
+        owns = turn.get_ownership()
 
         if turn.season in ('S', 'F'):
             # FIXME: do something with civil disorder
@@ -861,7 +873,22 @@ class Game(models.Model):
 
         turn = self.turn_set.create(number=turn.number+1)
         turn.update_units(orders, decisions)
-        turn.update_ownership()
+
+        units = turn.get_units()
+
+        if turn.season == 'FA':
+            owns = update_ownership(units, owns)
+
+        government_id = {
+            gvt.power.name: gvt.id
+            for gvt in self.government_set.select_related('power')
+        }
+        Ownership.objects.bulk_create([
+            Ownership(turn=turn,
+                      government_id=government_id[o['government']],
+                      territory_id=t_id(o['territory']))
+            for o in owns
+        ])
 
         turn.consistency_check()
         return True
@@ -1246,27 +1273,6 @@ class Turn(models.Model):
 
         for k, u in units.iteritems():
             Unit.objects.create(**u)
-
-    # FIXME refactor: this method should take data calculated by the
-    # engine and create the new ownership objects based on that.
-    def update_ownership(self):
-        governments = {
-            own.territory_id: own.government_id
-            for own in self.prev.ownership_set.all()
-        }
-
-        for t in Territory.objects.filter(subregion__sr_type='L'):
-            u = self.unit_set.filter(subregion__territory=t)
-
-            if self.season == 'FA' and u:
-                gvt = u[0].government_id
-            else:
-                gvt = governments.get(t.id)
-
-            if gvt is None:
-                continue
-
-            self.ownership_set.create(government_id=gvt, territory=t)
 
 
 def turn_create(sender, **kwargs):
