@@ -604,6 +604,38 @@ def construct_dependencies(orders):
 
     return dep
 
+def immediate_fails(orders, units):
+    results = set()
+    for T, o in orders.iteritems():
+        if o['action'] == 'M':
+            if o['target'] not in borders(o['actor']):
+                matching = [
+                    o2['actor']
+                    for T2, o2 in orders.iteritems()
+                    if o2['action'] == 'C'
+                    and o2['assist'] == o['actor']
+                    and o2['target'] == o['target']
+                ]
+                if any(o['actor'] in L and o['target'] in L
+                       for F, L in find_convoys(units, matching)):
+                    continue
+            else:
+                continue
+        elif o['action'] not in ('S', 'C'):
+            continue
+        else:
+            assist = orders[territory(o['assist'])]
+            if o['target'] is not None:
+                if (assist['action'] == 'M' and
+                    assist['target'] == o['target']):
+                    continue
+            else:
+                if assist['action'] in ('H', 'C', 'S'):
+                    continue
+        results.add(T)
+
+    return results
+
 def resolve_retreats(orders):
     decisions = []
     target_count = defaultdict(int)
@@ -818,7 +850,7 @@ class Game(models.Model):
             disorder = detect_civil_disorder(orders)
             dependencies = construct_dependencies(fixed_orders)
             paradox_convoys = detect_paradox(orders, dependencies)
-            fails = turn.immediate_fails(fixed_orders, units)
+            fails = immediate_fails(fixed_orders, units)
             decisions = resolve((), fixed_orders, dependencies, fails, paradox_convoys, units)
         elif turn.season in ('SR', 'FR'):
             decisions = resolve_retreats(fixed_orders)
@@ -1040,39 +1072,6 @@ class Turn(models.Model):
                     o['convoy'] = bool(matching)
 
         return [v for k, v in sorted(orders.iteritems())]
-
-    # FIXME refactor
-    def immediate_fails(self, orders, units):
-        results = set()
-        for T, o in orders.iteritems():
-            if o['action'] == 'M':
-                if o['target'] not in borders(o['actor']):
-                    matching = [
-                        o2['actor']
-                        for T2, o2 in orders.iteritems()
-                        if o2['action'] == 'C'
-                        and o2['assist'] == o['actor']
-                        and o2['target'] == o['target']
-                    ]
-                    if any(o['actor'] in L and o['target'] in L
-                           for F, L in find_convoys(units, matching)):
-                        continue
-                else:
-                    continue
-            elif o['action'] not in ('S', 'C'):
-                continue
-            else:
-                assist = orders[territory(o['assist'])]
-                if o['target'] is not None:
-                    if (assist['action'] == 'M' and
-                        assist['target'] == o['target']):
-                        continue
-                else:
-                    if assist['action'] in ('H', 'C', 'S'):
-                        continue
-            results.add(T)
-
-        return results
 
     # FIXME refactor
     def create_canonical_orders(self, orders, decisions, turn):
