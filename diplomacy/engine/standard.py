@@ -1,4 +1,6 @@
 
+seasons = ('S', 'SR', 'F', 'FR', 'FA')
+
 # For every territory, specify:
 #   - the initial owning empire, or None
 #   - whether the territory is a supply center

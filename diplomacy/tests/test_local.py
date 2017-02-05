@@ -33,8 +33,6 @@ class CorrectnessHelperTest(TestCase):
         fleets = [models.subregion_key(sr) for sr in fleets]
         legal = models.find_convoys(T.get_units(), fleets)
 
-        full_sr = models.Subregion.objects.select_related('territory')
-
         self.assertEqual(len(legal), 2)
         (seas1, lands1), (seas2, lands2) = legal
         if len(seas1) == 2:

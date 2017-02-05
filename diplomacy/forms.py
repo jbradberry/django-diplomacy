@@ -1,9 +1,9 @@
 from collections import defaultdict
 
-from django.forms import Form, CharField, Textarea, ValidationError
+from django.forms import Form, ValidationError
 from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
 
-from .models import (Order, Subregion, Unit, territory, borders, find_convoys, subregion_key,
+from .models import (Order, Subregion, territory, borders, find_convoys, subregion_key,
                      builds_available, is_legal)
 from .helpers import unit
 
@@ -59,7 +59,7 @@ class OrderForm(ModelForm):
         my_css = {'actor': 'unit',
                   'action': 'action',
                   'assist': 'unit',
-                  'target': 'subregion',}
+                  'target': 'subregion'}
         for w, c in my_css.iteritems():
             self.fields[w].widget.attrs['class'] = c
 

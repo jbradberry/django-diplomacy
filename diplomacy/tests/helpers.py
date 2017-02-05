@@ -115,4 +115,4 @@ def create_orders(orders, turn):
         gvt = models.Government.objects.get(power__name__startswith=gname)
         post = models.OrderPost.objects.create(turn=turn,
                                                government=gvt)
-        new_orders = [create_order(post, order) for order in oset]
+        [create_order(post, order) for order in oset]
