@@ -715,6 +715,14 @@ def update_ownership(units, owns):
 
     return list(current.itervalues())
 
+def increment_turn(turn):
+    number = turn['number'] + 1
+    return {
+        'number': number,
+        'year': 1900 + number // len(SEASON_CHOICES),
+        'season': SEASON_CHOICES[number % len(SEASON_CHOICES)][0],
+    }
+
 # End of refactor wrapper functions
 
 def subregion_key(sr):
@@ -831,7 +839,7 @@ class Game(models.Model):
             return False
         if self.government_set.count() != 7:
             return False
-        turn = self.turn_set.create(number=0)
+        turn = self.turn_set.create(number=0, year=1900, season='S')
         governments = list(self.government_set.all())
         shuffle(governments)
         for pwr, gvt in zip(Power.objects.all(), governments):
@@ -854,6 +862,7 @@ class Game(models.Model):
 
     def generate(self):
         turn = self.current_turn()
+        turn_data = turn.as_data()
 
         orders = {
             territory(o['actor']): o
@@ -864,21 +873,19 @@ class Game(models.Model):
         units = turn.get_units()
         owns = turn.get_ownership()
 
-        if turn.season in ('S', 'F'):
+        if turn_data['season'] in ('S', 'F'):
             # FIXME: do something with civil disorder
             disorder = detect_civil_disorder(orders)
             dependencies = construct_dependencies(orders)
             paradox_convoys = detect_paradox(orders, dependencies)
             fails = immediate_fails(orders, units)
             decisions = resolve((), orders, dependencies, fails, paradox_convoys, units)
-        elif turn.season in ('SR', 'FR'):
+        elif turn_data['season'] in ('SR', 'FR'):
             decisions = resolve_retreats(orders)
         else:
             decisions = resolve_adjusts(orders)
         if decisions is None:
             return False
-
-        turn = self.turn_set.create(number=turn.number+1)
 
         # BEGIN new updates code
 
@@ -892,7 +899,7 @@ class Game(models.Model):
             u['previous'] = u['subregion']
         # end update_previous_units
 
-        if turn.prev.season in ('SR', 'FR'):
+        if turn_data['season'] in ('SR', 'FR'):
             # begin update_retreats
             new_units = []
             for u in units:
@@ -916,7 +923,7 @@ class Game(models.Model):
             units = new_units
             # end update_retreats
 
-        if turn.prev.season in ('S', 'F'):
+        if turn_data['season'] in ('S', 'F'):
             # begin update_movement
             displaced, failed = {}, defaultdict(int)
             for u in units:
@@ -952,7 +959,7 @@ class Game(models.Model):
             # return units
             # end update_movement
 
-        if turn.prev.season == 'FA':
+        if turn_data['season'] == 'FA':
             # begin update_adjusts
             new_units = []
             for u in units:
@@ -1059,6 +1066,8 @@ class Game(models.Model):
 
         # END new updates code
 
+        turn = self.turn_set.create(**increment_turn(turn_data))
+
         government_id = {
             gvt.power.name: gvt.id
             for gvt in self.government_set.select_related('power')
@@ -1134,6 +1143,13 @@ class Turn(models.Model):
             'slug': self.game.slug,
             'season': self.season,
             'year': str(self.year),})
+
+    def as_data(self):
+        return {
+            'number': self.number,
+            'year': self.year,
+            'season': self.season,
+        }
 
     @property
     def prev(self):
@@ -1310,14 +1326,6 @@ class Turn(models.Model):
                     o['convoy'] = bool(matching)
 
         return [v for k, v in sorted(orders.iteritems())]
-
-
-def turn_create(sender, **kwargs):
-    instance = kwargs['instance']
-    if instance.id: return
-    instance.year = 1900 + instance.number // len(SEASON_CHOICES)
-    instance.season = SEASON_CHOICES[instance.number % len(SEASON_CHOICES)][0]
-pre_save.connect(turn_create, sender=Turn)
 
 
 class Power(models.Model):
