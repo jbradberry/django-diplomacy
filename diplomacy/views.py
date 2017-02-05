@@ -150,7 +150,14 @@ class OrdersView(DetailView, BaseFormView):
         return super(OrdersView, self).get_context_data(**context)
 
     def get_initial(self):
-        return self.object.game.current_turn().normalize_orders(self.object)
+        return [
+            {'actor': models.subregion_obj(o['actor']),
+             'action': o['action'],
+             'assist': models.subregion_obj(o['assist']),
+             'target': models.subregion_obj(o['target']),
+             'via_convoy': o['via_convoy']}
+            for o in self.object.game.current_turn().normalize_orders(self.object)
+        ]
 
     def get_form_kwargs(self):
         kwargs = super(OrdersView, self).get_form_kwargs()

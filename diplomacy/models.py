@@ -75,6 +75,20 @@ def subregion_id_closure():
 
 subregion_id = subregion_id_closure()
 
+def subregion_obj_closure():
+    lookup_table = {}
+
+    def subregion_obj(sr_key):
+        if not lookup_table:
+            lookup_table.update((subregion_key(sr), sr)
+                                for sr in Subregion.objects.select_related('territory'))
+
+            return lookup_table.get(sr_key)
+
+    return subregion_obj
+
+subregion_obj = subregion_obj_closure()
+
 def keys_to_ids(seq):
     return [subregion_id(sr_key) for sr_key in seq]
 
@@ -586,9 +600,9 @@ def consistent(state, orders, fails, paradox, units):
 
 def detect_civil_disorder(orders):
     user_issued = set(o['government'] for o in orders.itervalues()
-                      if 'id' in o)
+                      if o['user_issued'])
     automated = set(o['government'] for o in orders.itervalues()
-                    if 'id' not in o)
+                    if not o['user_issued'])
     return automated - user_issued
 
 def construct_dependencies(orders):
@@ -842,10 +856,7 @@ class Game(models.Model):
         turn = self.current_turn()
 
         orders = {
-            territory(subregion_key(o['actor'])): {
-                k: subregion_key(v) if k in ('actor', 'assist', 'target') else v
-                for k, v in o.iteritems()
-            }
+            territory(o['actor']): o
             for o in turn.normalize_orders()
             if o['actor'] is not None
         }
@@ -955,7 +966,7 @@ class Game(models.Model):
             for T, o in orders.iteritems():
                 if o['action'] == 'B' and o['result'] == 'S':
                     new_units.append({
-                        'government': o['government'].power.name,
+                        'government': o['government'],
                         'u_type': convert[o['actor'][2]],
                         'subregion': o['actor'],
                         'previous': None,
@@ -1033,7 +1044,7 @@ class Game(models.Model):
             for u in units:
                 if (u['government'], u['subregion']) in autodisbands:
                     orders[territory(u['subregion'])] = {
-                        'government': u['government'],
+                        'user_issued': False, 'government': u['government'],
                         'actor': u['subregion'],
                         'action': 'D', 'result': 'D',
                         'assist': None, 'target': None,
@@ -1064,7 +1075,7 @@ class Game(models.Model):
                 'assist_id': subregion_id(o['assist']),
                 'target_id': subregion_id(o['target']),
                 'via_convoy': o['via_convoy'],
-                'user_issued': o.get('id') is not None,
+                'user_issued': o.get('user_issued', False),
             })
             for o in orders.itervalues()
         ])
@@ -1206,9 +1217,7 @@ class Turn(models.Model):
         return sorted((power, sorted(adict.iteritems()))
                       for power, adict in orders.iteritems())
 
-    # FIXME refactor: The responsibility of this method should be to provide a
-    # list of Order instances.  Converting these to a list of dicts for use in
-    # the turn generation engine should be separate.
+    # FIXME refactor
     def normalize_orders(self, gvt=None):
         gvts = (gvt,) if gvt else self.game.government_set.all()
         units = self.get_units()
@@ -1219,7 +1228,7 @@ class Turn(models.Model):
         if self.season == 'FA':
             builds = builds_available(units, owns)
             orders = {
-                (g.id, s): {'government': g, 'turn': self,
+                (g.id, s): {'user_issued': False, 'government': g.power.name,
                             'actor': None, 'action': None,
                             'assist': None, 'target': None,
                             'via_convoy': False, 'convoy': False}
@@ -1229,8 +1238,8 @@ class Turn(models.Model):
         else:
             action = 'H' if self.season in ('S', 'F') else None
             orders = {
-                (g.id, a.id): {'government': g, 'turn': self,
-                               'actor': a, 'action': action,
+                (g.id, a.id): {'user_issued': False, 'government': g.power.name,
+                               'actor': subregion_key(a), 'action': action,
                                'assist': None, 'target': None,
                                'via_convoy': False, 'convoy': False}
                 for g in gvts
@@ -1238,15 +1247,12 @@ class Turn(models.Model):
             }
 
         # Find the most recent set of posted orders from each relevant government.
-        posts = self.posts.all()
-        if gvt:
-            posts = posts.filter(government=gvt)
-
         most_recent = {}
-        for post in posts:
-            most_recent.setdefault(post.government, post)
-            if post.timestamp > most_recent[post.government].timestamp:
-                most_recent[post.government] = post
+        for g in gvts:
+            try:
+                most_recent[g] = self.posts.filter(government=g).order_by('-id')[:1].get()
+            except OrderPost.DoesNotExist:
+                pass
 
         # For orders that were explicitly given, replace the default order if
         # the given order is legal.  Illegal orders are dropped.
@@ -1268,10 +1274,11 @@ class Turn(models.Model):
                         continue
 
                     orders[(gvt.id, index)] = {
-                        'id': o.id, 'government': post.government,
-                        'turn': self, 'actor': o.actor, 'action': o.action,
-                        'assist': o.assist, 'target': o.target,
-                        'via_convoy': o.via_convoy
+                        'user_issued': True, 'government': post.government.power.name,
+                        'actor': subregion_key(o.actor), 'action': o.action,
+                        'assist': subregion_key(o.assist),
+                        'target': subregion_key(o.target),
+                        'via_convoy': o.via_convoy, 'convoy': False,
                     }
 
         if self.season in ('S', 'F'):
@@ -1285,11 +1292,11 @@ class Turn(models.Model):
                 # both overall and specifically by this user's government.
                 matching = [(g2, o2) for (g2, i2), o2 in orders.iteritems()
                             if o2['action'] == 'C' and
-                            assist(territory(subregion_key(o['actor'])), o,
-                                   territory(subregion_key(o2['actor'])), o2)]
+                            assist(territory(o['actor']), o,
+                                   territory(o2['actor']), o2)]
                 gvt_matching = [o2 for g2, o2 in matching if g2 == g]
 
-                if subregion_key(o['target']) in borders(subregion_key(o['actor'])):
+                if o['target'] in borders(o['actor']):
                     # If the target territory is adjacent to the moving unit,
                     # only mark as convoying when the user's government issued
                     # the convoy order, or the movement is explicitly marked as
