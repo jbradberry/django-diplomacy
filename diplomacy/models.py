@@ -1128,6 +1128,7 @@ class Turn(models.Model):
              'displaced_from': getattr(u.displaced_from, 'name', ''),
              'standoff_from': getattr(u.standoff_from, 'name', '')}
             for u in self.unit_set.select_related('subregion__territory',
+                                                  'previous__subregion__territory',
                                                   'displaced_from',
                                                   'standoff_from',
                                                   'government__power')
