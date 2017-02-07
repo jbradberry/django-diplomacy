@@ -94,8 +94,7 @@ def unit_in(u_key, units):
 
 def valid_hold(actor, units, owns, season, empty=None):
     if season in ('S', 'F'):
-        actor_key = subregion_key(actor)
-        if unit_in(actor_key, units):
+        if unit_in(actor, units):
             return {empty: {empty: False}}
     return {}
 
@@ -103,10 +102,9 @@ def valid_move(actor, units, owns, season, empty=None):
     if season == 'FA':
         return {}
 
-    actor_key = subregion_key(actor)
-    actor_set = [u for u in units if territory(u['subregion']) == territory(actor_key)]
+    actor_set = [u for u in units if territory(u['subregion']) == territory(actor)]
 
-    target = borders(actor_key)
+    target = borders(actor)
 
     if season in ('SR', 'FR'):
         # only dislodged units retreat
@@ -136,17 +134,17 @@ def valid_move(actor, units, owns, season, empty=None):
             and not any(p[2] == 'L' for p in territory_parts(territory(u['subregion'])))
         ]
         for fset, lset in find_convoys(units, fleets):
-            if actor_key in lset:
+            if actor in lset:
                 lset = set(keys_to_ids(lset))
                 target.update(lset)
                 convoyable.update(lset)
-        target.discard(actor.id)
+        target.discard(subregion_id(actor))
 
     if not target:
         return {}
     return {
         empty: {x: (x in convoyable
-                    and any(x == subregion_id(b) for b in borders(subregion_key(actor))))
+                    and any(x == subregion_id(b) for b in borders(actor)))
                 for x in target}
     }
 
@@ -154,11 +152,10 @@ def valid_support(actor, units, owns, season, empty=None):
     if season not in ('S', 'F'):
         return {}
 
-    actor_key = subregion_key(actor)
-    if not unit_in(actor_key, units):
+    if not unit_in(actor, units):
         return {}
 
-    adj = {sr for b in borders(actor_key)
+    adj = {sr for b in borders(actor)
            for sr in territory_parts(territory(b))}
 
     # support to hold
@@ -172,7 +169,7 @@ def valid_support(actor, units, owns, season, empty=None):
     attackers = {
         b for a in adj
         for b in borders(a)
-        if b != actor_key
+        if b != actor
         and unit_in(b, units)
     }
     for a in attackers:
@@ -183,13 +180,13 @@ def valid_support(actor, units, owns, season, empty=None):
     attackers = {
         u['subregion'] for u in units
         if u['u_type'] == 'A'
-        and u['subregion'] != actor_key
+        and u['subregion'] != actor
     }
     fleets = [
         u['subregion'] for u in units
         if u['u_type'] == 'F'
         and not any(p[2] == 'L' for p in territory_parts(u['subregion']))
-        and u['subregion'] != actor_key  # if we are issuing a support, we can't convoy.
+        and u['subregion'] != actor  # if we are issuing a support, we can't convoy.
     ]
     for fset, lset in find_convoys(units, fleets):
         for a in attackers:
@@ -208,10 +205,9 @@ def valid_convoy(actor, units, owns, season, empty=None):
     if season not in ('S', 'F'):
         return {}
 
-    actor_key = subregion_key(actor)
-    if not unit_in(actor_key, units):
+    if not unit_in(actor, units):
         return {}
-    if actor_key[2] != 'S':
+    if actor[2] != 'S':
         return {}
 
     fleets = [
@@ -221,7 +217,7 @@ def valid_convoy(actor, units, owns, season, empty=None):
     ]
 
     for fset, lset in find_convoys(units, fleets):
-        if actor_key in fset:
+        if actor in fset:
             attackers = {
                 u['subregion'] for u in units
                 if u['u_type'] == 'A'
@@ -236,19 +232,17 @@ def valid_build(actor, units, owns, season, empty=None):
     if not season == 'FA':
         return {}
 
-    actor_key = subregion_key(actor)
-
     owns_index = {o['territory']: o for o in owns}
-    current_government = owns_index.get(territory(actor_key), {}).get('government')
+    current_government = owns_index.get(territory(actor), {}).get('government')
     home_government, is_supply = '', False
-    if territory(actor_key) in standard.definition:
-        home_government, is_supply = standard.definition[territory(actor_key)][:2]
+    if territory(actor) in standard.definition:
+        home_government, is_supply = standard.definition[territory(actor)][:2]
 
     # It has to be a supply center and the current government has to have builds available.
     if not (is_supply and builds_available(units, owns).get(current_government, 0) > 0):
         return {}
     # Only can build if the territory is currently unoccupied.
-    if any(territory(u['subregion']) == territory(actor_key) for u in units):
+    if any(territory(u['subregion']) == territory(actor) for u in units):
         return {}
     # And only if the territory is one of this government's "home" territories.
     if current_government == home_government:
@@ -259,8 +253,7 @@ def valid_disband(actor, units, owns, season, empty=None):
     if season in ('S', 'F'):
         return {}
 
-    actor_key = subregion_key(actor)
-    unit = [u for u in units if territory(u['subregion']) == territory(actor_key)]
+    unit = [u for u in units if territory(u['subregion']) == territory(actor)]
     if season in ('SR', 'FR'):
         if not any(u['dislodged'] for u in unit):
             return {}
@@ -315,7 +308,7 @@ def is_legal(order, units, owns, season):
                'C': valid_convoy,
                'B': valid_build,
                'D': valid_disband}
-    tree = actions[order['action']](order['actor'], units, owns, season)
+    tree = actions[order['action']](actor_key, units, owns, season)
     if not tree or getattr(order['assist'], 'id', None) not in tree:
         return False
     tree = tree[getattr(order['assist'], 'id', None)]
@@ -775,7 +768,7 @@ class Government(models.Model):
         tree = {}
         for a in self.actors(turn):
             for x in actions[turn.season]:
-                result = helper[x](a, units, owns, season, u'')
+                result = helper[x](subregion_key(a), units, owns, season, u'')
                 if not result:
                     continue
                 tree.setdefault(a.id, {})[x] = result
