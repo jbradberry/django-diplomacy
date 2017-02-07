@@ -92,13 +92,13 @@ def keys_to_ids(seq):
 def unit_in(u_key, units):
     return any(u['subregion'] == u_key for u in units)
 
-def valid_hold(actor, units, owns, season, empty=None):
+def valid_hold(actor, units, owns, season):
     if season in ('S', 'F'):
         if unit_in(actor, units):
-            return {empty: {empty: False}}
+            return {None: {None: False}}
     return {}
 
-def valid_move(actor, units, owns, season, empty=None):
+def valid_move(actor, units, owns, season):
     if season == 'FA':
         return {}
 
@@ -122,7 +122,6 @@ def valid_move(actor, units, owns, season, empty=None):
 
     if len(actor_set) != 1:
         return {}
-    target = [subregion_id(t) for t in target]
 
     convoyable = set()
     # Is the unit a convoyable army?  If so, include places it can convoy to.
@@ -135,20 +134,19 @@ def valid_move(actor, units, owns, season, empty=None):
         ]
         for fset, lset in find_convoys(units, fleets):
             if actor in lset:
-                lset = set(keys_to_ids(lset))
                 target.update(lset)
                 convoyable.update(lset)
-        target.discard(subregion_id(actor))
+        target.discard(actor)
 
     if not target:
         return {}
     return {
-        empty: {x: (x in convoyable
-                    and any(x == subregion_id(b) for b in borders(actor)))
-                for x in target}
+        None: {x: (x in convoyable
+                   and any(x == b for b in borders(actor)))
+               for x in target}
     }
 
-def valid_support(actor, units, owns, season, empty=None):
+def valid_support(actor, units, owns, season):
     if season not in ('S', 'F'):
         return {}
 
@@ -160,8 +158,7 @@ def valid_support(actor, units, owns, season, empty=None):
 
     # support to hold
     results = {
-        subregion_id(a): {empty: False}
-        for a in adj
+        a: {None: False} for a in adj
         if unit_in(a, units)
     }
 
@@ -173,8 +170,8 @@ def valid_support(actor, units, owns, season, empty=None):
         and unit_in(b, units)
     }
     for a in attackers:
-        reachable = keys_to_ids(adj & set(borders(a)))
-        results.setdefault(subregion_id(a), {}).update((x, False) for x in reachable)
+        reachable = adj & set(borders(a))
+        results.setdefault(a, {}).update((x, False) for x in reachable)
 
     # support to convoyed attack
     attackers = {
@@ -194,14 +191,13 @@ def valid_support(actor, units, owns, season, empty=None):
                 continue
             if not (adj & lset - {a}):
                 continue
-            results.setdefault(subregion_id(a), {}).update(
-                (x, False)
-                for x in keys_to_ids(adj & lset - {a})
+            results.setdefault(a, {}).update(
+                (x, False) for x in (adj & lset - {a})
             )
 
     return results
 
-def valid_convoy(actor, units, owns, season, empty=None):
+def valid_convoy(actor, units, owns, season):
     if season not in ('S', 'F'):
         return {}
 
@@ -223,12 +219,11 @@ def valid_convoy(actor, units, owns, season, empty=None):
                 if u['u_type'] == 'A'
                 and u['subregion'] in lset
             }
-            lset = set(keys_to_ids(lset))
-            return {subregion_id(a): {x: False for x in lset - {subregion_id(a)}}
+            return {a: {x: False for x in lset - {a}}
                     for a in attackers}
     return {}
 
-def valid_build(actor, units, owns, season, empty=None):
+def valid_build(actor, units, owns, season):
     if not season == 'FA':
         return {}
 
@@ -246,10 +241,10 @@ def valid_build(actor, units, owns, season, empty=None):
         return {}
     # And only if the territory is one of this government's "home" territories.
     if current_government == home_government:
-        return {empty: {empty: False}}
+        return {None: {None: False}}
     return {}
 
-def valid_disband(actor, units, owns, season, empty=None):
+def valid_disband(actor, units, owns, season):
     if season in ('S', 'F'):
         return {}
 
@@ -259,16 +254,17 @@ def valid_disband(actor, units, owns, season, empty=None):
             return {}
     elif builds_available(units, owns).get(unit[0]['government'], 0) >= 0:
         return {}
-    return {empty: {empty: False}}
+    return {None: {None: False}}
 
 def is_legal(order, units, owns, season):
     if isinstance(order, Order):
         order = {'government': order.post.government,
                  'turn': order.post.turn,
-                 'actor': order.actor, 'action': order.action,
-                 'assist': order.assist, 'target': order.target}
+                 'actor': subregion_key(order.actor),
+                 'action': order.action,
+                 'assist': subregion_key(order.assist),
+                 'target': subregion_key(order.target)}
 
-    actor_key = subregion_key(order['actor'])
     builds = builds_available(units, owns)
 
     if order['actor'] is None:
@@ -276,7 +272,7 @@ def is_legal(order, units, owns, season):
             return False
         unit = ()
     else:
-        unit = [u for u in units if u['subregion'] == actor_key]
+        unit = [u for u in units if u['subregion'] == order['actor']]
 
     if order['actor'] is None or order['action'] is None:
         return (season == 'FA' and
@@ -297,7 +293,7 @@ def is_legal(order, units, owns, season):
         if unit and unit[0]['government'] != order['government'].power.name:
             return False
     elif order['action'] == 'B':
-        if not any(o['territory'] == territory(actor_key)
+        if not any(o['territory'] == territory(order['actor'])
                    and o['government'] == order['government'].power.name
                    for o in owns):
             return False
@@ -308,11 +304,11 @@ def is_legal(order, units, owns, season):
                'C': valid_convoy,
                'B': valid_build,
                'D': valid_disband}
-    tree = actions[order['action']](actor_key, units, owns, season)
-    if not tree or getattr(order['assist'], 'id', None) not in tree:
+    tree = actions[order['action']](order['actor'], units, owns, season)
+    if not tree or order['assist'] not in tree:
         return False
-    tree = tree[getattr(order['assist'], 'id', None)]
-    if getattr(order['target'], 'id', None) not in tree:
+    tree = tree[order['assist']]
+    if order['target'] not in tree:
         return False
     return True
 
@@ -768,10 +764,16 @@ class Government(models.Model):
         tree = {}
         for a in self.actors(turn):
             for x in actions[turn.season]:
-                result = helper[x](subregion_key(a), units, owns, season, u'')
+                result = helper[x](subregion_key(a), units, owns, season)
                 if not result:
                     continue
-                tree.setdefault(a.id, {})[x] = result
+                tree.setdefault(a.id, {})[x] = {
+                    (subregion_id(k) or u''): {
+                        subregion_id(target) or u'': v
+                        for target, v in targets.iteritems()
+                    }
+                    for assist, targets in result.iteritems()
+                }
 
         if season == 'FA' and builds.get(self.power.name, 0) > 0:
             tree[u''] = {u'': {u'': {u'': False}}}
