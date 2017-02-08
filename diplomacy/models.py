@@ -8,7 +8,8 @@ from django.db import models
 from .engine import standard
 from .engine.check import (valid_hold, valid_move, valid_support, valid_convoy,
                            valid_build, valid_disband, is_legal)
-from .engine.main import find_convoys, builds_available, generate, assist
+from .engine.compare import assist
+from .engine.main import find_convoys, builds_available, generate
 from .engine.utils import territory, borders, territory_parts
 from .helpers import unit, convert
 
@@ -129,6 +130,7 @@ class Game(models.Model):
     def get_absolute_url(self):
         return ('diplomacy_game_detail', (), {'slug': self.slug})
 
+    # FIXME refactor
     def governments(self, turn=None):
         gvts = self.government_set.all()
         owns = Ownership.objects.filter(turn=turn, territory__is_supply=True)
@@ -145,6 +147,7 @@ class Game(models.Model):
         if self.turn_set.exists():
             return self.turn_set.latest()
 
+    # FIXME refactor
     def activate(self):
         if self.state != 'S' or self.turn_set.exists():
             return False
@@ -309,6 +312,7 @@ class Turn(models.Model):
             for o in self.ownership_set.select_related('territory', 'government__power')
         ]
 
+    # FIXME refactor
     def recent_orders(self):
         seasons = {'S': ['F', 'FR', 'FA'],
                    'SR': ['S'],
@@ -485,6 +489,7 @@ class Government(models.Model):
     def __unicode__(self):
         return self.name
 
+    # FIXME refactor
     def actors(self, turn=None):
         if not turn:
             turn = self.game.current_turn()
@@ -512,6 +517,7 @@ class Government(models.Model):
 
         return actors
 
+    # FIXME refactor
     def slots(self, turn):
         builds = builds_available(turn.get_units(), turn.get_ownership())
         if getattr(turn, 'season', '') == 'FA':
