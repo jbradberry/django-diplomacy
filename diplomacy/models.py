@@ -7,7 +7,7 @@ from django.db import models
 
 from .engine import standard
 from .engine.main import find_convoys, builds_available, generate, assist
-from .engine.utils import territory, borders, territory_parts
+from .engine.utils import territory, borders, territory_parts, unit_in
 from .helpers import unit, convert
 
 
@@ -85,12 +85,6 @@ def subregion_obj_closure():
     return subregion_obj
 
 subregion_obj = subregion_obj_closure()
-
-def keys_to_ids(seq):
-    return [subregion_id(sr_key) for sr_key in seq]
-
-def unit_in(u_key, units):
-    return any(u['subregion'] == u_key for u in units)
 
 def valid_hold(actor, units, owns, season):
     if season in ('S', 'F'):
