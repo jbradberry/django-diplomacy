@@ -1,4 +1,14 @@
 
+powers = (
+    'Austria-Hungary',
+    'England',
+    'France',
+    'Germany',
+    'Italy',
+    'Russia',
+    'Turkey',
+)
+
 seasons = ('S', 'SR', 'F', 'FR', 'FA')
 
 # For every territory, specify:
