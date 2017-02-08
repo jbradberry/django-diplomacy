@@ -171,3 +171,51 @@ def valid_disband(actor, units, owns, season):
     elif builds_available(units, owns).get(unit[0]['government'], 0) >= 0:
         return {}
     return {None: {None: False}}
+
+def is_legal(order, units, owns, season):
+    builds = builds_available(units, owns)
+
+    if order['actor'] is None:
+        if season != 'FA':
+            return False
+        unit = ()
+    else:
+        unit = [u for u in units if u['subregion'] == order['actor']]
+
+    if order['actor'] is None or order['action'] is None:
+        return (season == 'FA' and
+                builds.get(order['government'], 0) > 0)
+    if order['action'] != 'B' and not unit:
+        return False
+
+    if season in ('S', 'F'):
+        if unit[0]['government'] != order['government']:
+            return False
+    elif season in ('SR', 'FR'):
+        unit = [u for u in unit if u['dislodged']]
+        if not unit:
+            return False
+        if unit[0]['government'] != order['government']:
+            return False
+    elif order['action'] == 'D':
+        if unit and unit[0]['government'] != order['government']:
+            return False
+    elif order['action'] == 'B':
+        if not any(o['territory'] == territory(order['actor'])
+                   and o['government'] == order['government']
+                   for o in owns):
+            return False
+
+    actions = {'H': valid_hold,
+               'M': valid_move,
+               'S': valid_support,
+               'C': valid_convoy,
+               'B': valid_build,
+               'D': valid_disband}
+    tree = actions[order['action']](order['actor'], units, owns, season)
+    if not tree or order['assist'] not in tree:
+        return False
+    tree = tree[order['assist']]
+    if order['target'] not in tree:
+        return False
+    return True

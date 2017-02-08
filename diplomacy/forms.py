@@ -3,9 +3,10 @@ from collections import defaultdict
 from django.forms import Form, ValidationError
 from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
 
+from .engine.check import is_legal
 from .engine.main import find_convoys, builds_available
 from .engine.utils import territory, borders
-from .models import Order, Subregion, subregion_key, is_legal
+from .models import Order, Subregion, subregion_key
 from .helpers import unit
 
 
