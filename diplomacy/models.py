@@ -130,18 +130,24 @@ class Game(models.Model):
     def get_absolute_url(self):
         return ('diplomacy_game_detail', (), {'slug': self.slug})
 
-    # FIXME refactor
     def governments(self, turn=None):
         gvts = self.government_set.all()
-        owns = Ownership.objects.filter(turn=turn, territory__is_supply=True)
-        units = Unit.objects.filter(turn=turn)
-        orders = Order.objects.filter(post__turn=turn)
+        units, owns, posts = (), (), ()
+        if turn:
+            units = turn.get_units()
+            owns = turn.get_ownership()
+            posts = turn.posts.select_related('government')
+
         return sorted(
-            [(g, owns.filter(government=g).count(),
-              units.filter(government=g).count(),
-              bool(g.slots(turn)) == orders.filter(post__government=g).exists())
-             for g in gvts],
-            key=lambda x: (-x[1], -x[2], getattr(x[0].power, 'name', None)))
+            ((g,
+              sum(1 for o in owns
+                  if o['government'] == g.power.name
+                  and o['is_supply']),
+              sum(1 for u in units if u['government'] == g.power.name),
+              any(post.government == g for post in posts))
+             for g in gvts),
+            key=lambda x: (-x[1], -x[2], getattr(x[0].power, 'name', None))
+        )
 
     def current_turn(self):
         if self.turn_set.exists():
@@ -516,13 +522,6 @@ class Government(models.Model):
                                               **displaced)
 
         return actors
-
-    # FIXME refactor
-    def slots(self, turn):
-        builds = builds_available(turn.get_units(), turn.get_ownership())
-        if getattr(turn, 'season', '') == 'FA':
-            return abs(builds.get(self.power.name, 0))
-        return self.actors(turn).count()
 
     def filter_orders(self):
         turn = self.game.current_turn()
