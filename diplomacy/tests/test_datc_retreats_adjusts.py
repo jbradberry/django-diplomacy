@@ -39,7 +39,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -52,9 +52,10 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T, action='M'):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
         self.assertFalse(
-            is_legal(models.Order.objects.get(post__turn=T, action='S'), units, owns, T.season))
+            is_legal(models.Order.objects.get(post__turn=T, action='S').as_data(),
+                     units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -95,7 +96,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -108,9 +109,10 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T, action='M'):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
         self.assertFalse(
-            is_legal(models.Order.objects.get(post__turn=T, action='S'), units, owns, T.season))
+            is_legal(models.Order.objects.get(post__turn=T, action='S').as_data(),
+                     units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -157,7 +159,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -169,7 +171,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertFalse(is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -203,7 +205,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -216,10 +218,10 @@ class Retreating(TestCase):
         owns = T.get_ownership()
         o = models.Order.objects.get(
             post__turn=T, actor__territory__name="Holland")
-        self.assertTrue(is_legal(o, units, owns, T.season))
+        self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
         o = models.Order.objects.get(
             post__turn=T, actor__territory__name="North Sea")
-        self.assertFalse(is_legal(o, units, owns, T.season))
+        self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -255,7 +257,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -266,7 +268,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertFalse(is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -297,7 +299,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -308,7 +310,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         self.assertFalse(
-            is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -335,7 +337,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -347,7 +349,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -378,7 +380,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -394,7 +396,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -439,7 +441,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -453,7 +455,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -486,7 +488,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -504,12 +506,12 @@ class Retreating(TestCase):
             is_legal(
                 models.Order.objects.get(
                     post__turn=T,
-                    post__government__power__name="England"), units, owns, T.season))
+                    post__government__power__name="England").as_data(), units, owns, T.season))
         self.assertTrue(
             is_legal(
                 models.Order.objects.get(
                     post__turn=T,
-                    post__government__power__name="Germany"), units, owns, T.season))
+                    post__government__power__name="Germany").as_data(), units, owns, T.season))
         T.game.generate()
         T = T.game.current_turn()
 
@@ -544,7 +546,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -563,7 +565,8 @@ class Retreating(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        self.assertTrue(is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+        self.assertTrue(
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -604,7 +607,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -628,7 +631,8 @@ class Retreating(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        self.assertTrue(is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+        self.assertTrue(
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -659,7 +663,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -678,7 +682,8 @@ class Retreating(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        self.assertFalse(is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+        self.assertFalse(
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -706,7 +711,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -733,7 +738,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -759,7 +764,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -778,7 +783,8 @@ class Retreating(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        self.assertFalse(is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+        self.assertFalse(
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         orders = {"England": ("F Portugal M Mid-Atlantic Ocean",)}
         create_orders(orders, T)
@@ -787,7 +793,8 @@ class Retreating(TestCase):
             is_legal(
                 models.Order.objects.get(
                     post__turn=T,
-                    target__territory__name="Mid-Atlantic Ocean"), units, owns, T.season)
+                    target__territory__name="Mid-Atlantic Ocean").as_data(),
+                units, owns, T.season)
         )
 
         orders = {"England": ("F Portugal M Spain (SC)",)}
@@ -797,7 +804,7 @@ class Retreating(TestCase):
             is_legal(
                 models.Order.objects.get(
                     post__turn=T, target__territory__name="Spain",
-                    target__subname="SC"), units, owns, T.season)
+                    target__subname="SC").as_data(), units, owns, T.season)
         )
 
     def test_contested_for_both_coasts(self):
@@ -819,7 +826,7 @@ class Retreating(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -838,7 +845,8 @@ class Retreating(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        self.assertFalse(is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+        self.assertFalse(
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -879,11 +887,11 @@ class Building(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T,
                                              actor__territory__name="Warsaw"):
-            self.assertFalse(is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
 
         for o in models.Order.objects.filter(
                 post__turn=T).exclude(actor__territory__name="Warsaw"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -913,7 +921,8 @@ class Building(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        self.assertTrue(is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+        self.assertTrue(
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -936,7 +945,8 @@ class Building(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        self.assertFalse(is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+        self.assertFalse(
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -955,7 +965,8 @@ class Building(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        self.assertFalse(is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+        self.assertFalse(
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -980,7 +991,8 @@ class Building(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        self.assertFalse(is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+        self.assertFalse(
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -1000,7 +1012,8 @@ class Building(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        self.assertFalse(is_legal(models.Order.objects.get(post__turn=T), units, owns, T.season))
+        self.assertFalse(
+            is_legal(models.Order.objects.get(post__turn=T).as_data(), units, owns, T.season))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -1019,7 +1032,7 @@ class Building(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -1058,11 +1071,11 @@ class CivilDisorderAndDisbands(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.filter(
                 post__turn=T).exclude(actor__territory__name="Gulf of Lyon"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         for o in models.Order.objects.filter(
                 post__turn=T, actor__territory__name="Gulf of Lyon"):
-            self.assertFalse(is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -1092,7 +1105,7 @@ class CivilDisorderAndDisbands(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__turn=T):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()

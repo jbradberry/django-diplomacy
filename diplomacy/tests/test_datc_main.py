@@ -28,7 +28,7 @@ class BasicChecks(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         order = models.Order.objects.get()
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
     def test_move_army_to_sea(self):
         # DATC 6.A.2
@@ -42,7 +42,7 @@ class BasicChecks(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         order = models.Order.objects.get()
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
     def test_move_fleet_to_land(self):
         # DATC 6.A.3
@@ -56,7 +56,7 @@ class BasicChecks(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         order = models.Order.objects.get()
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
     def test_move_to_own_sector(self):
         # DATC 6.A.4
@@ -70,7 +70,7 @@ class BasicChecks(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         order = models.Order.objects.get()
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
     def test_move_to_own_sector_with_convoy(self):
         # DATC 6.A.5
@@ -94,10 +94,10 @@ class BasicChecks(TestCase):
         orders = models.Order.objects.all()
 
         for o in orders.filter(post__government__power__name='England'):
-            self.assertFalse(is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
 
         for o in orders.filter(post__government__power__name='Germany'):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -118,7 +118,7 @@ class BasicChecks(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         order = models.Order.objects.get()
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
     def test_only_armies_can_be_convoyed(self):
         # DATC 6.A.7
@@ -135,8 +135,8 @@ class BasicChecks(TestCase):
         owns = T.get_ownership()
         order1, order2 = models.Order.objects.all()
 
-        self.assertTrue(not is_legal(order1, units, owns, T.season))
-        self.assertTrue(not is_legal(order2, units, owns, T.season))
+        self.assertFalse(is_legal(order1.as_data(), units, owns, T.season))
+        self.assertFalse(is_legal(order2.as_data(), units, owns, T.season))
 
     def test_support_to_hold_yourself(self):
         # DATC 6.A.8
@@ -156,7 +156,7 @@ class BasicChecks(TestCase):
         order = models.Order.objects.get(
             post__government__power__name="Austria-Hungary")
 
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -177,7 +177,7 @@ class BasicChecks(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         order = models.Order.objects.get()
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
     def test_support_on_unreachable_destination(self):
         # DATC 6.A.10
@@ -197,7 +197,7 @@ class BasicChecks(TestCase):
         order = models.Order.objects.get(
             actor__territory__name="Rome")
 
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -219,7 +219,7 @@ class BasicChecks(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -247,7 +247,7 @@ class BasicChecks(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -290,7 +290,7 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         order = models.Order.objects.get()
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
     # expected fail
     def test_move_to_unspecified_coast_when_unnecessary(self):
@@ -305,8 +305,8 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         order = models.Order.objects.get()
-        # self.assertTrue(is_legal(order, units, owns, T.season))
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        # self.assertTrue(is_legal(order.as_data(), units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
     def test_moving_to_wrong_but_unnecessary_coast(self):
         # DATC 6.B.3
@@ -320,7 +320,7 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         order = models.Order.objects.get()
-        self.assertTrue(not is_legal(order, units, owns, T.season))
+        self.assertFalse(is_legal(order.as_data(), units, owns, T.season))
 
     def test_support_to_unreachable_coast_allowed(self):
         # DATC 6.B.4
@@ -337,7 +337,7 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -368,10 +368,10 @@ class CoastalIssues(TestCase):
         owns = T.get_ownership()
         self.assertEqual(models.Order.objects.exclude(action='S').count(), 2)
         for o in models.Order.objects.exclude(action='S'):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         o = models.Order.objects.get(action='S')
-        self.assertTrue(not is_legal(o, units, owns, T.season))
+        self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -405,7 +405,7 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -433,13 +433,13 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         # for o in models.Order.objects.all():
-        #     self.assertTrue(is_legal(o, units, owns, T.season))
+        #     self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
         for o in models.Order.objects.exclude(actor__territory__name=
                                               "Portugal"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         self.assertFalse(
-            is_legal(models.Order.objects.get(actor__territory__name="Portugal"), units, owns, T.season))
+            is_legal(models.Order.objects.get(actor__territory__name="Portugal").as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -478,13 +478,13 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         # for o in models.Order.objects.all():
-        #     self.assertTrue(is_legal(o, units, owns, T.season))
+        #     self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
         for o in models.Order.objects.exclude(actor__territory__name=
                                               "Portugal"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         self.assertFalse(
-            is_legal(models.Order.objects.get(actor__territory__name="Portugal"), units, owns, T.season))
+            is_legal(models.Order.objects.get(actor__territory__name="Portugal").as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -521,7 +521,7 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -555,8 +555,8 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         o = models.Order.objects.get()
-        # self.assertTrue(is_legal(o, units, owns, T.season))
-        self.assertTrue(not is_legal(o, units, owns, T.season))
+        # self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
+        self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
 
     def test_coast_cannot_be_ordered_to_change(self):
         # DATC 6.B.11
@@ -570,7 +570,7 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         o = models.Order.objects.get()
-        self.assertTrue(not is_legal(o, units, owns, T.season))
+        self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
 
     # expected fail
     def test_army_movement_with_coastal_specification(self):
@@ -585,8 +585,8 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         o = models.Order.objects.get()
-        # self.assertTrue(is_legal(o, units, owns, T.season))
-        self.assertTrue(not is_legal(o, units, owns, T.season))
+        # self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
+        self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
 
     def test_coastal_crawl_not_allowed(self):
         # DATC 6.B.13
@@ -601,7 +601,7 @@ class CoastalIssues(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -635,7 +635,7 @@ class CoastalIssues(TestCase):
         self.assertEqual(builds.get('Russia', 0), 4)
         o = models.Order.objects.get()
         self.assertIsNone(o.actor)
-        self.assertTrue(is_legal(o, units, owns, T.season))
+        self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
@@ -668,7 +668,7 @@ class CircularMovement(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -704,7 +704,7 @@ class CircularMovement(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -740,7 +740,7 @@ class CircularMovement(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -786,7 +786,7 @@ class CircularMovement(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -834,7 +834,7 @@ class CircularMovement(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -878,7 +878,7 @@ class CircularMovement(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -910,7 +910,7 @@ class CircularMovement(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()

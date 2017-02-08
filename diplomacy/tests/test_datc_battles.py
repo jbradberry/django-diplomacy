@@ -32,7 +32,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -64,7 +64,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -100,7 +100,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -136,7 +136,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -168,7 +168,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -200,7 +200,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -237,7 +237,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -273,7 +273,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -304,7 +304,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -333,7 +333,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -363,7 +363,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -396,7 +396,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -426,7 +426,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -461,7 +461,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -491,7 +491,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -523,7 +523,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -556,7 +556,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -596,7 +596,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -638,7 +638,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -677,7 +677,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -718,7 +718,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -763,10 +763,10 @@ class SupportsAndDislodges(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__government__power__name=
                                              "Germany"):
-            self.assertTrue(not is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
         for o in models.Order.objects.filter(post__government__power__name=
                                              "Russia"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -800,10 +800,10 @@ class SupportsAndDislodges(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__government__power__name=
                                              "France"):
-            self.assertTrue(not is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
         for o in models.Order.objects.filter(post__government__power__name=
                                              "Italy"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -839,10 +839,10 @@ class SupportsAndDislodges(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__government__power__name=
                                              "France"):
-            self.assertTrue(not is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
         for o in models.Order.objects.exclude(post__government__power__name=
                                               "France"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -879,7 +879,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -910,7 +910,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -943,7 +943,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -976,10 +976,10 @@ class SupportsAndDislodges(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__government__power__name=
                                              "Russia"):
-            self.assertTrue(not is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
         for o in models.Order.objects.exclude(post__government__power__name=
                                               "Russia"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1012,10 +1012,10 @@ class SupportsAndDislodges(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__government__power__name=
                                              "Russia"):
-            self.assertTrue(not is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
         for o in models.Order.objects.exclude(post__government__power__name=
                                               "Russia"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1048,10 +1048,10 @@ class SupportsAndDislodges(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__government__power__name=
                                              "Russia"):
-            self.assertTrue(not is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
         for o in models.Order.objects.exclude(post__government__power__name=
                                               "Russia"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1084,13 +1084,13 @@ class SupportsAndDislodges(TestCase):
         owns = T.get_ownership()
         o = models.Order.objects.get(post__government__power__name="Turkey",
                                      action='S')
-        self.assertTrue(not is_legal(o, units, owns, T.season))
+        self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
         o = models.Order.objects.get(post__government__power__name="Turkey",
                                      action='M')
-        self.assertTrue(is_legal(o, units, owns, T.season))
+        self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
         o = models.Order.objects.get(post__government__power__name=
                                      "Austria-Hungary")
-        self.assertTrue(is_legal(o, units, owns, T.season))
+        self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1123,10 +1123,10 @@ class SupportsAndDislodges(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__government__power__name=
                                              "Germany"):
-            self.assertTrue(not is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
         for o in models.Order.objects.exclude(post__government__power__name=
                                               "Germany"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1158,7 +1158,7 @@ class SupportsAndDislodges(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1199,10 +1199,10 @@ class SupportsAndDislodges(TestCase):
         owns = T.get_ownership()
         for o in models.Order.objects.filter(post__government__power__name=
                                              "Italy"):
-            self.assertTrue(not is_legal(o, units, owns, T.season))
+            self.assertFalse(is_legal(o.as_data(), units, owns, T.season))
         for o in models.Order.objects.exclude(post__government__power__name=
                                               "Italy"):
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1250,7 +1250,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1287,7 +1287,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1318,7 +1318,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1358,7 +1358,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1411,7 +1411,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1458,7 +1458,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1499,7 +1499,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1539,7 +1539,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1580,7 +1580,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1620,7 +1620,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1668,7 +1668,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1708,7 +1708,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1750,7 +1750,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
@@ -1791,11 +1791,11 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         owns = T.get_ownership()
         self.assertTrue(
             is_legal(
-                models.Order.objects.get(post__government__power__name="England"),
+                models.Order.objects.get(post__government__power__name="England").as_data(),
                 units, owns, T.season))
         self.assertFalse(
             is_legal(
-                models.Order.objects.get(post__government__power__name="Russia"),
+                models.Order.objects.get(post__government__power__name="Russia").as_data(),
                 units, owns, T.season))
 
         T.game.generate()
@@ -1836,7 +1836,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         units = T.get_units()
         owns = T.get_ownership()
         for o in models.Order.objects.all():
-            self.assertTrue(is_legal(o, units, owns, T.season))
+            self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()

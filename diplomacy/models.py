@@ -89,14 +89,6 @@ def subregion_obj_closure():
 subregion_obj = subregion_obj_closure()
 
 def is_legal(order, units, owns, season):
-    if isinstance(order, Order):
-        order = {'government': order.post.government,
-                 'turn': order.post.turn,
-                 'actor': subregion_key(order.actor),
-                 'action': order.action,
-                 'assist': subregion_key(order.assist),
-                 'target': subregion_key(order.target)}
-
     builds = builds_available(units, owns)
 
     if order['actor'] is None:
@@ -108,25 +100,25 @@ def is_legal(order, units, owns, season):
 
     if order['actor'] is None or order['action'] is None:
         return (season == 'FA' and
-                builds.get(order['government'].power.name, 0) > 0)
+                builds.get(order['government'], 0) > 0)
     if order['action'] != 'B' and not unit:
         return False
 
     if season in ('S', 'F'):
-        if unit[0]['government'] != order['government'].power.name:
+        if unit[0]['government'] != order['government']:
             return False
     elif season in ('SR', 'FR'):
         unit = [u for u in unit if u['dislodged']]
         if not unit:
             return False
-        if unit[0]['government'] != order['government'].power.name:
+        if unit[0]['government'] != order['government']:
             return False
     elif order['action'] == 'D':
-        if unit and unit[0]['government'] != order['government'].power.name:
+        if unit and unit[0]['government'] != order['government']:
             return False
     elif order['action'] == 'B':
         if not any(o['territory'] == territory(order['actor'])
-                   and o['government'] == order['government'].power.name
+                   and o['government'] == order['government']
                    for o in owns):
             return False
 
@@ -447,7 +439,7 @@ class Turn(models.Model):
             for o in post.orders.select_related('actor__territory',
                                                 'assist__territory',
                                                 'target__territory'):
-                if is_legal(o, units, owns, self.season):
+                if is_legal(o.as_data(), units, owns, self.season):
                     if self.season == 'FA':
                         index = i
                         i += 1
@@ -687,6 +679,16 @@ class Order(models.Model):
         if self.via_convoy:
             result = u"{0} via Convoy".format(result)
         return result
+
+    def as_data(self):
+        return {
+            'government': self.post.government.power.name,
+            'actor': subregion_key(self.actor),
+            'action': self.action,
+            'assist': subregion_key(self.assist),
+            'target': subregion_key(self.target),
+            'via_convoy': self.via_convoy,
+        }
 
 
 class CanonicalOrder(models.Model):
