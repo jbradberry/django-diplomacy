@@ -3,7 +3,8 @@ import re
 
 from django import template
 
-from ..models import Territory, Power
+from ..engine import standard
+from ..engine.utils import territory
 
 
 register = template.Library()
@@ -25,18 +26,24 @@ def map(context, width, height):
 
     data['colors'] = json.dumps(colors)
     if turn:
+        units = turn.get_units()
+        owns = turn.get_ownership()
+
         data['owns'] = json.dumps(
-            [(re.sub('[ .]', '', T.name.lower()), G.power.name)
-             for G in game.government_set.all()
-             for T in Territory.objects.filter(ownership__turn=turn,
-                                               ownership__government=G)])
+            [(re.sub('[ .]', '', o['territory'].lower()), o['government'])
+             for o in owns]
+        )
         data['units'] = json.dumps(
-            [(unicode(u.subregion), u.u_type, u.government.power.name)
-             for u in turn.unit_set.filter(dislodged=False)])
+            [("{}{}".format(territory(u['subregion']),
+                            " ({})".format(u['subregion'][1]) if u['subregion'][1] else ''),
+              u['u_type'], u['government'])
+             for u in units
+             if not u['dislodged']])
     else:
         data['owns'] = json.dumps(
-            [(re.sub('[ .]', '', T.name.lower()), P.name)
-             for P in Power.objects.all()
-             for T in Territory.objects.filter(power=P)])
+            [(re.sub('[ .]', '', T.lower()), P)
+             for P in standard.powers
+             for T, (p, sc, unit) in standard.definition.iteritems()
+             if p == P])
         data['units'] = json.dumps([])
     return data
