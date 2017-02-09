@@ -70,7 +70,7 @@ class GameMasterView(DetailView, BaseFormView):
     def get_context_data(self, **kwargs):
         context = {
             'actors': sum(
-                g.actors().count() for g in self.object.government_set.all())
+                len(g.actors()) for g in self.object.government_set.all())
         }
         context.update(**kwargs)
         return super(GameMasterView, self).get_context_data(**context)

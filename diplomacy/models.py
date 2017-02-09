@@ -378,10 +378,10 @@ class Turn(models.Model):
         else:
             action = 'H' if self.season in ('S', 'F') else None
             orders = {
-                (g.id, a.id): {'user_issued': False, 'government': g.power.name,
-                               'actor': subregion_key(a), 'action': action,
-                               'assist': None, 'target': None,
-                               'via_convoy': False, 'convoy': False}
+                (g.id, a): {'user_issued': False, 'government': g.power.name,
+                            'actor': a, 'action': action,
+                            'assist': None, 'target': None,
+                            'via_convoy': False, 'convoy': False}
                 for g in gvts
                 for a in g.actors(self)
             }
@@ -406,7 +406,7 @@ class Turn(models.Model):
                         index = i
                         i += 1
                     else:
-                        index = o.actor_id
+                        index = subregion_key(o.actor)
 
                     # Drop the order if it falls outside of the set of allowable
                     # acting units or build quantity.
@@ -495,33 +495,38 @@ class Government(models.Model):
     def __unicode__(self):
         return self.name
 
-    # FIXME refactor
     def actors(self, turn=None):
         if not turn:
             turn = self.game.current_turn()
         if turn is None:
-            return Subregion.objects.none()
+            return ()
 
-        builds = builds_available(turn.get_units(), turn.get_ownership())
+        units = turn.get_units()
 
-        if turn.season == 'FA' and builds.get(self.power.name, 0) > 0:
-            actors = Subregion.objects.filter(
-                territory__is_supply=True,
-                territory__power__government=self, # home supply center
-                territory__ownership__turn=turn,      # and it must still be
-                territory__ownership__government=self # owned by you this turn
-                ).exclude(
-                territory__subregion__unit__turn=turn # and must be unoccupied
-                ).distinct()
-        else:
-            displaced = {}
-            if turn.season in ('SR', 'FR'): # only dislodged units move
-                displaced['unit__dislodged'] = True
-            actors = Subregion.objects.filter(unit__turn=turn,
-                                              unit__government=self,
-                                              **displaced)
-
-        return actors
+        if turn.season in ('S', 'F'):
+            return [u['subregion'] for u in units if u['government'] == self.power.name]
+        elif turn.season in ('SR', 'FR'):
+            return [u['subregion'] for u in units
+                    if u['government'] == self.power.name and u['dislodged']]
+        elif turn.season == 'FA':
+            owns = turn.get_ownership()
+            occupied = {territory(u['subregion']) for u in units}
+            builds = builds_available(units, owns)
+            if builds.get(self.power.name, 0) > 0:
+                # If we have more supply centers than units, we can build.  If,
+                # - we own a supply center
+                # - that is one of our original supply centers
+                # - and that is not occupied by a unit
+                owned = (o['territory'] for o in owns
+                         if o['government'] == self.power.name and o['is_supply'])
+                return [sr for T in owned
+                        for sr in territory_parts(T)
+                        if standard.definition[T][0] == self.power.name
+                        and T not in occupied]
+            elif builds.get(self.power.name, 0) == 0:
+                return ()
+            else:
+                return [u['subregion'] for u in units if u['government'] == self.power.name]
 
     def filter_orders(self):
         turn = self.game.current_turn()
