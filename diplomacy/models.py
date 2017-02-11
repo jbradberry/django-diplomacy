@@ -421,6 +421,7 @@ class Government(models.Model):
     user = models.ForeignKey(User, null=True, blank=True)
     game = models.ForeignKey(Game)
     power = models.ForeignKey(Power, null=True, blank=True)
+    power_name = models.CharField(max_length=32, blank=True)
     owns = models.ManyToManyField(Territory, through='Ownership')
 
     def __unicode__(self):
@@ -472,6 +473,7 @@ class Ownership(models.Model):
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     territory = models.ForeignKey(Territory)
+    territory_name = models.CharField(max_length=32, blank=True)
 
 
 class Unit(models.Model):
@@ -482,12 +484,16 @@ class Unit(models.Model):
     government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.ForeignKey(Subregion)
+    subregion_name = models.CharField(max_length=64, blank=True)
     previous = models.ForeignKey("self", null=True, blank=True)
+    previous_name = models.CharField(max_length=64, blank=True)
     dislodged = models.BooleanField(default=False)
     displaced_from = models.ForeignKey(Territory, null=True, blank=True,
                                        related_name='displaced')
+    displaced_from_name = models.CharField(max_length=32, blank=True)
     standoff_from = models.ForeignKey(Territory, null=True, blank=True,
                                       related_name='standoff')
+    standoff_from_name = models.CharField(max_length=32, blank=True)
 
     def __unicode__(self):
         return u'{0} {1}'.format(self.u_type, self.subregion.territory)
@@ -518,12 +524,15 @@ class Order(models.Model):
 
     actor = models.ForeignKey(Subregion, null=True, blank=True,
                               related_name='acts')
+    actor_name = models.CharField(max_length=64, blank=True)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,
                               null=True, blank=True)
     assist = models.ForeignKey(Subregion, null=True, blank=True,
                                related_name='assisted')
+    assist_name = models.CharField(max_length=64, blank=True)
     target = models.ForeignKey(Subregion, null=True, blank=True,
                                related_name='targeted')
+    target_name = models.CharField(max_length=64, blank=True)
     via_convoy = models.BooleanField()
 
     def __unicode__(self):
@@ -563,12 +572,15 @@ class CanonicalOrder(models.Model):
     government = models.ForeignKey(Government)
 
     actor = models.ForeignKey(Subregion, related_name='canonical_actor')
+    actor_name = models.CharField(max_length=64, blank=True)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,
                               null=True, blank=True)
     assist = models.ForeignKey(Subregion, null=True, blank=True,
                                related_name='canonical_assist')
+    assist_name = models.CharField(max_length=64, blank=True)
     target = models.ForeignKey(Subregion, null=True, blank=True,
                                related_name='canonical_target')
+    target_name = models.CharField(max_length=64, blank=True)
     via_convoy = models.BooleanField()
 
     user_issued = models.BooleanField()
