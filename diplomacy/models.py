@@ -10,7 +10,7 @@ from .engine.check import (valid_hold, valid_move, valid_support, valid_convoy,
                            valid_build, valid_disband, is_legal)
 from .engine.compare import assist
 from .engine.main import (find_convoys, builds_available, actionable_subregions,
-                          normalize_orders, generate)
+                          normalize_orders, generate, initialize_game)
 from .engine.utils import territory, borders, territory_parts
 from .helpers import unit, convert
 
@@ -157,27 +157,24 @@ class Game(models.Model):
     def create_turn(self, turn_data):
         return self.turn_set.create(**turn_data)
 
-    # FIXME refactor
     def activate(self):
         if self.state != 'S' or self.turn_set.exists():
             return False
         if self.government_set.count() != 7:
             return False
-        turn = self.turn_set.create(number=0, year=1900, season='S')
+
         governments = list(self.government_set.all())
         shuffle(governments)
         for pwr, gvt in zip(Power.objects.all(), governments):
             gvt.power = pwr
             gvt.save()
-            for t in Territory.objects.filter(power=pwr):
-                Ownership(turn=turn, government=gvt, territory=t).save()
 
-            sr_set = Subregion.objects.filter(territory__power=pwr,
-                                              init_unit=True)
-            for sr in sr_set:
-                gvt.unit_set.create(turn=turn,
-                                    u_type=convert[sr.sr_type],
-                                    subregion=sr)
+        turn, units, owns = initialize_game()
+
+        turn = self.create_turn(turn)
+        turn.create_units(units)
+        turn.create_ownership(owns)
+
         self.state = 'A'
         self.save()
         return True
@@ -293,10 +290,10 @@ class Turn(models.Model):
                 'government_id': self.government_lookup[u['government']],
                 'u_type': u['u_type'],
                 'subregion_id': subregion_id(u['subregion']),
-                'previous_id': previous_id.get(u['previous']),
-                'dislodged': u['dislodged'],
-                'displaced_from_id': t_id(u['displaced_from']),
-                'standoff_from_id': t_id(u['standoff_from']),
+                'previous_id': previous_id.get(u.get('previous')),
+                'dislodged': u.get('dislodged', False),
+                'displaced_from_id': t_id(u.get('displaced_from')),
+                'standoff_from_id': t_id(u.get('standoff_from')),
             })
             for u in units
         ])

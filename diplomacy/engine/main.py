@@ -695,3 +695,28 @@ def generate(turn, orders, units, owns):
         owns = update_ownership(units, owns)
 
     return turn, orders, units, owns
+
+def initialize_game():
+    turn = {
+        'number': 0,
+        'year': 1900,
+        'season': standard.seasons[0],
+    }
+
+    units = [
+        {'government': government,
+         'u_type': convert[unit[1]],
+         'subregion': (T, unit[0], unit[1])}
+        for T, (government, sc, unit) in standard.definition.iteritems()
+        if unit
+    ]
+
+    owns = [
+        {'territory': T,
+         'government': government,
+         'is_supply': sc}
+        for T, (government, sc, unit) in standard.definition.iteritems()
+        if government
+    ]
+
+    return turn, units, owns
