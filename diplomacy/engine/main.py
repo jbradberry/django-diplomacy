@@ -114,23 +114,16 @@ def immediate_fails(orders, units):
 
     return results
 
-def consistent(state, orders, fails, paradox, units):
-    state = dict(state)
-    unit_index = {territory(u['subregion']): u for u in units}
+def calculate_paths(state, orders, paradox, units):
+    """Determine if moves have a valid path."""
 
-    hold_str = defaultdict(int)
-    attack_str = defaultdict(int)
-    defend_str = defaultdict(int)
-    prevent_str = defaultdict(int)
-
-    path = {}
     # True if this unit is successfully convoyed, False otherwise.
     convoy = defaultdict(lambda: False)
 
-    # determine if moves have a valid path
+    path = {}
     for T, order in orders.iteritems():
         if order['action'] == 'M':
-            defend_str[T], path[T], P = 1, False, False
+            path[T], P = False, False
 
             # matching successful convoy orders
             matching = [
@@ -168,9 +161,30 @@ def consistent(state, orders, fails, paradox, units):
                 # if we don't have a paradox
                 path[T] = not P
 
-    # calculate base hold, attack, and prevent strengths
+    return path, convoy
+
+def calculate_base_strengths(state, orders, unit_index, path, convoy):
+    """Calculate base hold, attack, and prevent strengths."""
+
+    # The hold strength is defined for an area, not a unit.  It is the defensive
+    # strength of an area when a unit declines to move, or fails in its ordered
+    # movement.  Attacks have to overcome this strength.
+    hold_str = defaultdict(int)
+
+    # The strength of an attack, complicated by the rules about paths and nationality.
+    attack_str = defaultdict(int)
+
+    # In cases where there is a head-to-head battle, the unit has to overcome the
+    # power of the move of the opposing unit.  All movements have a head-to-head
+    # attack strength of at least 1.
+    defend_str = defaultdict(int)
+
+    # The strength of competing attacks into a territory.
+    prevent_str = defaultdict(int)
+
     for T, order in orders.iteritems():
         if order['action'] == 'M':
+            defend_str[T] = 1
             if path[T]:
                 prevent_str[T], attack_str[T] = 1, 1
 
@@ -199,7 +213,11 @@ def consistent(state, orders, fails, paradox, units):
         if order['action'] in ('H', 'S', 'C'):
             hold_str[T] = 1
 
-    # calculate additions to strengths due to support orders
+    return hold_str, attack_str, defend_str, prevent_str
+
+def calculate_supports(state, orders, unit_index, hold_str, attack_str, defend_str,
+                       prevent_str, convoy):
+    """Calculate additions to strengths due to support orders."""
     for T, d in state.iteritems():
         order = orders[T]
 
@@ -227,63 +245,111 @@ def consistent(state, orders, fails, paradox, units):
             if prevent_str[territory(order['assist'])]:
                 prevent_str[territory(order['assist'])] += 1
 
+def consistent_move(T, d, orders, fails, hold_str, attack_str, defend_str, prevent_str,
+                    path, convoy):
+    order = orders[T]
+    target = territory(order['target'])
+    move = True
+    # Fail in a head-to-head attack
+    if (target in orders
+        and head_to_head(T, order, target, orders[target],
+                         convoy[T], convoy[target])
+        and attack_str[T] <= defend_str[target]):
+        move = False
+    # Fail in a standard attack
+    if attack_str[T] <= hold_str[target]:
+        move = False
+    # Fail in a competing attack
+    if any(attack_str[T] <= prevent_str[T2]
+           for T2, o2 in orders.iteritems()
+           if T != T2 and o2['action'] == 'M'
+           and territory(o2['target']) == target):
+        move = False
+    # Path to move does not exist
+    if not path[T]:
+        move = False
+    # Or the move was observed to be a failure initially
+    if T in fails:
+        move = False
+
+    # If the assumed outcome in `state` does not match any of the above, the
+    # state is inconsistent.
+    if d ^ move:
+        return False
+
+    return True
+
+def consistent_support(T, d, orders, fails, hold_str, attack_str):
+    order = orders[T]
+    target = territory(order['target'])
+    attackers = set(T2 for T2, o2 in orders.iteritems()
+                    if o2['action'] == 'M'
+                    and territory(o2['target']) == T)
+    # Is the support cut?
+    cut = (T in fails
+           or (target in attackers
+               and attack_str[target] > hold_str[T])
+           or any(attack_str[T2] > 0 for T2 in attackers
+                  if T2 != target))
+
+    # The value in `state` must match the calculation of whether the support
+    # was cut or not.
+    if d ^ (not cut):
+        return False
+
+    return True
+
+def consistent_hold(T, d, orders, fails, hold_str, attack_str, prevent_str):
+    hold = True
+    # The order was initially observed to be a failure.
+    if T in fails:
+        hold = False
+
+    attackers = set(T2 for T2, o2 in orders.iteritems()
+                    if o2['action'] == 'M'
+                    and territory(o2['target']) == T)
+    # Is there enough to dislodge this unit?
+    if attackers:
+        S, P, A = max((attack_str[T2], prevent_str[T2], T2)
+                      for T2 in attackers)
+        if S > hold_str[T] and not any(prevent_str[T2] >= S
+                                       for T2 in attackers
+                                       if T2 != A):
+            hold = False
+
+    # Whether or not the unit is calculated to be dislodged must match the
+    # assumed value in `state`, with the exception of a convoy paradox
+    # (stored in `state` as None).
+    if (d is not False) ^ hold:
+        return False
+
+    return True
+
+def consistent(state, orders, fails, paradox, units):
+    state = dict(state)
+    unit_index = {territory(u['subregion']): u for u in units}
+
+    path, convoy = calculate_paths(state, orders, paradox, units)
+    hold_str, attack_str, defend_str, prevent_str = calculate_base_strengths(
+        state, orders, unit_index, path, convoy)
+    calculate_supports(state, orders, unit_index, hold_str, attack_str, defend_str,
+                       prevent_str, convoy)
+
     # determine if the strength calculations are consistent with the state
     for T, d in state.iteritems():
         order = orders[T]
-
         if order['action'] == 'M':
-            target = territory(order['target'])
-            move = True
-            if (target in orders
-                and head_to_head(T, order, target, orders[target],
-                                 convoy[T], convoy[target])
-                and attack_str[T] <= defend_str[target]):
-                move = False
-            if attack_str[T] <= hold_str[target]:
-                move = False
-            if any(attack_str[T] <= prevent_str[T2]
-                   for T2, o2 in orders.iteritems()
-                   if T != T2 and o2['action'] == 'M'
-                   and territory(o2['target']) == target):
-                move = False
-            if not path[T]:
-                move = False
-            if T in fails:
-                move = False
-
-            if d ^ move:
+            if not consistent_move(T, d, orders, fails, hold_str, attack_str, defend_str,
+                                   prevent_str, path, convoy):
                 return False
 
         if order['action'] == 'S':
-            target = territory(order['target'])
-            attackers = set(T2 for T2, o2 in orders.iteritems()
-                            if o2['action'] == 'M'
-                            and territory(o2['target']) == T)
-            cut = (T in fails
-                   or (target in attackers
-                       and attack_str[target] > hold_str[T])
-                   or any(attack_str[T2] > 0 for T2 in attackers
-                          if T2 != target))
-            if d ^ (not cut):
+            if not consistent_support(T, d, orders, fails, hold_str, attack_str):
                 return False
 
         if order['action'] in ('H', 'C'):
-            hold = True
-            if T in fails:
-                hold = False
-
-            attackers = set(T2 for T2, o2 in orders.iteritems()
-                            if o2['action'] == 'M'
-                            and territory(o2['target']) == T)
-            if attackers:
-                S, P, A = max((attack_str[T2], prevent_str[T2], T2)
-                              for T2 in attackers)
-                if S > hold_str[T] and not any(prevent_str[T2] >= S
-                                               for T2 in attackers
-                                               if T2 != A):
-                    hold = False
-
-            if (d is not False) ^ hold:
+            if not consistent_hold(T, d, orders, fails, hold_str, attack_str,
+                                   prevent_str):
                 return False
 
     return True
