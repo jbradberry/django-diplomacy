@@ -53,9 +53,16 @@ class TurnGeneration(object):
         )
 
     def is_ready(self, generator):
+        turn = models.Turn.objects.filter(
+            game_id=generator.object_id
+        ).latest()
+        units = turn.get_units()
+        owns = turn.get_ownership()
+
+        actors = actionable_subregions(turn.as_data(), units, owns)
         readys = set(r.agent.pk for r in generator.readies.all())
         return all(
-            empire.pk in readys or not empire.actors()
+            empire.pk in readys or not actors.get(empire.power.name)
             for empire in models.Government.objects.filter(
                 game_id=generator.object_id,
             )

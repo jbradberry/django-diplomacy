@@ -12,6 +12,7 @@ from django.views.generic import ListView, DetailView
 from django.views.generic.edit import BaseFormView
 
 from . import models, forms
+from .engine.main import builds_available, actionable_subregions, normalize_orders
 
 
 class GameListView(ListView):
@@ -68,10 +69,22 @@ class GameMasterView(DetailView, BaseFormView):
         return obj
 
     def get_context_data(self, **kwargs):
-        context = {
-            'actors': sum(
-                len(g.actors()) for g in self.object.government_set.all())
-        }
+        turn = self.object.current_turn()
+        context = {'actors': 0}
+
+        if turn:
+            units = turn.get_units()
+            owns = turn.get_ownership()
+
+            builds = builds_available(units, owns)
+            actors = actionable_subregions(turn.as_data(), units, owns)
+            context = {
+                'actors': sum(
+                    min(abs(builds.get(g, 0)), len(actorset))
+                    for g, actorset in actors.iteritems()
+                )
+            }
+
         context.update(**kwargs)
         return super(GameMasterView, self).get_context_data(**context)
 
@@ -150,13 +163,20 @@ class OrdersView(DetailView, BaseFormView):
         return super(OrdersView, self).get_context_data(**context)
 
     def get_initial(self):
+        turn = self.object.game.current_turn()
+        orders = turn.get_orders()
+        units = turn.get_units()
+        owns = turn.get_ownership()
+
+        normalized = normalize_orders(turn.as_data(), orders, units, owns)
         return [
             {'actor': models.subregion_obj(o['actor']),
              'action': o['action'],
              'assist': models.subregion_obj(o['assist']),
              'target': models.subregion_obj(o['target']),
              'via_convoy': o['via_convoy']}
-            for o in self.object.game.current_turn().normalize_orders(self.object)
+            for o in normalized
+            if o['government'] == self.object.power.name
         ]
 
     def get_form_kwargs(self):

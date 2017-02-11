@@ -172,6 +172,7 @@ def valid_disband(actor, units, owns, season):
         return {}
     return {None: {None: False}}
 
+
 def is_legal(order, units, owns, season):
     builds = builds_available(units, owns)
 

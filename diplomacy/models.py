@@ -9,7 +9,8 @@ from .engine import standard
 from .engine.check import (valid_hold, valid_move, valid_support, valid_convoy,
                            valid_build, valid_disband, is_legal)
 from .engine.compare import assist
-from .engine.main import find_convoys, builds_available, generate
+from .engine.main import (find_convoys, builds_available, actionable_subregions,
+                          normalize_orders, generate)
 from .engine.utils import territory, borders, territory_parts
 from .helpers import unit, convert
 
@@ -182,15 +183,15 @@ class Game(models.Model):
 
     def generate(self):
         turn = self.current_turn()
+        orders = turn.get_orders()
+        units = turn.get_units()
+        owns = turn.get_ownership()
 
         orders = {
             territory(o['actor']): o
-            for o in turn.normalize_orders()
+            for o in normalize_orders(turn.as_data(), orders, units, owns)
             if o['actor'] is not None
         }
-
-        units = turn.get_units()
-        owns = turn.get_ownership()
 
         turn, orders, units, owns = generate(turn.as_data(), orders, units, owns)
 
@@ -318,6 +319,16 @@ class Turn(models.Model):
             for o in self.ownership_set.select_related('territory', 'government__power')
         ]
 
+    def get_orders(self):
+        posts = {}
+        for p in self.posts.prefetch_related('orders__actor__territory',
+                                             'orders__assist__territory',
+                                             'orders__target__territory'):
+            posts[p.government_id] = p
+
+        return [o.as_data() for p in posts.itervalues()
+                for o in p.orders.all()]
+
     # FIXME refactor
     def recent_orders(self):
         seasons = {'S': ['F', 'FR', 'FA'],
@@ -356,100 +367,6 @@ class Turn(models.Model):
 
         return sorted((power, sorted(adict.iteritems()))
                       for power, adict in orders.iteritems())
-
-    # FIXME refactor
-    def normalize_orders(self, gvt=None):
-        gvts = (gvt,) if gvt else self.game.government_set.all()
-        units = self.get_units()
-        owns = self.get_ownership()
-
-        # Construct the set of default orders.  This set is exhaustive, no units
-        # outside or number of builds in excess will be permitted.
-        if self.season == 'FA':
-            builds = builds_available(units, owns)
-            orders = {
-                (g.id, s): {'user_issued': False, 'government': g.power.name,
-                            'actor': None, 'action': None,
-                            'assist': None, 'target': None,
-                            'via_convoy': False, 'convoy': False}
-                for g in gvts
-                for s in xrange(abs(builds.get(g.power.name, 0)))
-            }
-        else:
-            action = 'H' if self.season in ('S', 'F') else None
-            orders = {
-                (g.id, a): {'user_issued': False, 'government': g.power.name,
-                            'actor': a, 'action': action,
-                            'assist': None, 'target': None,
-                            'via_convoy': False, 'convoy': False}
-                for g in gvts
-                for a in g.actors(self)
-            }
-
-        # Find the most recent set of posted orders from each relevant government.
-        most_recent = {}
-        for g in gvts:
-            try:
-                most_recent[g] = self.posts.filter(government=g).order_by('-id')[:1].get()
-            except OrderPost.DoesNotExist:
-                pass
-
-        # For orders that were explicitly given, replace the default order if
-        # the given order is legal.  Illegal orders are dropped.
-        for gvt, post in most_recent.iteritems():
-            i = 0
-            for o in post.orders.select_related('actor__territory',
-                                                'assist__territory',
-                                                'target__territory'):
-                if is_legal(o.as_data(), units, owns, self.season):
-                    if self.season == 'FA':
-                        index = i
-                        i += 1
-                    else:
-                        index = subregion_key(o.actor)
-
-                    # Drop the order if it falls outside of the set of allowable
-                    # acting units or build quantity.
-                    if (gvt.id, index) not in orders:
-                        continue
-
-                    orders[(gvt.id, index)] = {
-                        'user_issued': True, 'government': post.government.power.name,
-                        'actor': subregion_key(o.actor), 'action': o.action,
-                        'assist': subregion_key(o.assist),
-                        'target': subregion_key(o.target),
-                        'via_convoy': o.via_convoy, 'convoy': False,
-                    }
-
-        if self.season in ('S', 'F'):
-            for (g, index), o in orders.iteritems():
-                # This block concerns the convoyability of units, so if the unit
-                # isn't moving or isn't an army, ignore it.
-                if o['action'] != 'M':
-                    continue
-
-                # Find all of the convoy orders that match the current move,
-                # both overall and specifically by this user's government.
-                matching = [(g2, o2) for (g2, i2), o2 in orders.iteritems()
-                            if o2['action'] == 'C' and
-                            assist(territory(o['actor']), o,
-                                   territory(o2['actor']), o2)]
-                gvt_matching = [o2 for g2, o2 in matching if g2 == g]
-
-                if o['target'] in borders(o['actor']):
-                    # If the target territory is adjacent to the moving unit,
-                    # only mark as convoying when the user's government issued
-                    # the convoy order, or the movement is explicitly marked as
-                    # 'via convoy'.
-                    o['convoy'] = bool(gvt_matching or
-                                       (o['via_convoy'] and matching))
-                else:
-                    # If the target isn't adjacent, the unit clearly couldn't
-                    # make it there on its own, so convoying is implied.  Allow
-                    # any specified supporting convoy orders.
-                    o['convoy'] = bool(matching)
-
-        return [v for k, v in sorted(orders.iteritems())]
 
 
 class Power(models.Model):
@@ -495,39 +412,6 @@ class Government(models.Model):
     def __unicode__(self):
         return self.name
 
-    def actors(self, turn=None):
-        if not turn:
-            turn = self.game.current_turn()
-        if turn is None:
-            return ()
-
-        units = turn.get_units()
-
-        if turn.season in ('S', 'F'):
-            return [u['subregion'] for u in units if u['government'] == self.power.name]
-        elif turn.season in ('SR', 'FR'):
-            return [u['subregion'] for u in units
-                    if u['government'] == self.power.name and u['dislodged']]
-        elif turn.season == 'FA':
-            owns = turn.get_ownership()
-            occupied = {territory(u['subregion']) for u in units}
-            builds = builds_available(units, owns)
-            if builds.get(self.power.name, 0) > 0:
-                # If we have more supply centers than units, we can build.  If,
-                # - we own a supply center
-                # - that is one of our original supply centers
-                # - and that is not occupied by a unit
-                owned = (o['territory'] for o in owns
-                         if o['government'] == self.power.name and o['is_supply'])
-                return [sr for T in owned
-                        for sr in territory_parts(T)
-                        if standard.definition[T][0] == self.power.name
-                        and T not in occupied]
-            elif builds.get(self.power.name, 0) == 0:
-                return ()
-            else:
-                return [u['subregion'] for u in units if u['government'] == self.power.name]
-
     def filter_orders(self):
         turn = self.game.current_turn()
         season = turn.season
@@ -548,12 +432,12 @@ class Government(models.Model):
                   'D': valid_disband}
 
         tree = {}
-        for a in self.actors(turn):
+        for a in actionable_subregions(turn.as_data, units, owns).get(self.power.name, ()):
             for x in actions[turn.season]:
-                result = helper[x](subregion_key(a), units, owns, season)
+                result = helper[x](a, units, owns, season)
                 if not result:
                     continue
-                tree.setdefault(a.id, {})[x] = {
+                tree.setdefault(subregion_id(a), {})[x] = {
                     (subregion_id(assist) or u''): {
                         subregion_id(target) or u'': v
                         for target, v in targets.iteritems()

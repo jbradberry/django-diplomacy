@@ -356,6 +356,136 @@ def builds_available(units, owns):
 
     return builds
 
+def actionable_subregions(turn, units, owns):
+    """Returns lists of subregions that would be legal actors this turn,
+    indexed by government.  These lists are not constrained by the
+    number of builds available during Fall Adjustment turns, merely by
+    whether the home supply center would fit the criteria.
+
+    """
+    if turn['season'] in ('S', 'F'):
+        return {
+            government: [u['subregion'] for u in units
+                         if u['government'] == government]
+            for government in standard.powers
+        }
+    elif turn['season'] in ('SR', 'FR'):
+        return {
+            government: [u['subregion'] for u in units
+                         if u['dislodged'] and u['government'] == government]
+            for government in standard.powers
+        }
+    elif turn['season'] == 'FA':
+        builds = builds_available(units, owns)
+        actors_index = {}
+        for government in standard.powers:
+            if builds.get(government, 0) > 0:
+                # If we have more supply centers than units, we can build.  If,
+                # - we own a supply center
+                # - that is one of our original supply centers
+                # - and that is not occupied by a unit
+                owned_sc = (o['territory'] for o in owns
+                            if o['is_supply'] and o['government'] == government)
+                occupied = {territory(u['subregion']) for u in units}
+                actors_index[government] = [
+                    sr for T in owned_sc
+                    for sr in territory_parts(T)
+                    if standard.definition[T][0] == government
+                    and T not in occupied
+                ]
+            elif builds.get(government, 0) == 0:
+                actors_index[government] = []
+            else:
+                actors_index[government] = [u['subregion'] for u in units
+                                            if u['government'] == government]
+
+        return actors_index
+    return {}
+
+def normalize_orders(turn, orders, units, owns):
+    """Returns a list of order dicts, taken from the orders previously
+    submitted this turn, filtered down by legality and refilled with
+    defaults.  This list is exhaustive, no units not covered by the
+    list or number of builds in excess will be permitted.
+
+    """
+    from .check import is_legal  # FIXME
+    actors = actionable_subregions(turn, units, owns)
+
+    # Construct the set of default orders.  This will be the fully constrained set.
+    if turn['season'] == 'FA':
+        builds = builds_available(units, owns)
+        orders_index = {
+            (government, index): {
+                'government': government, 'actor': None,
+                'action': None, 'assist': None, 'target': None,
+                'via_convoy': False, 'convoy': False, 'user_issued': False
+            }
+            for government, B in builds.iteritems()
+            for index in xrange(-B if B < 0 else min(B, len(actors.get(government, ()))))
+        }
+    else:
+        action = 'H' if turn['season'] in ('S', 'F') else None
+        orders_index = {
+            (government, a): {
+                'government': government, 'actor': a,
+                'action': action, 'assist': None, 'target': None,
+                'via_convoy': False, 'convoy': False, 'user_issued': False
+            }
+            for government, actor_set in actors.iteritems()
+            for a in actor_set
+        }
+
+    # For orders that were explicitly given, replace the default order if
+    # the given order is legal.  Illegal orders are dropped.
+    index = {}
+    for o in orders:
+        if is_legal(o, units, owns, turn['season']):
+            i = o['actor']
+            if turn['season'] == 'FA':
+                index.setdefault(o['government'], 0)
+                i = index[o['government']]
+                index[o['government']] += 1
+
+            # Drop the order if it falls outside of the set of
+            # allowable acting units or build quantity.
+            if (o['government'], i) not in orders_index:
+                continue
+
+            o['user_issued'], o['convoy'] = True, False
+            orders_index[(o['government'], i)] = o
+
+    if turn['season'] in ('S', 'F'):
+        for (g, i), o in orders_index.iteritems():
+            # This block concerns the convoyability of units, so if the unit
+            # isn't moving or isn't an army, ignore it.
+            if o['action'] != 'M' or o['actor'][2] != 'L':
+                continue
+
+            # Find all of the convoy orders that match the current move,
+            # both overall and specifically by this user's government.
+            matching = [
+                (g2, o2) for (g2, i2), o2 in orders_index.iteritems()
+                if o2['action'] == 'C'
+                and assist(territory(o['actor']), o, territory(o2['actor']), o2)
+            ]
+            gvt_matching = [o2 for g2, o2 in matching if g2 == g]
+
+            if o['target'] in borders(o['actor']):
+                # If the target territory is adjacent to the moving unit,
+                # only mark as convoying when the user's government issued
+                # the convoy order, or the movement is explicitly marked as
+                # 'via convoy'.
+                o['convoy'] = bool(gvt_matching or
+                                   (o['via_convoy'] and matching))
+            else:
+                # If the target isn't adjacent, the unit clearly couldn't
+                # make it there on its own, so convoying is implied.  Allow
+                # any specified supporting convoy orders.
+                o['convoy'] = bool(matching)
+
+    return [v for k, v in sorted(orders_index.iteritems())]
+
 def update_retreats(orders, units):
     new_units = []
     for u in units:
