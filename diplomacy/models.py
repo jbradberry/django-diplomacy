@@ -279,10 +279,13 @@ class Turn(models.Model):
         ])
 
     def create_units(self, units):
-        previous_id = {
-            subregion_key(u.subregion): u.id
-            for u in self.prev.unit_set.select_related('subregion__territory')
-        }
+        if self.prev:
+            previous_id = {
+                subregion_key(u.subregion): u.id
+                for u in self.prev.unit_set.select_related('subregion__territory')
+            }
+        else:
+            previous_id = {}
 
         Unit.objects.bulk_create([
             Unit(**{

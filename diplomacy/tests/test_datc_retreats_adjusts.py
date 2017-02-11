@@ -2,8 +2,10 @@ from django.db.models import Count
 from django.test import TestCase
 from django.utils.unittest import expectedFailure
 
+from . import factories
 from .helpers import create_units, create_orders
 from .. import models
+from ..engine.main import initialize_game
 from ..models import is_legal
 
 
@@ -16,7 +18,13 @@ class Retreating(TestCase):
 
     """
 
-    fixtures = ['basic_game.json']
+    def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
 
     def test_no_supports_during_retreat(self):
         # DATC 6.H.1
@@ -864,7 +872,15 @@ class Building(TestCase):
 
     """
 
-    fixtures = ['adjustment_turn.json']
+    def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 4, 'year': 1900, 'season': 'FA'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
+        _, _, owns = initialize_game()
+        self.turn.create_ownership(owns)  # set up the proper ownership objects
 
     def test_too_many_build_orders(self):
         # DATC 6.I.1
@@ -1050,7 +1066,15 @@ class CivilDisorderAndDisbands(TestCase):
 
     """
 
-    fixtures = ['adjustment_turn.json']
+    def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 4, 'year': 1900, 'season': 'FA'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
+        _, _, owns = initialize_game()
+        self.turn.create_ownership(owns)  # set up the proper ownership objects
 
     def test_too_many_remove_orders(self):
         # DATC 6.J.1

@@ -1,13 +1,19 @@
 from django.test import TestCase
 
+from . import factories
 from .helpers import create_units, create_orders
 from .. import models
 
 
 class CorrectnessHelperTest(TestCase):
-    fixtures = ['basic_game.json']
-
     def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
+
         self.subs_unit = {
             models.subregion_key(s): "{0} {1}".format(models.convert[s.sr_type], unicode(s))
             for s in models.Subregion.objects.select_related('territory')

@@ -1,7 +1,9 @@
 from django.test import TestCase
 
+from . import factories
 from .helpers import create_units, create_orders
 from .. import models
+from ..engine.main import initialize_game
 from ..models import is_legal
 
 
@@ -14,7 +16,13 @@ class BasicChecks(TestCase):
 
     """
 
-    fixtures = ['basic_game.json']
+    def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
 
     def test_non_adjacent_move(self):
         # DATC 6.A.1
@@ -276,7 +284,13 @@ class CoastalIssues(TestCase):
 
     """
 
-    fixtures = ['basic_game.json']
+    def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
 
     def test_move_to_unspecified_coast_when_necessary(self):
         # DATC 6.B.1
@@ -616,6 +630,8 @@ class CoastalIssues(TestCase):
     def test_build_with_unspecified_coast(self):
         # DATC 6.B.14
         T = models.Turn.objects.get()
+        _, _, owns = initialize_game()
+        T.create_ownership(owns)  # set up the proper ownership objects
 
         T.game.generate() # SR 1900
         T = T.game.current_turn()
@@ -652,7 +668,13 @@ class CircularMovement(TestCase):
 
     """
 
-    fixtures = ['basic_game.json']
+    def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
 
     def test_three_unit_circular_move(self):
         # DATC 6.C.1

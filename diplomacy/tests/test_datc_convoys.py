@@ -1,5 +1,6 @@
 from django.test import TestCase
 
+from . import factories
 from .helpers import create_units, create_orders
 from .. import models
 from ..models import is_legal
@@ -14,7 +15,13 @@ class Convoys(TestCase):
 
     """
 
-    fixtures = ['basic_game.json']
+    def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
 
     def test_no_convoy_in_coastal_areas(self):
         # DATC 6.F.1
@@ -1108,7 +1115,13 @@ class ConvoyingToAdjacent(TestCase):
 
     """
 
-    fixtures = ['basic_game.json']
+    def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
 
     def test_two_units_can_swap_by_convoy(self):
         # DATC 6.G.1

@@ -1,5 +1,6 @@
 from django.test import TestCase
 
+from . import factories
 from .helpers import create_units, create_orders
 from .. import models
 from ..models import is_legal
@@ -14,7 +15,13 @@ class SupportsAndDislodges(TestCase):
 
     """
 
-    fixtures = ['basic_game.json']
+    def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
 
     def test_supported_hold_prevents_dislodgement(self):
         # DATC 6.D.1
@@ -1231,8 +1238,13 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
     http://web.inter.nl.net/users/L.B.Kruijswijk/#6.E
 
     """
-
-    fixtures = ['basic_game.json']
+    def setUp(self):
+        self.game = factories.GameFactory()
+        self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
+        self.governments = [
+            factories.GovernmentFactory(game=self.game, power=p)
+            for p in models.Power.objects.all()
+        ]
 
     def test_dislodged_unit_has_no_effect_on_attackers_area(self):
         # DATC 6.E.1
