@@ -154,6 +154,9 @@ class Game(models.Model):
         if self.turn_set.exists():
             return self.turn_set.latest()
 
+    def create_turn(self, turn_data):
+        return self.turn_set.create(**turn_data)
+
     # FIXME refactor
     def activate(self):
         if self.state != 'S' or self.turn_set.exists():
@@ -195,52 +198,10 @@ class Game(models.Model):
 
         turn, orders, units, owns = generate(turn.as_data(), orders, units, owns)
 
-        turn = self.turn_set.create(**turn)
-
-        government_id = {
-            gvt.power.name: gvt.id
-            for gvt in self.government_set.select_related('power')
-        }
-
-        CanonicalOrder.objects.bulk_create([
-            CanonicalOrder(**{
-                'turn': turn.prev,
-                'government_id': government_id[o['government']],
-                'actor_id': subregion_id(o['actor']),
-                'action': o['action'],
-                'assist_id': subregion_id(o['assist']),
-                'target_id': subregion_id(o['target']),
-                'via_convoy': o['via_convoy'],
-                'user_issued': o.get('user_issued', False),
-            })
-            for o in orders.itervalues()
-        ])
-
-        previous_id = {
-            subregion_key(u.subregion): u.id
-            for u in turn.prev.unit_set.select_related('subregion__territory')
-        }
-
-        Unit.objects.bulk_create([
-            Unit(**{
-                'turn': turn,
-                'government_id': government_id[u['government']],
-                'u_type': u['u_type'],
-                'subregion_id': subregion_id(u['subregion']),
-                'previous_id': previous_id.get(u['previous']),
-                'dislodged': u['dislodged'],
-                'displaced_from_id': t_id(u['displaced_from']),
-                'standoff_from_id': t_id(u['standoff_from']),
-            })
-            for u in units
-        ])
-
-        Ownership.objects.bulk_create([
-            Ownership(turn=turn,
-                      government_id=government_id[o['government']],
-                      territory_id=t_id(o['territory']))
-            for o in owns
-        ])
+        turn = self.create_turn(turn)
+        turn.create_canonical_orders(orders)
+        turn.create_units(units)
+        turn.create_ownership(owns)
 
         return True
 
@@ -295,6 +256,59 @@ class Turn(models.Model):
             self._next = later.get()
             return self._next
 
+    @property
+    def government_lookup(self):
+        if not getattr(self, '_government_lookup', None):
+            self._government_lookup = {
+                gvt.power.name: gvt.id
+                for gvt in self.game.government_set.select_related('power')
+            }
+
+        return self._government_lookup
+
+    def create_canonical_orders(self, orders_index):
+        CanonicalOrder.objects.bulk_create([
+            CanonicalOrder(**{
+                'turn': self.prev,
+                'government_id': self.government_lookup[o['government']],
+                'actor_id': subregion_id(o['actor']),
+                'action': o['action'],
+                'assist_id': subregion_id(o['assist']),
+                'target_id': subregion_id(o['target']),
+                'via_convoy': o['via_convoy'],
+                'user_issued': o.get('user_issued', False),
+            })
+            for o in orders_index.itervalues()
+        ])
+
+    def create_units(self, units):
+        previous_id = {
+            subregion_key(u.subregion): u.id
+            for u in self.prev.unit_set.select_related('subregion__territory')
+        }
+
+        Unit.objects.bulk_create([
+            Unit(**{
+                'turn': self,
+                'government_id': self.government_lookup[u['government']],
+                'u_type': u['u_type'],
+                'subregion_id': subregion_id(u['subregion']),
+                'previous_id': previous_id.get(u['previous']),
+                'dislodged': u['dislodged'],
+                'displaced_from_id': t_id(u['displaced_from']),
+                'standoff_from_id': t_id(u['standoff_from']),
+            })
+            for u in units
+        ])
+
+    def create_ownership(self, owns):
+        Ownership.objects.bulk_create([
+            Ownership(turn=self,
+                      government_id=self.government_lookup[o['government']],
+                      territory_id=t_id(o['territory']))
+            for o in owns
+        ])
+
     def get_units(self):
         return [
             {'government': u.government.power.name,
@@ -340,7 +354,7 @@ class Turn(models.Model):
             season__in=seasons[self.season],
             number__gt=self.number - 5,
             number__lt=self.number
-            ).select_related('unit', 'canonical_order').order_by('number')
+        ).select_related('unit', 'canonical_order').order_by('number')
 
         units = {}
         for t in turns:
@@ -432,7 +446,7 @@ class Government(models.Model):
                   'D': valid_disband}
 
         tree = {}
-        for a in actionable_subregions(turn.as_data, units, owns).get(self.power.name, ()):
+        for a in actionable_subregions(turn.as_data(), units, owns).get(self.power.name, ()):
             for x in actions[turn.season]:
                 result = helper[x](a, units, owns, season)
                 if not result:
