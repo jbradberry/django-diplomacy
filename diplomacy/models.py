@@ -32,70 +32,6 @@ SUBREGION_CHOICES = (
 )
 
 
-# Refactor wrapper functions
-
-def t_key_closure():
-    lookup_table = {}
-
-    def t_key(t_id):
-        if not lookup_table:
-            lookup_table.update((t.id, t.name) for t in Territory.objects.all())
-
-        return lookup_table[t_id]
-
-    return t_key
-
-t_key = t_key_closure()
-
-def t_id_closure():
-    lookup_table = {}
-
-    def t_id(t_key):
-        if not lookup_table:
-            lookup_table.update((t.name, t.id) for t in Territory.objects.all())
-
-        return lookup_table.get(t_key)
-
-    return t_id
-
-t_id = t_id_closure()
-
-def subregion_id_closure():
-    lookup_table = {}
-
-    def subregion_id(sr_key):
-        if not lookup_table:
-            lookup_table.update((subregion_key(sr), sr.id)
-                                for sr in Subregion.objects.select_related('territory'))
-
-        return lookup_table.get(sr_key)
-
-    return subregion_id
-
-subregion_id = subregion_id_closure()
-
-def subregion_obj_closure():
-    lookup_table = {}
-
-    def subregion_obj(sr_key):
-        if not lookup_table:
-            lookup_table.update((subregion_key(sr), sr)
-                                for sr in Subregion.objects.select_related('territory'))
-
-            return lookup_table.get(sr_key)
-
-    return subregion_obj
-
-subregion_obj = subregion_obj_closure()
-
-# End of refactor wrapper functions
-
-def subregion_key(sr):
-    if not sr:
-        return None
-    return (sr.territory.name, sr.subname, sr.sr_type)
-
-
 class DiplomacyPrefs(models.Model):
     class Meta:
         verbose_name_plural = "diplomacyprefs"
@@ -266,10 +202,10 @@ class Turn(models.Model):
             CanonicalOrder(**{
                 'turn': self.prev,
                 'government_id': self.government_lookup[o['government']],
-                'actor_id': subregion_id(o['actor']),
+                'actor': o['actor'],
                 'action': o['action'],
-                'assist_id': subregion_id(o['assist']),
-                'target_id': subregion_id(o['target']),
+                'assist': o.get('assist', ''),
+                'target': o.get('target', ''),
                 'via_convoy': o['via_convoy'],
                 'user_issued': o.get('user_issued', False),
             })
@@ -277,24 +213,16 @@ class Turn(models.Model):
         ])
 
     def create_units(self, units):
-        if self.prev:
-            previous_id = {
-                subregion_key(u.subregion): u.id
-                for u in self.prev.unit_set.select_related('subregion__territory')
-            }
-        else:
-            previous_id = {}
-
         Unit.objects.bulk_create([
             Unit(**{
                 'turn': self,
                 'government_id': self.government_lookup[u['government']],
                 'u_type': u['u_type'],
-                'subregion_id': subregion_id(u['subregion']),
-                'previous_id': previous_id.get(u.get('previous')),
+                'subregion': u['subregion'],
+                'previous': u.get('previous', ''),
                 'dislodged': u.get('dislodged', False),
-                'displaced_from_id': t_id(u.get('displaced_from')),
-                'standoff_from_id': t_id(u.get('standoff_from')),
+                'displaced_from': u.get('displaced_from', ''),
+                'standoff_from': u.get('standoff_from', ''),
             })
             for u in units
         ])
@@ -303,24 +231,20 @@ class Turn(models.Model):
         Ownership.objects.bulk_create([
             Ownership(turn=self,
                       government_id=self.government_lookup[o['government']],
-                      territory_id=t_id(o['territory']))
+                      territory=o['territory'])
             for o in owns
         ])
 
     def get_units(self):
         return [
-            {'government': u.government.power.name,
+            {'government': u.government.power,
              'u_type': u.u_type,
-             'subregion': subregion_key(u.subregion),
-             'previous': subregion_key(getattr(u.previous, 'subregion', None)),
+             'subregion': u.subregion,
+             'previous': u.previous,
              'dislodged': u.dislodged,
-             'displaced_from': getattr(u.displaced_from, 'name', ''),
-             'standoff_from': getattr(u.standoff_from, 'name', '')}
-            for u in self.unit_set.select_related('subregion__territory',
-                                                  'previous__subregion__territory',
-                                                  'displaced_from',
-                                                  'standoff_from',
-                                                  'government__power')
+             'displaced_from': u.displaced_from,
+             'standoff_from': u.standoff_from}
+            for u in self.unit_set.select_related('government')
         ]
 
     def get_ownership(self):
@@ -415,9 +339,9 @@ class Government(models.Model):
                 result = helper[x](a, units, owns, season)
                 if not result:
                     continue
-                tree.setdefault(subregion_id(a), {})[x] = {
-                    (subregion_id(assist) or u''): {
-                        subregion_id(target) or u'': v
+                tree.setdefault(a, {})[x] = {
+                    (assist or u''): {
+                        target or u'': v
                         for target, v in targets.iteritems()
                     }
                     for assist, targets in result.iteritems()
@@ -502,10 +426,10 @@ class Order(models.Model):
     def as_data(self):
         return {
             'government': self.post.government.power.name,
-            'actor': subregion_key(self.actor),
+            'actor': self.actor,
             'action': self.action,
-            'assist': subregion_key(self.assist),
-            'target': subregion_key(self.target),
+            'assist': self.assist,
+            'target': self.target,
             'via_convoy': self.via_convoy,
         }
 

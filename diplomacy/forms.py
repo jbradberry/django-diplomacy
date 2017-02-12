@@ -6,7 +6,7 @@ from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
 from .engine.check import is_legal
 from .engine.main import find_convoys, builds_available
 from .engine.utils import territory, borders
-from .models import Order, Subregion, subregion_key
+from .models import Order, Subregion
 from .helpers import unit
 
 
@@ -161,19 +161,19 @@ class OrderFormSet(BaseFormSet):
                         cross_moves.add(territory(actor))
                         cross_moves.add(territory(t_actor))
                 if (actor.sr_type == 'L'
-                    and (subregion_key(target) not in borders(subregion_key(actor))
+                    and (target not in borders(actor)
                          or f.instance.via_convoy)):
 
                     fleets = Subregion.objects.filter(
                         sr_type='S', unit__turn=self.turn
                     ).exclude(territory__subregion__sr_type='L').distinct()
-                    fleets = [subregion_key(sr) for sr in fleets]
+                    fleets = [sr for sr in fleets]
                     units = self.turn.get_units()
                     convoys = find_convoys(units, fleets)
 
                     fleets = set()
                     for F, A in convoys:
-                        if subregion_key(actor) in A and subregion_key(target) in A:
+                        if actor in A and target in A:
                             fleets = F
                             break
                     for f2 in self.forms:
@@ -181,9 +181,9 @@ class OrderFormSet(BaseFormSet):
                             continue
                         if not (f2.instance.action == 'C' and
                                 f2.instance.assist_id == actor.id):
-                            fleets.discard(subregion_key(f2.instance.actor))
+                            fleets.discard(f2.instance.actor)
 
-                    if not any(subregion_key(actor) in A and subregion_key(target) in A
+                    if not any(actor in A and target in A
                                for F, A in find_convoys(units, fleets)):
                         w = msgs['m-conv'].format(unit(actor), target)
                         warnings.append(w)

@@ -15,7 +15,7 @@ class CorrectnessHelperTest(TestCase):
         ]
 
         self.subs_unit = {
-            models.subregion_key(s): "{0} {1}".format(models.convert[s.sr_type], unicode(s))
+            s: "{0} {1}".format(models.convert[s.sr_type], unicode(s))
             for s in models.Subregion.objects.select_related('territory')
         }
 
@@ -36,7 +36,7 @@ class CorrectnessHelperTest(TestCase):
         fleets = models.Subregion.objects.filter(
             sr_type='S', unit__turn=T
         ).exclude(territory__subregion__sr_type='L').distinct()
-        fleets = [models.subregion_key(sr) for sr in fleets]
+        fleets = [sr for sr in fleets]
         legal = models.find_convoys(T.get_units(), fleets)
 
         self.assertEqual(len(legal), 2)

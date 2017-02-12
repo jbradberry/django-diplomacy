@@ -170,10 +170,10 @@ class OrdersView(DetailView, BaseFormView):
 
         normalized = normalize_orders(turn.as_data(), orders, units, owns)
         return [
-            {'actor': models.subregion_obj(o['actor']),
+            {'actor': o['actor'],
              'action': o['action'],
-             'assist': models.subregion_obj(o['assist']),
-             'target': models.subregion_obj(o['target']),
+             'assist': o['assist'],
+             'target': o['target'],
              'via_convoy': o['via_convoy']}
             for o in normalized
             if o['government'] == self.object.power.name
