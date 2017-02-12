@@ -176,7 +176,7 @@ class OrdersView(DetailView, BaseFormView):
              'target': o['target'],
              'via_convoy': o['via_convoy']}
             for o in normalized
-            if o['government'] == self.object.power.name
+            if o['government'] == self.object.power
         ]
 
     def get_form_kwargs(self):
@@ -207,7 +207,7 @@ class OrdersView(DetailView, BaseFormView):
     def get_success_url(self):
         return reverse('diplomacy_orders',
                        kwargs={'gameslug': self.object.game.slug,
-                               'slug': self.object.power.name})
+                               'slug': self.object.power})
 
 
 class MapView(DetailView):

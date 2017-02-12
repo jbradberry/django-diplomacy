@@ -47,9 +47,9 @@ class TurnGeneration(object):
         if not empire:
             return False
         return (
-            any(o['government'] == empire.power.name and o['is_supply']
+            any(o['government'] == empire.power and o['is_supply']
                 for o in turn.get_ownership())
-            or any(u['government'] == empire.power.name
+            or any(u['government'] == empire.power
                    for u in turn.get_units())
         )
 
@@ -63,7 +63,7 @@ class TurnGeneration(object):
         actors = actionable_subregions(turn.as_data(), units, owns)
         readys = set(r.agent.pk for r in generator.readies.all())
         return all(
-            empire.pk in readys or not actors.get(empire.power.name)
+            empire.pk in readys or not actors.get(empire.power)
             for empire in models.Government.objects.filter(
                 game_id=generator.object_id,
             )

@@ -73,7 +73,7 @@ class OrderForm(ModelForm):
         if turn.season == 'FA':
             # Fall Adjustment builds are optional.
             builds = builds_available(units, owns)
-            if builds.get(self.government.power.name, 0) > 0 and actor is None:
+            if builds.get(self.government.power, 0) > 0 and actor is None:
                 return {}
         else:
             if actor != self.initial['actor']:
@@ -160,7 +160,7 @@ class OrderFormSet(BaseFormSet):
                         warnings.append(w)
                         cross_moves.add(territory(actor))
                         cross_moves.add(territory(t_actor))
-                if (actor.sr_type == 'L'
+                if (actor.endswith('.l')
                     and (target not in borders(actor)
                          or f.instance.via_convoy)):
 
@@ -177,10 +177,10 @@ class OrderFormSet(BaseFormSet):
                             fleets = F
                             break
                     for f2 in self.forms:
-                        if f2.instance.actor.sr_type != 'S':
+                        if not f2.instance.actor.endswith('.s'):
                             continue
                         if not (f2.instance.action == 'C' and
-                                f2.instance.assist_id == actor.id):
+                                f2.instance.assist == actor):
                             fleets.discard(f2.instance.actor)
 
                     if not any(actor in A and target in A
@@ -214,7 +214,7 @@ class OrderFormSet(BaseFormSet):
         if self.season == 'FA':
             builds = builds_available(
                 self.turn.get_units(), self.turn.get_ownership()
-            ).get(self.government.power.name)
+            ).get(self.government.power)
             if builds >= 0 and len(actors) > builds:
                 raise ValidationError("You may not build more units than"
                                       " you have supply centers.")

@@ -5,9 +5,10 @@ from random import shuffle
 from django.contrib.auth.models import User
 from django.db import models
 
+from .engine import standard
 from .engine.check import (valid_hold, valid_move, valid_support, valid_convoy,
                            valid_build, valid_disband, is_legal)
-from .engine.main import (find_convoys, builds_available, actionable_subregions,
+from .engine.main import (builds_available, actionable_subregions,
                           normalize_orders, generate, initialize_game)
 from .engine.utils import territory, territory_parts
 from .helpers import unit, convert
@@ -76,9 +77,9 @@ class Game(models.Model):
         return sorted(
             ((g,
               sum(1 for o in owns
-                  if o['government'] == g.power.name
+                  if o['government'] == g.power
                   and o['is_supply']),
-              sum(1 for u in units if u['government'] == g.power.name),
+              sum(1 for u in units if u['government'] == g.power),
               any(post.government == g for post in posts))
              for g in gvts),
             key=lambda x: (-x[1], -x[2], getattr(x[0].power, 'name', None))
@@ -99,7 +100,7 @@ class Game(models.Model):
 
         governments = list(self.government_set.all())
         shuffle(governments)
-        for pwr, gvt in zip(Power.objects.all(), governments):
+        for pwr, gvt in zip(standard.powers, governments):
             gvt.power = pwr
             gvt.save()
 
@@ -191,7 +192,7 @@ class Turn(models.Model):
     def government_lookup(self):
         if not getattr(self, '_government_lookup', None):
             self._government_lookup = {
-                gvt.power.name: gvt.id
+                gvt.power: gvt.id
                 for gvt in self.game.government_set.select_related('power')
             }
 
@@ -249,10 +250,10 @@ class Turn(models.Model):
 
     def get_ownership(self):
         return [
-            {'territory': o.territory.name,
-             'government': o.government.power.name,
+            {'territory': o.territory,
+             'government': o.government.power,
              'is_supply': o.territory.is_supply}
-            for o in self.ownership_set.select_related('territory', 'government__power')
+            for o in self.ownership_set.select_related('government')
         ]
 
     def get_orders(self):
@@ -293,7 +294,7 @@ class Turn(models.Model):
                                       subregion=o.actor)
                 u = u.get() if u else None
                 if u is None:
-                    orders[p]["b{0}".format(o.actor_id)].append(o)
+                    orders[p]["b{0}".format(o.actor)].append(o)
                     continue
                 u_id = u.id
                 while u_id in units:
@@ -325,7 +326,7 @@ class Government(models.Model):
                    'F': ('H', 'M', 'S', 'C'),
                    'SR': ('M', 'D'),
                    'FR': ('M', 'D'),
-                   'FA': ('B',) if builds.get(self.power.name, 0) > 0 else ('D',)}
+                   'FA': ('B',) if builds.get(self.power, 0) > 0 else ('D',)}
         helper = {'H': valid_hold,
                   'M': valid_move,
                   'S': valid_support,
@@ -334,7 +335,7 @@ class Government(models.Model):
                   'D': valid_disband}
 
         tree = {}
-        for a in actionable_subregions(turn.as_data(), units, owns).get(self.power.name, ()):
+        for a in actionable_subregions(turn.as_data(), units, owns).get(self.power, ()):
             for x in actions[turn.season]:
                 result = helper[x](a, units, owns, season)
                 if not result:
@@ -347,7 +348,7 @@ class Government(models.Model):
                     for assist, targets in result.iteritems()
                 }
 
-        if season == 'FA' and builds.get(self.power.name, 0) > 0:
+        if season == 'FA' and builds.get(self.power, 0) > 0:
             tree[u''] = {u'': {u'': {u'': False}}}
 
         return tree
@@ -425,7 +426,7 @@ class Order(models.Model):
 
     def as_data(self):
         return {
-            'government': self.post.government.power.name,
+            'government': self.post.government.power,
             'actor': self.actor,
             'action': self.action,
             'assist': self.assist,
