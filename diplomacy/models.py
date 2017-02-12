@@ -381,46 +381,11 @@ class Turn(models.Model):
                       for power, adict in orders.iteritems())
 
 
-class Power(models.Model):
-    name = models.CharField(max_length=20)
-
-    def __unicode__(self):
-        return self.name
-
-
-class Territory(models.Model):
-    name = models.CharField(max_length=30)
-    power = models.ForeignKey(Power, null=True, blank=True)
-    is_supply = models.BooleanField()
-
-    def __unicode__(self):
-        return self.name
-
-
-class Subregion(models.Model):
-    class Meta:
-        ordering = ('id',)
-
-    territory = models.ForeignKey(Territory)
-    subname = models.CharField(max_length=10, blank=True)
-    sr_type = models.CharField(max_length=1, choices=SUBREGION_CHOICES)
-    init_unit = models.BooleanField()
-    borders = models.ManyToManyField("self", null=True, blank=True)
-
-    def __unicode__(self):
-        if self.subname:
-            return u'{0} ({1})'.format(self.territory.name, self.subname)
-        else:
-            return self.territory.name
-
-
 class Government(models.Model):
     name = models.CharField(max_length=100)
     user = models.ForeignKey(User, null=True, blank=True)
     game = models.ForeignKey(Game)
-    power = models.ForeignKey(Power, null=True, blank=True)
     power_name = models.CharField(max_length=32, blank=True)
-    owns = models.ManyToManyField(Territory, through='Ownership')
 
     def __unicode__(self):
         return self.name
@@ -466,31 +431,24 @@ class Government(models.Model):
 
 class Ownership(models.Model):
     class Meta:
-        unique_together = ("turn", "territory")
+        unique_together = ("turn", "territory_name")
 
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
-    territory = models.ForeignKey(Territory)
     territory_name = models.CharField(max_length=32, blank=True)
 
 
 class Unit(models.Model):
     class Meta:
-        ordering = ('-turn', 'government', 'subregion')
+        ordering = ('-turn', 'government', 'subregion_name')
 
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
-    subregion = models.ForeignKey(Subregion)
     subregion_name = models.CharField(max_length=64, blank=True)
-    previous = models.ForeignKey("self", null=True, blank=True)
     previous_name = models.CharField(max_length=64, blank=True)
     dislodged = models.BooleanField(default=False)
-    displaced_from = models.ForeignKey(Territory, null=True, blank=True,
-                                       related_name='displaced')
     displaced_from_name = models.CharField(max_length=32, blank=True)
-    standoff_from = models.ForeignKey(Territory, null=True, blank=True,
-                                      related_name='standoff')
     standoff_from_name = models.CharField(max_length=32, blank=True)
 
     def __unicode__(self):
@@ -520,16 +478,10 @@ ACTION_CHOICES = (
 class Order(models.Model):
     post = models.ForeignKey(OrderPost, related_name='orders')
 
-    actor = models.ForeignKey(Subregion, null=True, blank=True,
-                              related_name='acts')
     actor_name = models.CharField(max_length=64, blank=True)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,
                               null=True, blank=True)
-    assist = models.ForeignKey(Subregion, null=True, blank=True,
-                               related_name='assisted')
     assist_name = models.CharField(max_length=64, blank=True)
-    target = models.ForeignKey(Subregion, null=True, blank=True,
-                               related_name='targeted')
     target_name = models.CharField(max_length=64, blank=True)
     via_convoy = models.BooleanField()
 
@@ -569,15 +521,10 @@ class CanonicalOrder(models.Model):
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
 
-    actor = models.ForeignKey(Subregion, related_name='canonical_actor')
     actor_name = models.CharField(max_length=64, blank=True)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,
                               null=True, blank=True)
-    assist = models.ForeignKey(Subregion, null=True, blank=True,
-                               related_name='canonical_assist')
     assist_name = models.CharField(max_length=64, blank=True)
-    target = models.ForeignKey(Subregion, null=True, blank=True,
-                               related_name='canonical_target')
     target_name = models.CharField(max_length=64, blank=True)
     via_convoy = models.BooleanField()
 
