@@ -385,7 +385,7 @@ class Government(models.Model):
     name = models.CharField(max_length=100)
     user = models.ForeignKey(User, null=True, blank=True)
     game = models.ForeignKey(Game)
-    power_name = models.CharField(max_length=32, blank=True)
+    power = models.CharField(max_length=32, blank=True)
 
     def __unicode__(self):
         return self.name
@@ -431,25 +431,25 @@ class Government(models.Model):
 
 class Ownership(models.Model):
     class Meta:
-        unique_together = ("turn", "territory_name")
+        unique_together = ('turn', 'territory')
 
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
-    territory_name = models.CharField(max_length=32, blank=True)
+    territory = models.CharField(max_length=32, blank=True)
 
 
 class Unit(models.Model):
     class Meta:
-        ordering = ('-turn', 'government', 'subregion_name')
+        ordering = ('-turn', 'government', 'subregion')
 
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
-    subregion_name = models.CharField(max_length=64, blank=True)
-    previous_name = models.CharField(max_length=64, blank=True)
+    subregion = models.CharField(max_length=64, blank=True)
+    previous = models.CharField(max_length=64, blank=True)
     dislodged = models.BooleanField(default=False)
-    displaced_from_name = models.CharField(max_length=32, blank=True)
-    standoff_from_name = models.CharField(max_length=32, blank=True)
+    displaced_from = models.CharField(max_length=32, blank=True)
+    standoff_from = models.CharField(max_length=32, blank=True)
 
     def __unicode__(self):
         return u'{0} {1}'.format(self.u_type, self.subregion.territory)
@@ -478,11 +478,11 @@ ACTION_CHOICES = (
 class Order(models.Model):
     post = models.ForeignKey(OrderPost, related_name='orders')
 
-    actor_name = models.CharField(max_length=64, blank=True)
+    actor = models.CharField(max_length=64, blank=True)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,
                               null=True, blank=True)
-    assist_name = models.CharField(max_length=64, blank=True)
-    target_name = models.CharField(max_length=64, blank=True)
+    assist = models.CharField(max_length=64, blank=True)
+    target = models.CharField(max_length=64, blank=True)
     via_convoy = models.BooleanField()
 
     def __unicode__(self):
@@ -521,11 +521,11 @@ class CanonicalOrder(models.Model):
     turn = models.ForeignKey(Turn)
     government = models.ForeignKey(Government)
 
-    actor_name = models.CharField(max_length=64, blank=True)
+    actor = models.CharField(max_length=64, blank=True)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,
                               null=True, blank=True)
-    assist_name = models.CharField(max_length=64, blank=True)
-    target_name = models.CharField(max_length=64, blank=True)
+    assist = models.CharField(max_length=64, blank=True)
+    target = models.CharField(max_length=64, blank=True)
     via_convoy = models.BooleanField()
 
     user_issued = models.BooleanField()
