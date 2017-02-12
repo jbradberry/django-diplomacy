@@ -74,7 +74,7 @@ def find_convoys(units, fleets):
         coasts = {
             sr for f in gset
             for b in borders(f)
-            for sr in standard.territories.get(territory(b), ())
+            for sr in standard.subregion_groups.get(territory(b), ())
             if sr[2] == 'L'
         }
         if coasts & armies:
@@ -456,7 +456,7 @@ def actionable_subregions(turn, units, owns):
                 actors_index[government] = [
                     sr for T in owned_sc
                     for sr in territory_parts(T)
-                    if standard.definition[T][0] == government
+                    if standard.starting_state[T][0] == government
                     and T not in occupied
                 ]
             elif builds.get(government, 0) == 0:
@@ -652,7 +652,7 @@ def update_autodisbands(orders, units, owns):
 
         distance = 0
         examined = {
-            sr for T, (power, sc, _) in standard.definition.iteritems()
+            sr for T, (power, sc, _) in standard.starting_state.iteritems()
             for sr in territory_parts(T)
             if sr[2] == 'S' and sc
             and power == gvt
@@ -670,7 +670,7 @@ def update_autodisbands(orders, units, owns):
 
         distance = 0
         examined = {
-            sr for T, (power, sc, _) in standard.definition.iteritems()
+            sr for T, (power, sc, _) in standard.starting_state.iteritems()
             for sr in territory_parts(T)
             if sc and power == gvt
         }
@@ -773,7 +773,7 @@ def initialize_game():
         {'government': government,
          'u_type': convert[unit[1]],
          'subregion': (T, unit[0], unit[1])}
-        for T, (government, sc, unit) in standard.definition.iteritems()
+        for T, (government, sc, unit) in standard.starting_state.iteritems()
         if unit
     ]
 
@@ -781,7 +781,7 @@ def initialize_game():
         {'territory': T,
          'government': government,
          'is_supply': sc}
-        for T, (government, sc, unit) in standard.definition.iteritems()
+        for T, (government, sc, unit) in standard.starting_state.iteritems()
         if government
     ]
 

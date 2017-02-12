@@ -5,13 +5,11 @@ from random import shuffle
 from django.contrib.auth.models import User
 from django.db import models
 
-from .engine import standard
 from .engine.check import (valid_hold, valid_move, valid_support, valid_convoy,
                            valid_build, valid_disband, is_legal)
-from .engine.compare import assist
 from .engine.main import (find_convoys, builds_available, actionable_subregions,
                           normalize_orders, generate, initialize_game)
-from .engine.utils import territory, borders, territory_parts
+from .engine.utils import territory, territory_parts
 from .helpers import unit, convert
 
 

@@ -145,8 +145,8 @@ def valid_build(actor, units, owns, season):
     owns_index = {o['territory']: o for o in owns}
     current_government = owns_index.get(territory(actor), {}).get('government')
     home_government, is_supply = '', False
-    if territory(actor) in standard.definition:
-        home_government, is_supply = standard.definition[territory(actor)][:2]
+    if territory(actor) in standard.starting_state:
+        home_government, is_supply, _ = standard.starting_state[territory(actor)]
 
     # It has to be a supply center and the current government has to have builds available.
     if not (is_supply and builds_available(units, owns).get(current_government, 0) > 0):

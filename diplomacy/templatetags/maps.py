@@ -4,7 +4,7 @@ import re
 from django import template
 
 from ..engine import standard
-from ..engine.utils import territory
+from ..engine.utils import territory, subregion_display
 
 
 register = template.Library()
@@ -30,20 +30,18 @@ def map(context, width, height):
         owns = turn.get_ownership()
 
         data['owns'] = json.dumps(
-            [(re.sub('[ .]', '', o['territory'].lower()), o['government'])
-             for o in owns]
+            [(o['territory'], o['government']) for o in owns]
         )
         data['units'] = json.dumps(
-            [("{}{}".format(territory(u['subregion']),
-                            " ({})".format(u['subregion'][1]) if u['subregion'][1] else ''),
-              u['u_type'], u['government'])
+            [(subregion_display(u['subregion']), u['u_type'], u['government'])
              for u in units
-             if not u['dislodged']])
+             if not u['dislodged']]
+        )
     else:
         data['owns'] = json.dumps(
-            [(re.sub('[ .]', '', T.lower()), P)
+            [(T, P)
              for P in standard.powers
-             for T, (p, sc, unit) in standard.definition.iteritems()
+             for T, (p, sc, unit) in standard.starting_state.iteritems()
              if p == P])
         data['units'] = json.dumps([])
     return data
