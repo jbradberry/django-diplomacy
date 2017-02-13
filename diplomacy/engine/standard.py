@@ -11,6 +11,8 @@ powers = {
     u'turkey': u'Turkey'
 }
 
+inv_powers = {v: k for k, v in powers.iteritems()}
+
 territories = {
     u'adriatic-sea': u'Adriatic Sea',
     u'aegean-sea': u'Aegean Sea',
@@ -88,6 +90,8 @@ territories = {
     u'western-mediterranean': u'Western Mediterranean',
     u'yorkshire': u'Yorkshire'
 }
+
+inv_territories = {v: k for k, v in territories.iteritems()}
 
 subregions = {
     u'adriatic-sea.s': (u'Adriatic Sea', u'', u'S'),
@@ -211,6 +215,8 @@ subregions = {
     u'yorkshire.l': (u'Yorkshire', u'', u'L'),
     u'yorkshire.s': (u'Yorkshire', u'', u'S')
 }
+
+inv_subregions = {v: k for k, v in subregions.iteritems()}
 
 # For every territory, specify:
 #   - the initial owning empire, or None

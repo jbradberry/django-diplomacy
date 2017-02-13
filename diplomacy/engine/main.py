@@ -51,6 +51,8 @@ def find_convoys(units, fleets):
     from that cluster.  This is necessary to determine legal orders.
 
     """
+    fleets = [f for f in fleets
+              if not any(p.endswith('.l') for p in territory_parts(territory(f)))]
     index = {f: {f} for f in fleets}
 
     # Calculate the connected sets of fleets
@@ -74,8 +76,8 @@ def find_convoys(units, fleets):
         coasts = {
             sr for f in gset
             for b in borders(f)
-            for sr in standard.subregion_groups.get(territory(b), ())
-            if sr[2] == 'L'
+            for sr in territory_parts(territory(b))
+            if sr.endswith('.l')
         }
         if coasts & armies:
             convoyable.append((set(gset), coasts))

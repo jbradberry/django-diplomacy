@@ -1,23 +1,32 @@
+import re
+
 from django.test import TestCase
 
-from . import factories
-from .helpers import create_units, create_orders
-from .. import models
+from ..engine import standard
+from ..engine.main import find_convoys
+from ..engine.utils import territory, territory_display, unit_display, subregion_token, power_token
+
+
+convert = {'F': 'S', 'A': 'L'}
+unitRE = re.compile(
+    r"(?P<u_type>F|A) (?P<territory>[-\w.]{2,}(?: [-\w.]{2,})*)(?: \((?P<subname>\w+)\))?")
 
 
 class CorrectnessHelperTest(TestCase):
-    def setUp(self):
-        self.game = factories.GameFactory()
-        self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
-        self.governments = [
-            factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
-        ]
+    def parse_unit_subregion(self, unit):
+        data = unitRE.match(unit).groupdict()
+        return subregion_token(
+            (data['territory'], data['subname'] or '', convert[data['u_type']])
+        )
 
-        self.subs_unit = {
-            s: "{0} {1}".format(models.convert[s.sr_type], unicode(s))
-            for s in models.Subregion.objects.select_related('territory')
-        }
+    def parse_units(self, units):
+        return [
+            {'government': power_token(g),
+             'u_type': unitstr[0],
+             'subregion': self.parse_unit_subregion(unitstr)}
+            for g, uset in units.iteritems()
+            for unitstr in uset
+        ]
 
     def test_find_convoys(self):
         units = {'England': ('F Mid-Atlantic Ocean',
@@ -30,14 +39,10 @@ class CorrectnessHelperTest(TestCase):
                              'F Gulf of Bothnia',
                              'A Gascony',
                              'A Sweden')}
-        T = models.Turn.objects.get()
-        create_units(units, T)
 
-        fleets = models.Subregion.objects.filter(
-            sr_type='S', unit__turn=T
-        ).exclude(territory__subregion__sr_type='L').distinct()
-        fleets = [sr for sr in fleets]
-        legal = models.find_convoys(T.get_units(), fleets)
+        parsed = self.parse_units(units)
+        fleets = [u['subregion'] for u in parsed if u['u_type'] == 'F']
+        legal = find_convoys(parsed, fleets)
 
         self.assertEqual(len(legal), 2)
         (seas1, lands1), (seas2, lands2) = legal
@@ -47,26 +52,26 @@ class CorrectnessHelperTest(TestCase):
 
         self.assertEqual(len(seas1), 3)
         self.assertItemsEqual(
-            [self.subs_unit[sr] for sr in seas1],
+            [unit_display(sr) for sr in seas1],
             units['England'][:3]
         )
 
         self.assertEqual(len(lands1), 10)
         self.assertItemsEqual(
-            [sr[0] for sr in lands1],
+            [territory_display(territory(sr)) for sr in lands1],
             ['Tunisia', 'North Africa', 'London', 'Wales', 'Spain',
              'Brest', 'Gascony', 'Picardy', 'Belgium', 'Portugal']
         )
 
         self.assertEqual(len(seas2), 2)
         self.assertItemsEqual(
-            [self.subs_unit[sr] for sr in seas2],
+            [unit_display(sr) for sr in seas2],
             units['England'][6:8]
         )
 
         self.assertEqual(len(lands2), 8)
         self.assertItemsEqual(
-            [sr[0] for sr in lands2],
+            [territory_display(territory(sr)) for sr in lands2],
             ['Prussia', 'Berlin', 'Kiel', 'Denmark', 'Sweden',
              'Finland', 'St. Petersburg', 'Livonia']
         )
