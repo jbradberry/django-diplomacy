@@ -1,6 +1,6 @@
 from . import standard
 from .main import find_convoys, builds_available
-from .utils import unit_in, territory, borders, territory_parts
+from .utils import unit_in, territory, borders, territory_parts, has_land, is_fleet
 
 
 def valid_hold(actor, units, owns, season):
@@ -42,7 +42,7 @@ def valid_move(actor, units, owns, season):
         fleets = [
             u['subregion'] for u in units
             if u['u_type'] == 'F'
-            and not any(p[2] == 'L' for p in territory_parts(territory(u['subregion'])))
+            and not has_land(u['subregion'])
         ]
         for fset, lset in find_convoys(units, fleets):
             if actor in lset:
@@ -95,7 +95,7 @@ def valid_support(actor, units, owns, season):
     fleets = [
         u['subregion'] for u in units
         if u['u_type'] == 'F'
-        and not any(p[2] == 'L' for p in territory_parts(u['subregion']))
+        and not has_land(u['subregion'])
         and u['subregion'] != actor  # if we are issuing a support, we can't convoy.
     ]
     for fset, lset in find_convoys(units, fleets):
@@ -117,13 +117,13 @@ def valid_convoy(actor, units, owns, season):
 
     if not unit_in(actor, units):
         return {}
-    if actor[2] != 'S':
+    if not is_fleet(actor):
         return {}
 
     fleets = [
         u['subregion'] for u in units
         if u['u_type'] == 'F'
-        and not any(p[2] == 'L' for p in territory_parts(territory(u['subregion'])))
+        and not has_land(u['subregion'])
     ]
 
     for fset, lset in find_convoys(units, fleets):

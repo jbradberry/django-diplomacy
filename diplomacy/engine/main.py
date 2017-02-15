@@ -3,7 +3,7 @@ from itertools import combinations, permutations
 
 from . import standard
 from .compare import assist, head_to_head, construct_dependencies
-from .utils import convert, territory, borders, territory_parts
+from .utils import convert, territory, borders, territory_parts, has_land, is_land
 
 
 def detect_paradox(orders, dep):
@@ -51,8 +51,7 @@ def find_convoys(units, fleets):
     from that cluster.  This is necessary to determine legal orders.
 
     """
-    fleets = [f for f in fleets
-              if not any(p.endswith('.l') for p in territory_parts(territory(f)))]
+    fleets = [f for f in fleets if not has_land(f)]
     index = {f: {f} for f in fleets}
 
     # Calculate the connected sets of fleets
@@ -77,7 +76,7 @@ def find_convoys(units, fleets):
             sr for f in gset
             for b in borders(f)
             for sr in territory_parts(territory(b))
-            if sr.endswith('.l')
+            if is_land(sr)
         }
         if coasts & armies:
             convoyable.append((set(gset), coasts))
@@ -527,7 +526,7 @@ def normalize_orders(turn, orders, units, owns):
         for (g, i), o in orders_index.iteritems():
             # This block concerns the convoyability of units, so if the unit
             # isn't moving or isn't an army, ignore it.
-            if o['action'] != 'M' or o['actor'][2] != 'L':
+            if o['action'] != 'M' or not is_land(o['actor']):
                 continue
 
             # Find all of the convoy orders that match the current move,

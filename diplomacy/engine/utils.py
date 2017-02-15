@@ -51,3 +51,25 @@ def territory_token(t_str):
 
 def subregion_token(sr_tuple):
     return standard.inv_subregions.get(sr_tuple, u'')
+
+
+def is_land(sr_token):
+    return sr_token.endswith('.l')
+
+
+def is_sea(sr_token):
+    return sr_token.endswith('.s')
+
+
+def has_land(sr_token):
+    return any(is_land(sr) for sr in territory_parts(territory(sr_token)))
+
+
+def has_sea(sr_token):
+    return any(is_sea(sr) for sr in territory_parts(territory(sr_token)))
+
+
+is_army = is_land
+
+
+is_fleet = is_sea
