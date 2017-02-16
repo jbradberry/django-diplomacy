@@ -1,6 +1,6 @@
 from . import standard
 from .main import find_convoys, builds_available
-from .utils import unit_in, territory, borders, territory_parts, has_land, is_fleet
+from .utils import unit_in, get_territory, borders, territory_parts, has_land, is_fleet
 
 
 def valid_hold(actor, units, owns, season):
@@ -14,7 +14,7 @@ def valid_move(actor, units, owns, season):
     if season == 'FA':
         return {}
 
-    actor_set = [u for u in units if territory(u['subregion']) == territory(actor)]
+    actor_set = [u for u in units if get_territory(u['subregion']) == get_territory(actor)]
 
     target = borders(actor)
 
@@ -25,11 +25,11 @@ def valid_move(actor, units, owns, season):
         target = [
             t for t in target
             # only go to empty territories ...
-            if not any(territory(e['subregion']) == territory(t) for e in units)
+            if not any(get_territory(e['subregion']) == get_territory(t) for e in units)
             # that weren't the source of a displacing attack ...
-            and all(territory(t) != a['displaced_from'] for a in actor_set)
+            and all(get_territory(t) != a['displaced_from'] for a in actor_set)
             # and that isn't empty because of a standoff.
-            and all(territory(t) != u['standoff_from'] for u in units)
+            and all(get_territory(t) != u['standoff_from'] for u in units)
         ]
 
     if len(actor_set) != 1:
@@ -67,7 +67,7 @@ def valid_support(actor, units, owns, season):
         return {}
 
     adj = {sr for b in borders(actor)
-           for sr in territory_parts(territory(b))}
+           for sr in territory_parts(get_territory(b))}
 
     # support to hold
     results = {
@@ -143,16 +143,16 @@ def valid_build(actor, units, owns, season):
         return {}
 
     owns_index = {o['territory']: o for o in owns}
-    current_government = owns_index.get(territory(actor), {}).get('government')
+    current_government = owns_index.get(get_territory(actor), {}).get('government')
     home_government, is_supply = '', False
-    if territory(actor) in standard.starting_state:
-        home_government, is_supply, _ = standard.starting_state[territory(actor)]
+    if get_territory(actor) in standard.starting_state:
+        home_government, is_supply, _ = standard.starting_state[get_territory(actor)]
 
     # It has to be a supply center and the current government has to have builds available.
     if not (is_supply and builds_available(units, owns).get(current_government, 0) > 0):
         return {}
     # Only can build if the territory is currently unoccupied.
-    if any(territory(u['subregion']) == territory(actor) for u in units):
+    if any(get_territory(u['subregion']) == get_territory(actor) for u in units):
         return {}
     # And only if the territory is one of this government's "home" territories.
     if current_government == home_government:
@@ -164,7 +164,7 @@ def valid_disband(actor, units, owns, season):
     if season in ('S', 'F'):
         return {}
 
-    unit = [u for u in units if territory(u['subregion']) == territory(actor)]
+    unit = [u for u in units if get_territory(u['subregion']) == get_territory(actor)]
     if season in ('SR', 'FR'):
         if not any(u['dislodged'] for u in unit):
             return {}
@@ -202,7 +202,7 @@ def is_legal(order, units, owns, season):
         if unit and unit[0]['government'] != order['government']:
             return False
     elif order['action'] == 'B':
-        if not any(o['territory'] == territory(order['actor'])
+        if not any(o['territory'] == get_territory(order['actor'])
                    and o['government'] == order['government']
                    for o in owns):
             return False

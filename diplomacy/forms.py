@@ -5,7 +5,7 @@ from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
 
 from .engine.check import is_legal
 from .engine.main import find_convoys, builds_available
-from .engine.utils import territory, borders
+from .engine.utils import get_territory, borders
 from .models import Order, Subregion
 from .helpers import unit
 
@@ -110,7 +110,7 @@ class OrderFormSet(BaseFormSet):
         moves = defaultdict(list)
         cross_moves = set()
 
-        orders = {territory(f.instance.actor): f.instance
+        orders = {get_territory(f.instance.actor): f.instance
                   for f in self.forms}
         for f in self.forms:
             w = None
@@ -120,10 +120,10 @@ class OrderFormSet(BaseFormSet):
             target = f.instance.target
 
             if action == 'S':
-                if assist is None or territory(assist) not in orders:
+                if assist is None or get_territory(assist) not in orders:
                     continue
-                a_action = orders[territory(assist)].action
-                a_target = orders[territory(assist)].target
+                a_action = orders[get_territory(assist)].action
+                a_target = orders[get_territory(assist)].target
                 if target is None and a_action not in ('H', 'S', 'C'):
                     w = msgs['s-hold'].format(unit(actor), unit(assist))
                     warnings.append(w)
@@ -133,10 +133,10 @@ class OrderFormSet(BaseFormSet):
                         unit(actor), unit(assist), target)
                     warnings.append(w)
             elif action == 'C':
-                if assist is None or territory(assist) not in orders:
+                if assist is None or get_territory(assist) not in orders:
                     continue
-                a_action = orders[territory(assist)].action
-                a_target = orders[territory(assist)].target
+                a_action = orders[get_territory(assist)].action
+                a_target = orders[get_territory(assist)].target
                 if a_action != 'M' or a_target != target:
                     w = msgs['c-move'].format(
                         unit(actor), unit(assist), target)
@@ -144,22 +144,22 @@ class OrderFormSet(BaseFormSet):
             elif action == 'M':
                 moves[target].append(f.instance.actor)
 
-                if territory(target) in orders:
-                    t_actor = orders[territory(target)].actor
-                    t_action = orders[territory(target)].action
-                    t_target = orders[territory(target)].target
+                if get_territory(target) in orders:
+                    t_actor = orders[get_territory(target)].actor
+                    t_action = orders[get_territory(target)].action
+                    t_target = orders[get_territory(target)].target
                     if t_action in ('H', 'S', 'C'):
                         w = msgs['m-hold'].format(
                             unit(actor), target, unit(target))
                         warnings.append(w)
                     elif (t_action == 'M' and
-                          territory(t_target) == territory(actor)):
-                        if territory(actor) in cross_moves:
+                          get_territory(t_target) == get_territory(actor)):
+                        if get_territory(actor) in cross_moves:
                             continue
                         w = msgs['m-xing'].format(unit(actor), unit(t_actor))
                         warnings.append(w)
-                        cross_moves.add(territory(actor))
-                        cross_moves.add(territory(t_actor))
+                        cross_moves.add(get_territory(actor))
+                        cross_moves.add(get_territory(t_actor))
                 if (actor.endswith('.l')
                     and (target not in borders(actor)
                          or f.instance.via_convoy)):

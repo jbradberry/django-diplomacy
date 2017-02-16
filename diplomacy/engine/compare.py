@@ -1,41 +1,41 @@
 from collections import defaultdict
 from itertools import permutations
 
-from .utils import territory, borders
+from .utils import get_territory, borders
 
 
 def assist(T1, o1, T2, o2):
-    return territory(o2['assist']) == T1
+    return get_territory(o2['assist']) == T1
 
 def attack_us(T1, o1, T2, o2):
-    return territory(o2['target']) == T1
+    return get_territory(o2['target']) == T1
 
 def attack_us_from_target(T1, o1, T2, o2):
-    return (territory(o2['assist']) == territory(o1['target'])
-            and territory(o2['target']) == T1)
+    return (get_territory(o2['assist']) == get_territory(o1['target'])
+            and get_territory(o2['target']) == T1)
 
 def head_to_head(T1, o1, T2, o2, c1=False, c2=False):
     actor = o2['assist'] if o2['assist'] else o2['actor']
-    T2 = territory(actor)
-    if not any(territory(S) == T2 for S in borders(o1['actor'])):
+    T2 = get_territory(actor)
+    if not any(get_territory(S) == T2 for S in borders(o1['actor'])):
         return False
-    if not any(territory(S) == T1 for S in borders(actor)):
+    if not any(get_territory(S) == T1 for S in borders(actor)):
         return False
     if c1 or c2:
         return False
-    return territory(o2['target']) == T1 and territory(o1['target']) == T2
+    return get_territory(o2['target']) == T1 and get_territory(o1['target']) == T2
 
 def hostile_assist_hold(T1, o1, T2, o2):
-    return (territory(o2['assist']) == territory(o1['target'])
+    return (get_territory(o2['assist']) == get_territory(o1['target'])
             and o2['target'] is None)
 
 def hostile_assist_compete(T1, o1, T2, o2):
-    return (territory(o2['assist']) != T1 and
-            territory(o2['target']) == territory(o1['target']))
+    return (get_territory(o2['assist']) != T1 and
+            get_territory(o2['target']) == get_territory(o1['target']))
 
 def move_away(T1, o1, T2, o2):
-    return (territory(o1['target']) == T2 and
-            (territory(o2['target']) != T1 or o1['convoy'] or o2['convoy']))
+    return (get_territory(o1['target']) == T2 and
+            (get_territory(o2['target']) != T1 or o1['convoy'] or o2['convoy']))
 
 
 DEPENDENCIES = {('C', 'M'): (attack_us,),

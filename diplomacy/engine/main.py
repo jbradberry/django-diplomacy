@@ -3,7 +3,7 @@ from itertools import combinations, permutations
 
 from . import standard
 from .compare import assist, head_to_head, construct_dependencies
-from .utils import convert, territory, borders, territory_parts, has_land, is_land
+from .utils import convert, get_territory, borders, territory_parts, has_land, is_land
 
 
 def detect_paradox(orders, dep):
@@ -75,7 +75,7 @@ def find_convoys(units, fleets):
         coasts = {
             sr for f in gset
             for b in borders(f)
-            for sr in territory_parts(territory(b))
+            for sr in territory_parts(get_territory(b))
             if is_land(sr)
         }
         if coasts & armies:
@@ -103,7 +103,7 @@ def immediate_fails(orders, units):
         elif o['action'] not in ('S', 'C'):
             continue
         else:
-            assist = orders[territory(o['assist'])]
+            assist = orders[get_territory(o['assist'])]
             if o['target'] is not None:
                 if (assist['action'] == 'M' and
                     assist['target'] == o['target']):
@@ -189,8 +189,8 @@ def calculate_base_strengths(state, orders, unit_index, path, convoy):
             if path[T]:
                 prevent_str[T], attack_str[T] = 1, 1
 
-                if territory(order['target']) in state:
-                    T2 = territory(order['target'])
+                if get_territory(order['target']) in state:
+                    T2 = get_territory(order['target'])
                     d2 = state[T2]
 
                     # other unit moves away
@@ -226,30 +226,30 @@ def calculate_supports(state, orders, unit_index, hold_str, attack_str, defend_s
             continue
 
         if order['target'] is None:
-            hold_str[territory(order['assist'])] += 1
+            hold_str[get_territory(order['assist'])] += 1
         else:
-            if attack_str[territory(order['assist'])]:
-                T2 = territory(order['target'])
+            if attack_str[get_territory(order['assist'])]:
+                T2 = get_territory(order['target'])
                 d2 = state.get(T2, False)
                 if T2 not in orders:
-                    attack_str[territory(order['assist'])] += 1
+                    attack_str[get_territory(order['assist'])] += 1
                 elif (d2
                       and orders[T2]['action'] == 'M'
                       and not head_to_head(T, order, T2, orders[T2],
                                            convoy[T], convoy[T2])):
-                    attack_str[territory(order['assist'])] += 1
+                    attack_str[get_territory(order['assist'])] += 1
                 # other unit is not ours
                 elif unit_index[T]['government'] != unit_index[T2]['government']:
-                    attack_str[territory(order['assist'])] += 1
-            if defend_str[territory(order['assist'])]:
-                defend_str[territory(order['assist'])] += 1
-            if prevent_str[territory(order['assist'])]:
-                prevent_str[territory(order['assist'])] += 1
+                    attack_str[get_territory(order['assist'])] += 1
+            if defend_str[get_territory(order['assist'])]:
+                defend_str[get_territory(order['assist'])] += 1
+            if prevent_str[get_territory(order['assist'])]:
+                prevent_str[get_territory(order['assist'])] += 1
 
 def consistent_move(T, d, orders, fails, hold_str, attack_str, defend_str, prevent_str,
                     path, convoy):
     order = orders[T]
-    target = territory(order['target'])
+    target = get_territory(order['target'])
     move = True
     # Fail in a head-to-head attack
     if (target in orders
@@ -264,7 +264,7 @@ def consistent_move(T, d, orders, fails, hold_str, attack_str, defend_str, preve
     if any(attack_str[T] <= prevent_str[T2]
            for T2, o2 in orders.iteritems()
            if T != T2 and o2['action'] == 'M'
-           and territory(o2['target']) == target):
+           and get_territory(o2['target']) == target):
         move = False
     # Path to move does not exist
     if not path[T]:
@@ -282,10 +282,10 @@ def consistent_move(T, d, orders, fails, hold_str, attack_str, defend_str, preve
 
 def consistent_support(T, d, orders, fails, hold_str, attack_str):
     order = orders[T]
-    target = territory(order['target'])
+    target = get_territory(order['target'])
     attackers = set(T2 for T2, o2 in orders.iteritems()
                     if o2['action'] == 'M'
-                    and territory(o2['target']) == T)
+                    and get_territory(o2['target']) == T)
     # Is the support cut?
     cut = (T in fails
            or (target in attackers
@@ -308,7 +308,7 @@ def consistent_hold(T, d, orders, fails, hold_str, attack_str, prevent_str):
 
     attackers = set(T2 for T2, o2 in orders.iteritems()
                     if o2['action'] == 'M'
-                    and territory(o2['target']) == T)
+                    and get_territory(o2['target']) == T)
     # Is there enough to dislodge this unit?
     if attackers:
         S, P, A = max((attack_str[T2], prevent_str[T2], T2)
@@ -328,7 +328,7 @@ def consistent_hold(T, d, orders, fails, hold_str, attack_str, prevent_str):
 
 def consistent(state, orders, fails, paradox, units):
     state = dict(state)
-    unit_index = {territory(u['subregion']): u for u in units}
+    unit_index = {get_territory(u['subregion']): u for u in units}
 
     path, convoy = calculate_paths(state, orders, paradox, units)
     hold_str, attack_str, defend_str, prevent_str = calculate_base_strengths(
@@ -393,13 +393,13 @@ def resolve_retreats(orders):
     target_count = defaultdict(int)
     for T, order in orders.iteritems():
         if order['action'] == 'M':
-            target_count[territory(order['target'])] += 1
+            target_count[get_territory(order['target'])] += 1
         else:
             decisions.append((T, None))
     for T, order in orders.iteritems():
         if order['action'] != 'M':
             continue
-        if target_count[territory(order['target'])] == 1:
+        if target_count[get_territory(order['target'])] == 1:
             decisions.append((T, True))
         else:
             decisions.append((T, False))
@@ -453,7 +453,7 @@ def actionable_subregions(turn, units, owns):
                 # - and that is not occupied by a unit
                 owned_sc = (o['territory'] for o in owns
                             if o['is_supply'] and o['government'] == government)
-                occupied = {territory(u['subregion']) for u in units}
+                occupied = {get_territory(u['subregion']) for u in units}
                 actors_index[government] = [
                     sr for T in owned_sc
                     for sr in territory_parts(T)
@@ -534,7 +534,7 @@ def normalize_orders(turn, orders, units, owns):
             matching = [
                 (g2, o2) for (g2, i2), o2 in orders_index.iteritems()
                 if o2['action'] == 'C'
-                and assist(territory(o['actor']), o, territory(o2['actor']), o2)
+                and assist(get_territory(o['actor']), o, get_territory(o2['actor']), o2)
             ]
             gvt_matching = [o2 for g2, o2 in matching if g2 == g]
 
@@ -556,7 +556,7 @@ def normalize_orders(turn, orders, units, owns):
 def update_retreats(orders, units):
     new_units = []
     for u in units:
-        T = territory(u['subregion'])
+        T = get_territory(u['subregion'])
         if T not in orders or not u['dislodged']:
             new_units.append(u)
             continue
@@ -577,19 +577,19 @@ def update_retreats(orders, units):
 def update_movements(orders, units):
     displaced, failed = {}, defaultdict(int)
     for u in units:
-        T = territory(u['subregion'])
+        T = get_territory(u['subregion'])
         order = orders[T]
         if order['action'] == 'M':
             if order['result'] == 'S':
                 u['subregion'] = order['target']
                 # if the move succeeded, any unit occupying the target
                 # territory will be displaced
-                displaced[territory(order['target'])] = T
+                displaced[get_territory(order['target'])] = T
             else:
-                failed[territory(order['target'])] += 1
+                failed[get_territory(order['target'])] += 1
 
     for u in units:
-        T = territory(u['previous'])
+        T = get_territory(u['previous'])
         order = orders[T]
         if T in displaced and not (order['action'] == 'M' and order['result'] == 'S'):
             order['result'] = 'B'
@@ -601,7 +601,7 @@ def update_movements(orders, units):
                     None if orders[displaced[T]].get('convoy') else displaced[T])
             )
 
-        target = territory(order['target'])
+        target = get_territory(order['target'])
         # if multiple moves to our target failed, we have a standoff
         if order['action'] == 'M' and failed[target] > 1:
             u['standoff_from'] = target
@@ -611,7 +611,7 @@ def update_movements(orders, units):
 def update_adjusts(orders, units):
     new_units = []
     for u in units:
-        T = territory(u['subregion'])
+        T = get_territory(u['subregion'])
         order = orders.get(T, {})
         if order.get('action') == 'D':
             order['result'] = 'D'
@@ -646,7 +646,7 @@ def update_autodisbands(orders, units, owns):
         # armies may count both land and water as one space each.
 
         unit_distances = [
-            [None, u['u_type'] == 'A', territory(u['subregion']), u]
+            [None, u['u_type'] == 'A', get_territory(u['subregion']), u]
             for u in units
             if u['government'] == gvt
         ]
@@ -685,7 +685,7 @@ def update_autodisbands(orders, units, owns):
             adj = {
                 a for sr in examined
                 for b in borders(sr)
-                for a in territory_parts(territory(b))
+                for a in territory_parts(get_territory(b))
             }
             examined |= adj
             distance += 1
@@ -696,7 +696,7 @@ def update_autodisbands(orders, units, owns):
     new_units = []
     for u in units:
         if (u['government'], u['subregion']) in autodisbands:
-            orders[territory(u['subregion'])] = {
+            orders[get_territory(u['subregion'])] = {
                 'user_issued': False, 'government': u['government'],
                 'actor': u['subregion'],
                 'action': 'D', 'result': 'D',
@@ -711,8 +711,8 @@ def update_autodisbands(orders, units, owns):
 def update_ownership(units, owns):
     current = {o['territory']: o for o in owns}
     current.update(
-        (territory(u['subregion']),
-         {'territory': territory(u['subregion']), 'government': u['government']})
+        (get_territory(u['subregion']),
+         {'territory': get_territory(u['subregion']), 'government': u['government']})
         for u in units
         if u['u_type'] == 'A'
     )

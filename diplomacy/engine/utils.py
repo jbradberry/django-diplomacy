@@ -4,7 +4,7 @@ from . import standard
 convert = {'L': 'A', 'S': 'F'}
 
 
-def territory(sr_token):
+def get_territory(sr_token):
     if not sr_token:
         return u''
     return sr_token.split(u'.')[0]
@@ -62,11 +62,11 @@ def is_sea(sr_token):
 
 
 def has_land(sr_token):
-    return any(is_land(sr) for sr in territory_parts(territory(sr_token)))
+    return any(is_land(sr) for sr in territory_parts(get_territory(sr_token)))
 
 
 def has_sea(sr_token):
-    return any(is_sea(sr) for sr in territory_parts(territory(sr_token)))
+    return any(is_sea(sr) for sr in territory_parts(get_territory(sr_token)))
 
 
 is_army = is_land

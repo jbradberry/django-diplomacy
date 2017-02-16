@@ -4,7 +4,8 @@ from django.test import TestCase
 
 from ..engine import standard
 from ..engine.main import find_convoys
-from ..engine.utils import territory, territory_display, unit_display, subregion_token, power_token
+from ..engine.utils import (get_territory, territory_display, unit_display, subregion_token,
+                            power_token)
 
 
 convert = {'F': 'S', 'A': 'L'}
@@ -58,7 +59,7 @@ class CorrectnessHelperTest(TestCase):
 
         self.assertEqual(len(lands1), 10)
         self.assertItemsEqual(
-            [territory_display(territory(sr)) for sr in lands1],
+            [territory_display(get_territory(sr)) for sr in lands1],
             ['Tunisia', 'North Africa', 'London', 'Wales', 'Spain',
              'Brest', 'Gascony', 'Picardy', 'Belgium', 'Portugal']
         )
@@ -71,7 +72,7 @@ class CorrectnessHelperTest(TestCase):
 
         self.assertEqual(len(lands2), 8)
         self.assertItemsEqual(
-            [territory_display(territory(sr)) for sr in lands2],
+            [territory_display(get_territory(sr)) for sr in lands2],
             ['Prussia', 'Berlin', 'Kiel', 'Denmark', 'Sweden',
              'Finland', 'St. Petersburg', 'Livonia']
         )

@@ -4,7 +4,7 @@ import re
 from django import template
 
 from ..engine import standard
-from ..engine.utils import territory, subregion_display
+from ..engine.utils import subregion_display
 
 
 register = template.Library()
