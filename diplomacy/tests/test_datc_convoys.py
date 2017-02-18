@@ -3,6 +3,8 @@ from django.test import TestCase
 from . import factories
 from .helpers import create_units, create_orders
 from .. import models
+from ..engine import standard
+from ..engine.utils import get_territory
 from ..models import is_legal
 
 
@@ -20,7 +22,7 @@ class Convoys(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = [
             factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
+            for p in standard.powers
         ]
 
     def test_no_convoy_in_coastal_areas(self):
@@ -43,11 +45,12 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Greece",
-                              government__power__name="Turkey",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('greece', 'turkey', 'A')
+                for u in units))
 
     def test_convoyed_army_can_bounce(self):
         # DATC 6.F.2
@@ -68,16 +71,17 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('london', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Paris",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('paris', 'france', 'A')
+                for u in units))
 
     def test_convoyed_army_can_receive_support(self):
         # DATC 6.F.3
@@ -100,17 +104,17 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Brest",
-                              previous__subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('brest', 'london', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Paris",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('paris', 'france', 'A')
+                for u in units))
 
     def test_attacked_convoy_is_not_disrupted(self):
         # DATC 6.F.4
@@ -131,23 +135,22 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('north-sea', 'england', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Holland",
-                              previous__subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('holland', 'london', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Skagerrak",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('skagerrak', 'germany', 'F')
+                for u in units))
 
     def test_beleaguered_convoy_is_not_disrupted(self):
         # DATC 6.F.5
@@ -172,28 +175,27 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('north-sea', 'england', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Holland",
-                              previous__subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('holland', 'london', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('english-channel', 'france', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Skagerrak",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('skagerrak', 'germany', 'F')
+                for u in units))
 
     def test_dislodged_convoy_does_not_cut_support(self):
         # DATC 6.F.6
@@ -221,33 +223,32 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              displaced_from__name="Skagerrak",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('north-sea', 'england', 'skagerrak', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('london', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              previous__subregion__territory__name="Skagerrak",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('north-sea', 'skagerrak', 'germany', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Holland",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('holland', 'germany', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'germany', 'A')
+                for u in units))
 
     def test_dislodged_convoy_does_not_cause_contested_area(self):
         # DATC 6.F.7
@@ -269,23 +270,22 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              displaced_from__name="Skagerrak",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('north-sea', 'england', 'skagerrak', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              previous__subregion__territory__name="Skagerrak",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('north-sea', 'skagerrak', 'germany', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('london', 'england', 'A')
+                for u in units))
 
         orders = {"England": ("F North Sea M Holland",)}
         create_orders(orders, T)
@@ -316,28 +316,27 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              displaced_from__name="Skagerrak",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('north-sea', 'england', 'skagerrak', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              previous__subregion__territory__name="Skagerrak",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('north-sea', 'skagerrak', 'germany', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('london', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Holland",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('holland', 'germany', 'A')
+                for u in units))
 
     def test_dislodge_of_multi_route_convoy(self):
         # DATC 6.F.9
@@ -361,24 +360,22 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="England",
-                              displaced_from__name="Mid-Atlantic Ocean",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('english-channel', 'england', 'mid-atlantic-ocean', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              previous__subregion__territory__name=
-                              "Mid-Atlantic Ocean",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('english-channel', 'mid-atlantic-ocean', 'france', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'england', 'A')
+                for u in units))
 
     def test_dislodge_of_multi_route_convoy_with_foreign_fleet(self):
         # DATC 6.F.10
@@ -403,24 +400,22 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="Germany",
-                              displaced_from__name="Mid-Atlantic Ocean",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('english-channel', 'germany', 'mid-atlantic-ocean', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              previous__subregion__territory__name=
-                              "Mid-Atlantic Ocean",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('english-channel', 'mid-atlantic-ocean', 'france', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'england', 'A')
+                for u in units))
 
     def test_dislodge_of_multi_route_convoy_with_only_foreign_fleets(self):
         # DATC 6.F.11
@@ -446,24 +441,22 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="Germany",
-                              displaced_from__name="Mid-Atlantic Ocean",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('english-channel', 'germany', 'mid-atlantic-ocean', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              previous__subregion__territory__name=
-                              "Mid-Atlantic Ocean",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('english-channel', 'mid-atlantic-ocean', 'france', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'england', 'A')
+                for u in units))
 
     def test_dislodged_convoying_fleet_not_on_route(self):
         # DATC 6.F.12
@@ -487,24 +480,22 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Irish Sea",
-                              government__power__name="England",
-                              displaced_from__name="Mid-Atlantic Ocean",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('irish-sea', 'england', 'mid-atlantic-ocean', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Irish Sea",
-                              previous__subregion__territory__name=
-                              "Mid-Atlantic Ocean",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('irish-sea', 'mid-atlantic-ocean', 'france', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'england', 'A')
+                for u in units))
 
     def test_the_unwanted_alternative(self):
         # DATC 6.F.13
@@ -528,23 +519,22 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              displaced_from__name="Denmark",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('north-sea', 'england', 'denmark', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              previous__subregion__territory__name="Denmark",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('north-sea', 'denmark', 'germany', 'F')
+                for u in units))
 
     def test_simple_convoy_paradox(self):
         # DATC 6.F.14
@@ -566,23 +556,22 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Brest",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('brest', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="France",
-                              displaced_from__name="Wales",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('english-channel', 'france', 'wales', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              previous__subregion__territory__name="Wales",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('english-channel', 'wales', 'england', 'F')
+                for u in units))
 
     def test_simple_convoy_paradox_with_additional_convoy(self):
         # DATC 6.F.15
@@ -609,28 +598,27 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Brest",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('brest', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="France",
-                              displaced_from__name="Wales",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('english-channel', 'france', 'wales', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              previous__subregion__territory__name="Wales",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('english-channel', 'wales', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Wales",
-                              government__power__name="Italy",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('wales', 'italy', 'A')
+                for u in units))
 
     def test_pandins_paradox(self):
         # DATC 6.F.16
@@ -655,33 +643,32 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'germany', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Wales",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('wales', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="England",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('london', 'england', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="France",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('english-channel', 'france', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Brest",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('brest', 'france', 'A')
+                for u in units))
 
     def test_pandins_extended_paradox(self):
         # DATC 6.F.17
@@ -707,33 +694,32 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'germany', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Wales",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('wales', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="England",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('london', 'england', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="France",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('english-channel', 'france', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Brest",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('brest', 'france', 'A')
+                for u in units))
 
     def test_betrayal_paradox(self):
         # DATC 6.F.18
@@ -758,27 +744,27 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('london', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'france', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('north-sea', 'england', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Skagerrak",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('skagerrak', 'germany', 'F')
+                for u in units))
 
     def test_multi_route_convoy_disruption_paradox(self):
         # DATC 6.F.19
@@ -801,28 +787,27 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Tyrrhenian Sea",
-                              government__power__name="France",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('tyrrhenian-sea', 'france', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Naples",
-                              government__power__name="Italy",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('naples', 'italy', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Rome",
-                              government__power__name="Italy",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('rome', 'italy', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Tunisia",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('tunisia', 'france', 'A')
+                for u in units))
 
     def test_unwanted_multi_route_convoy_paradox(self):
         # DATC 6.F.20
@@ -848,24 +833,22 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ionian Sea",
-                              government__power__name="Italy",
-                              displaced_from__name="Eastern Mediterranean",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('ionian-sea', 'italy', 'eastern-mediterranean', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ionian Sea",
-                              previous__subregion__territory__name=
-                              "Eastern Mediterranean",
-                              government__power__name="Turkey",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('ionian-sea', 'eastern-mediterranean', 'turkey', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Tunisia",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('tunisia', 'france', 'A')
+                for u in units))
 
     def test_dads_army(self):
         # DATC 6.F.21
@@ -894,30 +877,27 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Atlantic Ocean",
-                              government__power__name="England",
-                              displaced_from__name="Mid-Atlantic Ocean",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('north-atlantic-ocean', 'england', 'mid-atlantic-ocean', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Atlantic Ocean",
-                              previous__subregion__territory__name=
-                              "Mid-Atlantic Ocean",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('north-atlantic-ocean', 'mid-atlantic-ocean', 'france', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Clyde",
-                              government__power__name="England",
-                              dislodged=True, u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('clyde', 'england', True, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Clyde",
-                              previous__subregion__territory__name="Norway",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('clyde', 'norway', 'russia', 'A')
+                for u in units))
 
     def test_second_order_paradox_with_two_solutions(self):
         # DATC 6.F.22
@@ -945,40 +925,37 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="France",
-                              displaced_from__name="Picardy",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('english-channel', 'france', 'picardy', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              previous__subregion__territory__name="Picardy",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('english-channel', 'picardy', 'germany', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="Russia",
-                              displaced_from__name="Edinburgh",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('north-sea', 'russia', 'edinburgh', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              previous__subregion__territory__name="Edinburgh",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('north-sea', 'edinburgh', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Brest",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('brest', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norway', 'russia', 'A')
+                for u in units))
 
     def test_second_order_paradox_with_two_exclusive_convoys(self):
         # DATC 6.F.23
@@ -1010,38 +987,37 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Brest",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('brest', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norway', 'russia', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="France",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('english-channel', 'france', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Mid-Atlantic Ocean",
-                              government__power__name="Italy",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('mid-atlantic-ocean', 'italy', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="Russia",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('north-sea', 'russia', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Edinburgh",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('edinburgh', 'england', 'F')
+                for u in units))
 
     def test_second_order_paradox_with_no_resolution(self):
         # DATC 6.F.24
@@ -1071,39 +1047,37 @@ class Convoys(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Brest",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('brest', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norway', 'russia', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="France",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('english-channel', 'france', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Irish Sea",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('irish-sea', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="Russia",
-                              displaced_from__name="Edinburgh",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('north-sea', 'russia', 'edinburgh', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              previous__subregion__territory__name="Edinburgh",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('north-sea', 'edinburgh', 'england', 'F')
+                for u in units))
 
 
 class ConvoyingToAdjacent(TestCase):
@@ -1120,7 +1094,7 @@ class ConvoyingToAdjacent(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = [
             factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
+            for p in standard.powers
         ]
 
     def test_two_units_can_swap_by_convoy(self):
@@ -1142,18 +1116,17 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              previous__subregion__territory__name="Norway",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('sweden', 'norway', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              previous__subregion__territory__name="Sweden",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('norway', 'sweden', 'russia', 'A')
+                for u in units))
 
     def test_kidnapping_an_army(self):
         # DATC 6.G.2
@@ -1175,16 +1148,17 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norway', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('sweden', 'russia', 'F')
+                for u in units))
 
     def test_kidnapping_with_disrupted_convoy(self):
         # DATC 6.G.3
@@ -1209,24 +1183,22 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              previous__subregion__territory__name="Picardy",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('belgium', 'picardy', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="England",
-                              displaced_from__name="Brest",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('english-channel', 'england', 'brest', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              previous__subregion__territory__name="Brest",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('english-channel', 'brest', 'france', 'F')
+                for u in units))
 
     def test_kidnapping_with_disrupted_convoy_and_opposite_move(self):
         # DATC 6.G.4
@@ -1252,36 +1224,32 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              previous__subregion__territory__name="Picardy",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('belgium', 'picardy', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="England",
-                              displaced_from__name="Brest",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('english-channel', 'england', 'brest', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              previous__subregion__territory__name="Brest",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('english-channel', 'brest', 'france', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="England",
-                              displaced_from__name="Picardy",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('belgium', 'england', 'picardy', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              previous__subregion__territory__name="Picardy",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('belgium', 'picardy', 'france', 'A')
+                for u in units))
 
     def test_swapping_with_intent(self):
         # DATC 6.G.5
@@ -1303,18 +1271,17 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Apulia",
-                              previous__subregion__territory__name="Rome",
-                              government__power__name="Italy",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('apulia', 'rome', 'italy', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Rome",
-                              previous__subregion__territory__name="Apulia",
-                              government__power__name="Turkey",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('rome', 'apulia', 'turkey', 'A')
+                for u in units))
 
     def test_swapping_with_unintended_intent(self):
         # DATC 6.G.6
@@ -1342,18 +1309,17 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Edinburgh",
-                              previous__subregion__territory__name="Liverpool",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('edinburgh', 'liverpool', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Liverpool",
-                              previous__subregion__territory__name="Edinburgh",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('liverpool', 'edinburgh', 'germany', 'A')
+                for u in units))
 
     def test_swapping_with_illegal_intent(self):
         # DATC 6.G.7
@@ -1380,16 +1346,17 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norway', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('sweden', 'russia', 'A')
+                for u in units))
 
     def test_explicit_convoy_that_isnt_there(self):
         # DATC 6.G.8
@@ -1410,18 +1377,17 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Holland",
-                              previous__subregion__territory__name="Belgium",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('holland', 'belgium', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Kiel",
-                              previous__subregion__territory__name="Holland",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('kiel', 'holland', 'england', 'A')
+                for u in units))
 
     def test_swapped_or_dislodged(self):
         # DATC 6.G.9
@@ -1443,19 +1409,17 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              previous__subregion__territory__name="Norway",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('sweden', 'norway', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              previous__subregion__territory__name="Sweden",
-                              government__power__name="Russia",
-                              dislodged=False,
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'],
+                 u['dislodged'], u['u_type']) == ('norway', 'sweden', 'russia', False, 'A')
+                for u in units))
 
     def test_swapped_or_head_to_head(self):
         # DATC 6.G.10
@@ -1483,22 +1447,22 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              previous__subregion__territory__name="Norway",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('sweden', 'norway', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              government__power__name="Russia",
-                              dislodged=True, u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('sweden', 'russia', True, 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norwegian Sea",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norwegian-sea', 'france', 'F')
+                for u in units))
 
     def test_convoy_to_adjacent_place_with_paradox(self):
         # DATC 6.G.11
@@ -1521,23 +1485,22 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Skagerrak",
-                              previous__subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('skagerrak', 'north-sea', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Skagerrak",
-                              government__power__name="Russia",
-                              displaced_from__name="North Sea",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('skagerrak', 'russia', 'north-sea', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('sweden', 'russia', 'A')
+                for u in units))
 
     def test_swapping_two_units_with_two_convoys(self):
         # DATC 6.G.12
@@ -1565,18 +1528,17 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Edinburgh",
-                              previous__subregion__territory__name="Liverpool",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('edinburgh', 'liverpool', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Liverpool",
-                              previous__subregion__territory__name="Edinburgh",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('liverpool', 'edinburgh', 'germany', 'A')
+                for u in units))
 
     def test_support_cut_on_attack_on_itself_via_convoy(self):
         # DATC 6.G.13
@@ -1598,18 +1560,17 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__power__name="Austria-Hungary",
-                              displaced_from__name="Albania",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('trieste', 'austria-hungary', 'albania', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              previous__subregion__territory__name="Albania",
-                              government__power__name="Italy",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('trieste', 'albania', 'italy', 'F')
+                for u in units))
 
     def test_bounce_by_convoy_to_adjacent_place(self):
         # DATC 6.G.14
@@ -1638,23 +1599,22 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              government__power__name="Russia",
-                              displaced_from__name="Norway",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('sweden', 'russia', 'norway', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              previous__subregion__territory__name="Norway",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('sweden', 'norway', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norwegian Sea",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norwegian-sea', 'france', 'F')
+                for u in units))
 
     def test_bounce_and_dislodge_with_double_convoy(self):
         # DATC 6.G.15
@@ -1679,22 +1639,22 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              previous__subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('belgium', 'london', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="France",
-                              dislodged=True, u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('belgium', 'france', True, 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Yorkshire",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('yorkshire', 'england', 'A')
+                for u in units))
 
     def test_two_units_in_one_area_bug_by_convoy(self):
         # DATC 6.G.16
@@ -1720,26 +1680,25 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              previous__subregion__territory__name="Norway",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('sweden', 'norway', 'england', 'A')
+                for u in units))
 
         self.assertEqual(
-            T.unit_set.filter(subregion__territory__name="Norway").count(), 1)
+            sum(1 for u in units if get_territory(u['subregion']) == 'norway'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              previous__subregion__territory__name="Sweden",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('norway', 'sweden', 'russia', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('north-sea', 'england', 'F')
+                for u in units))
 
     def test_two_units_in_one_area_bug_moving_over_land(self):
         # DATC 6.G.17
@@ -1765,26 +1724,25 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              previous__subregion__territory__name="Norway",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('sweden', 'norway', 'england', 'A')
+                for u in units))
 
         self.assertEqual(
-            T.unit_set.filter(subregion__territory__name="Norway").count(), 1)
+            sum(1 for u in units if get_territory(u['subregion']) == 'norway'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              previous__subregion__territory__name="Sweden",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('norway', 'sweden', 'russia', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('north-sea', 'england', 'F')
+                for u in units))
 
     def test_two_units_in_one_area_bug_with_double_convoy(self):
         # DATC 6.G.18
@@ -1811,23 +1769,22 @@ class ConvoyingToAdjacent(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              previous__subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('belgium', 'london', 'england', 'A')
+                for u in units))
 
         self.assertEqual(
-            T.unit_set.filter(subregion__territory__name="London").count(), 1)
+            sum(1 for u in units if get_territory(u['subregion']) == 'london'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              previous__subregion__territory__name="Belgium",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('london', 'belgium', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Yorkshire",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('yorkshire', 'england', 'A')
+                for u in units))

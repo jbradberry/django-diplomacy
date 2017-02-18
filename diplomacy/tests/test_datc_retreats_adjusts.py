@@ -1,11 +1,14 @@
-from django.db.models import Count
+from collections import Counter
+
 from django.test import TestCase
 from django.utils.unittest import expectedFailure
 
 from . import factories
 from .helpers import create_units, create_orders
 from .. import models
+from ..engine import standard
 from ..engine.main import initialize_game
+from ..engine.utils import get_territory
 from ..models import is_legal
 
 
@@ -23,7 +26,7 @@ class Retreating(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = [
             factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
+            for p in standard.powers
         ]
 
     def test_no_supports_during_retreat(self):
@@ -67,19 +70,21 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
+
+        self.assertEqual(
+            max(Counter(get_territory(u['subregion']) for u in units).itervalues()), 1)
+
+        self.assertEqual(
+            sum(1 for u in units if u['government'] == 'austria-hungary'), 1)
+
+        self.assertTrue(
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('serbia', 'austria-hungary', 'A')
+                for u in units))
 
         self.assertFalse(
-            T.unit_set.values('subregion__territory'
-                              ).annotate(count=Count('subregion__territory')
-                                         ).filter(count__gt=1).exists())
-
-        austria = T.unit_set.filter(government__power__name="Austria-Hungary")
-        self.assertEqual(austria.count(), 1)
-        self.assertTrue(austria.filter(subregion__territory__name="Serbia",
-                                       u_type='A').exists())
-
-        turkey = T.unit_set.filter(government__power__name="Turkey")
-        self.assertEqual(turkey.count(), 0)
+            any(u['government'] == 'turkey' for u in units))
 
     def test_no_supports_from_retreating_unit(self):
         # DATC 6.H.2
@@ -124,32 +129,31 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
-
-        self.assertFalse(
-            T.unit_set.values('subregion__territory'
-                              ).annotate(count=Count('subregion__territory')
-                                         ).filter(count__gt=1).exists())
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="England").count(), 2)
-
-        self.assertFalse(
-            T.unit_set.filter(
-                government__power__name="England",
-                previous__subregion__territory__name="Norway").exists())
+            max(Counter(get_territory(u['subregion']) for u in units).itervalues()), 1)
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 2)
+            sum(1 for u in units if u['government'] == 'england'), 2)
 
         self.assertFalse(
-            T.unit_set.filter(
-                government__power__name="Russia",
-                previous__subregion__territory__name="Edinburgh").exists())
+            any((u['government'], get_territory(u['previous']))
+                == ('england', 'norway')
+                for u in units))
+
+        self.assertEqual(
+            sum(1 for u in units if u['government'] == 'russia'), 2)
 
         self.assertFalse(
-            T.unit_set.filter(
-                government__power__name="Russia",
-                previous__subregion__territory__name="Holland").exists())
+            any((u['government'], get_territory(u['previous']))
+                == ('russia', 'edinburgh')
+                for u in units))
+
+        self.assertFalse(
+            any((u['government'], get_territory(u['previous']))
+                == ('russia', 'holland')
+                for u in units))
 
     def test_no_convoy_during_retreat(self):
         # DATC 6.H.3
@@ -183,19 +187,17 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
-
-        self.assertFalse(
-            T.unit_set.values('subregion__territory'
-                              ).annotate(count=Count('subregion__territory')
-                                         ).filter(count__gt=1).exists())
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="England").count(), 1)
+            max(Counter(get_territory(u['subregion']) for u in units).itervalues()), 1)
+
+        self.assertEqual(
+            sum(1 for u in units if u['government'] == 'england'), 1)
 
         self.assertFalse(
-            T.unit_set.filter(
-                government__power__name="England",
-                previous__subregion__territory__name="Holland").exists())
+            any((u['government'], get_territory(u['previous'])) == ('england', 'holland')
+                for u in units))
 
     def test_no_other_moves_during_retreat(self):
         # DATC 6.H.4
@@ -233,22 +235,20 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
-        self.assertFalse(
-            T.unit_set.values('subregion__territory'
-                              ).annotate(count=Count('subregion__territory')
-                                         ).filter(count__gt=1).exists())
-
-        self.assertTrue(
-            T.unit_set.filter(
-                government__power__name="England",
-                subregion__territory__name="Belgium",
-                previous__subregion__territory__name="Holland").exists())
+        self.assertEqual(
+            max(Counter(get_territory(u['subregion']) for u in units).itervalues()), 1)
 
         self.assertTrue(
-            T.unit_set.filter(
-                government__power__name="England",
-                subregion__territory__name="North Sea").exists())
+            any((u['government'], get_territory(u['subregion']), get_territory(u['previous']))
+                == ('england', 'belgium', 'holland')
+                for u in units))
+
+        self.assertTrue(
+            any((u['government'], get_territory(u['subregion']))
+                == ('england', 'north-sea')
+                for u in units))
 
     def test_unit_may_not_retreat_to_area_it_was_attacked_from(self):
         # DATC 6.H.5
@@ -280,14 +280,13 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
+
+        self.assertEqual(
+            max(Counter(get_territory(u['subregion']) for u in units).itervalues()), 1)
 
         self.assertFalse(
-            T.unit_set.values('subregion__territory'
-                              ).annotate(count=Count('subregion__territory')
-                                         ).filter(count__gt=1).exists())
-
-        self.assertFalse(
-            T.unit_set.filter(government__power__name="Turkey").exists())
+            any(u['government'] == 'turkey' for u in units))
 
     def test_unit_may_not_retreat_to_contested_area(self):
         # DATC 6.H.6
@@ -322,9 +321,10 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertFalse(
-            T.unit_set.filter(government__power__name="Italy").exists())
+            any(u['government'] == ('italy') for u in units))
 
     def test_two_retreats_to_same_area_disbands_units(self):
         # DATC 6.H.7
@@ -361,9 +361,10 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertFalse(
-            T.unit_set.filter(government__power__name="Italy").exists())
+            any(u['government'] == ('italy') for u in units))
 
     def test_three_retreats_to_same_area_disbands_units(self):
         # DATC 6.H.8
@@ -392,9 +393,10 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(dislodged=True).count(), 3)
+            sum(1 for u in units if u['dislodged']), 3)
 
         orders = {"England": ("F Norway M North Sea",),
                   "Russia": ("F Edinburgh M North Sea",
@@ -408,27 +410,28 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="England").count(), 2)
+            sum(1 for u in units if u['government'] == 'england'), 2)
 
         self.assertFalse(
-            T.unit_set.filter(
-                government__power__name="England",
-                previous__subregion__territory__name="Norway").exists())
+            any((u['government'], get_territory(u['previous']))
+                == ('england', 'norway')
+                for u in units))
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 2)
+            sum(1 for u in units if u['government'] == 'russia'), 2)
 
         self.assertFalse(
-            T.unit_set.filter(
-                government__power__name="Russia",
-                previous__subregion__territory__name="Edinburgh").exists())
+            any((u['government'], get_territory(u['previous']))
+                == ('russia', 'edinburgh')
+                for u in units))
 
         self.assertFalse(
-            T.unit_set.filter(
-                government__power__name="Russia",
-                previous__subregion__territory__name="Holland").exists())
+            any((u['government'], get_territory(u['previous']))
+                == ('russia', 'holland')
+                for u in units))
 
     def test_dislodged_unit_will_not_make_attackers_area_contested(self):
         # DATC 6.H.9
@@ -453,9 +456,10 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(dislodged=True).count(), 2)
+            sum(1 for u in units if u['dislodged']), 2)
 
         orders = {"Germany": ("F Kiel M Berlin",)}
         create_orders(orders, T)
@@ -467,15 +471,15 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Germany").count(), 3)
+            sum(1 for u in units if u['government'] == 'germany'), 3)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              previous__subregion__territory__name="Kiel",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('berlin', 'kiel', 'germany', 'F')
+                for u in units))
 
     def test_attackers_area_not_contested_for_other_retreats(self):
         # DATC 6.H.10
@@ -500,9 +504,10 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(dislodged=True).count(), 2)
+            sum(1 for u in units if u['dislodged']), 2)
 
         orders = {"England": ("A Kiel M Berlin",),
                   "Germany": ("A Prussia M Berlin",)}
@@ -522,18 +527,18 @@ class Retreating(TestCase):
                     post__government__power__name="Germany").as_data(), units, owns, T.season))
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertFalse(
-            T.unit_set.filter(government__power__name="England").exists())
+            any(u['government'] == 'england' for u in units))
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Germany").count(), 3)
+            sum(1 for u in units if u['government'] == 'germany'), 3)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              previous__subregion__territory__name="Prussia",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('berlin', 'prussia', 'germany', 'A')
+                for u in units))
 
     def test_retreat_when_dislodged_by_adjacent_convoy(self):
         # DATC 6.H.11
@@ -558,15 +563,15 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(dislodged=True).count(), 1)
+            sum(1 for u in units if u['dislodged']), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Marseilles",
-                              previous__subregion__territory__name="Gascony",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('marseilles', 'gascony', 'france', 'A')
+                for u in units))
 
         orders = {"Italy": ("A Marseilles M Gascony",)}
         create_orders(orders, T)
@@ -578,15 +583,15 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Italy").count(), 1)
+            sum(1 for u in units if u['government'] == 'italy'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Gascony",
-                              previous__subregion__territory__name="Marseilles",
-                              government__power__name="Italy",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('gascony', 'marseilles', 'italy', 'A')
+                for u in units))
 
     def test_retreat_when_dislodged_by_adjacent_convoy_while_convoying(self):
         # DATC 6.H.12
@@ -619,20 +624,19 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(dislodged=True).count(), 2)
+            sum(1 for u in units if u['dislodged']), 2)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Liverpool",
-                              previous__subregion__territory__name="Edinburgh",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('liverpool', 'edinburgh', 'russia', 'A')
+                for u in units))
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              previous__subregion__territory__name="Brest",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('english-channel', 'brest', 'france', 'F')
+                for u in units))
 
         orders = {"England": ("A Liverpool M Edinburgh",)}
         create_orders(orders, T)
@@ -644,16 +648,16 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         # We lose the fleet in the English Channel, since it didn't retreat.
         self.assertEqual(
-            T.unit_set.filter(government__power__name="England").count(), 3)
+            sum(1 for u in units if u['government'] == 'england'), 3)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Edinburgh",
-                              previous__subregion__territory__name="Liverpool",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('edinburgh', 'liverpool', 'england', 'A')
+                for u in units))
 
     def test_no_retreat_with_convoy_in_main_phase(self):
         # DATC 6.H.13
@@ -675,15 +679,15 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(dislodged=True).count(), 1)
+            sum(1 for u in units if u['dislodged']), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Picardy",
-                              previous__subregion__territory__name="Paris",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('picardy', 'paris', 'france', 'A')
+                for u in units))
 
         orders = {"England": ("A Picardy M London",)}
         create_orders(orders, T)
@@ -695,9 +699,10 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="England").count(), 1)
+            sum(1 for u in units if u['government'] == 'england'), 1)
 
     def test_no_retreat_with_support_in_main_phase(self):
         # DATC 6.H.14
@@ -723,21 +728,20 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(dislodged=True).count(), 2)
+            sum(1 for u in units if u['dislodged']), 2)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Picardy",
-                              previous__subregion__territory__name="Paris",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('picardy', 'paris', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Burgundy",
-                              previous__subregion__territory__name="Marseilles",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('burgundy', 'marseilles', 'germany', 'A')
+                for u in units))
 
         orders = {"England": ("A Picardy M Belgium",),
                   "France": ("A Burgundy M Belgium",)}
@@ -750,12 +754,13 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="England").count(), 1)
+            sum(1 for u in units if u['government'] == 'england'), 1)
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="France").count(), 2)
+            sum(1 for u in units if u['government'] == 'france'), 2)
 
     def test_no_coastal_crawl_in_retreat(self):
         # DATC 6.H.15
@@ -776,15 +781,15 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(dislodged=True).count(), 1)
+            sum(1 for u in units if u['dislodged']), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Portugal",
-                              previous__subregion__territory__name="Spain",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('portugal', 'spain', 'france', 'F')
+                for u in units))
 
         orders = {"England": ("F Portugal M Spain (NC)",)}
         create_orders(orders, T)
@@ -838,15 +843,15 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(dislodged=True).count(), 1)
+            sum(1 for u in units if u['dislodged']), 1)
 
         self.assertTrue(
-            T.unit_set.filter(
-                subregion__territory__name="Western Mediterranean",
-                previous__subregion__territory__name="Tyrrhenian Sea",
-                government__power__name="Italy", u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('western-mediterranean', 'tyrrhenian-sea', 'italy', 'F')
+                for u in units))
 
         orders = {"France": ("F Western Mediterranean M Spain (SC)",)}
         create_orders(orders, T)
@@ -858,9 +863,10 @@ class Retreating(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="France").count(), 2)
+            sum(1 for u in units if u['government'] == 'france'), 2)
 
 
 class Building(TestCase):
@@ -877,7 +883,7 @@ class Building(TestCase):
         self.turn = self.game.create_turn({'number': 4, 'year': 1900, 'season': 'FA'})
         self.governments = [
             factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
+            for p in standard.powers
         ]
         _, _, owns = initialize_game()
         self.turn.create_ownership(owns)  # set up the proper ownership objects
@@ -888,9 +894,10 @@ class Building(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T)
 
-        self.assertEqual(T.unit_set.count(), 2)
-        builds = models.builds_available(T.get_units(), T.get_ownership())
-        self.assertEqual(builds.get('Germany', 0), 1)
+        units = T.get_units()
+        self.assertEqual(len(units), 2)
+        builds = models.builds_available(units, T.get_ownership())
+        self.assertEqual(builds.get('germany', 0), 1)
 
         orders = {"Germany": ("A Warsaw B",
                               "A Kiel B",
@@ -913,12 +920,12 @@ class Building(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Germany").count(), 3)
+            sum(1 for u in units if u['government'] == 'germany'), 3)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Kiel",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('kiel', 'germany', 'A')
+                for u in units))
 
     def test_fleets_cannot_be_built_in_land_areas(self):
         # DATC 6.I.2
@@ -944,11 +951,12 @@ class Building(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 3)
+            sum(1 for u in units if u['government'] == 'russia'), 3)
 
         self.assertFalse(
-            T.unit_set.filter(subregion__territory__name="Moscow",
-                              government__power__name="Russia").exists())
+            any((get_territory(u['subregion']), u['government'])
+                == ('moscow', 'russia')
+                for u in units))
 
     def test_supply_center_must_be_empty_for_building(self):
         # DATC 6.I.3
@@ -968,7 +976,7 @@ class Building(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Germany").count(), 2)
+            sum(1 for u in units if u['government'] == 'germany'), 2)
 
     def test_both_coasts_must_be_empty_for_building(self):
         # DATC 6.I.4
@@ -988,12 +996,11 @@ class Building(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 1)
+            sum(1 for u in units if u['government'] == 'russia'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="St. Petersburg",
-                              government__power__name="Russia",
-                              subregion__subname="SC").exists())
+            any((u['subregion'], u['government']) == ('st-petersburg.sc.s', 'russia')
+                for u in units))
 
     def test_building_in_home_supply_center_that_is_not_owned(self):
         # DATC 6.I.5
@@ -1014,7 +1021,7 @@ class Building(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Germany").count(), 0)
+            sum(1 for u in units if u['government'] == 'germany'), 0)
 
     def test_building_in_owned_supply_center_that_is_not_a_home_center(self):
         # DATC 6.I.6
@@ -1035,7 +1042,7 @@ class Building(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Germany").count(), 0)
+            sum(1 for u in units if u['government'] == 'germany'), 0)
 
     def test_only_one_build_in_a_home_supply_center(self):
         # DATC 6.I.7
@@ -1054,7 +1061,7 @@ class Building(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 1)
+            sum(1 for u in units if u['government'] == 'russia'), 1)
 
 
 class CivilDisorderAndDisbands(TestCase):
@@ -1071,7 +1078,7 @@ class CivilDisorderAndDisbands(TestCase):
         self.turn = self.game.create_turn({'number': 4, 'year': 1900, 'season': 'FA'})
         self.governments = [
             factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
+            for p in standard.powers
         ]
         _, _, owns = initialize_game()
         self.turn.create_ownership(owns)  # set up the proper ownership objects
@@ -1105,12 +1112,12 @@ class CivilDisorderAndDisbands(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="France").count(), 1)
+            sum(1 for u in units if u['government'] == 'france'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Paris",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('paris', 'france', 'A')
+                for u in units))
 
     def test_removing_the_same_unit_twice(self):
         # DATC 6.J.2
@@ -1135,12 +1142,12 @@ class CivilDisorderAndDisbands(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="France").count(), 1)
+            sum(1 for u in units if u['government'] == 'france'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('english-channel', 'france', 'F')
+                for u in units))
 
     def test_civil_disorder_two_armies_with_different_distance(self):
         # DATC 6.J.3
@@ -1156,12 +1163,12 @@ class CivilDisorderAndDisbands(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 1)
+            sum(1 for u in units if u['government'] == 'russia'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Livonia",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('livonia', 'russia', 'A')
+                for u in units))
 
     def test_civil_disorder_two_armies_with_equal_distance(self):
         # DATC 6.J.4
@@ -1177,12 +1184,12 @@ class CivilDisorderAndDisbands(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 1)
+            sum(1 for u in units if u['government'] == 'russia'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ukraine",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('ukraine', 'russia', 'A')
+                for u in units))
 
     def test_civil_disorder_two_fleets_with_different_distance(self):
         # DATC 6.J.5
@@ -1198,12 +1205,12 @@ class CivilDisorderAndDisbands(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 1)
+            sum(1 for u in units if u['government'] == 'russia'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Skagerrak",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('skagerrak', 'russia', 'F')
+                for u in units))
 
     def test_civil_disorder_two_fleets_with_equal_distance(self):
         # DATC 6.J.6
@@ -1219,12 +1226,12 @@ class CivilDisorderAndDisbands(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 1)
+            sum(1 for u in units if u['government'] == 'russia'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Helgoland Bight",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('helgoland-bight', 'russia', 'F')
+                for u in units))
 
     def test_civil_disorder_two_fleets_and_army_with_equal_distance(self):
         # DATC 6.J.7
@@ -1241,17 +1248,17 @@ class CivilDisorderAndDisbands(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 2)
+            sum(1 for u in units if u['government'] == 'russia'), 2)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Skagerrak",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('skagerrak', 'russia', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Bohemia",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('bohemia', 'russia', 'A')
+                for u in units))
 
     def test_civil_disorder_fleet_with_shorter_distance_than_army(self):
         # DATC 6.J.8
@@ -1267,12 +1274,12 @@ class CivilDisorderAndDisbands(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 1)
+            sum(1 for u in units if u['government'] == 'russia'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Baltic Sea",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('baltic-sea', 'russia', 'F')
+                for u in units))
 
     def test_civil_disorder_must_be_counted_from_both_coasts(self):
         # DATC 6.J.9
@@ -1286,14 +1293,15 @@ class CivilDisorderAndDisbands(TestCase):
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Russia").count(), 1)
+            sum(1 for u in units if u['government'] == 'russia'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Skagerrak",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('skagerrak', 'russia', 'F')
+                for u in units))
 
     def test_civil_disorder_counting_convoying_distance(self):
         # DATC 6.J.10
@@ -1308,19 +1316,20 @@ class CivilDisorderAndDisbands(TestCase):
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Italy").count(), 2)
+            sum(1 for u in units if u['government'] == 'italy'), 2)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ionian Sea",
-                              government__power__name="Italy",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('ionian-sea', 'italy', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Greece",
-                              government__power__name="Italy",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('greece', 'italy', 'A')
+                for u in units))
 
     def test_civil_disorder_counting_distance_without_convoying_fleet(self):
         # DATC 6.J.11
@@ -1336,9 +1345,9 @@ class CivilDisorderAndDisbands(TestCase):
         T = T.game.current_turn()
 
         self.assertEqual(
-            T.unit_set.filter(government__power__name="Italy").count(), 1)
+            sum(1 for u in units if u['government'] == 'italy'), 1)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Greece",
-                              government__power__name="Italy",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('greece', 'italy', 'A')
+                for u in units))

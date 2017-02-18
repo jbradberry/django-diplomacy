@@ -3,7 +3,9 @@ from django.test import TestCase
 from . import factories
 from .helpers import create_units, create_orders
 from .. import models
+from ..engine import standard
 from ..engine.main import initialize_game
+from ..engine.utils import get_territory
 from ..models import is_legal
 
 
@@ -21,7 +23,7 @@ class BasicChecks(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = [
             factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
+            for p in standard.powers
         ]
 
     def test_non_adjacent_move(self):
@@ -109,10 +111,12 @@ class BasicChecks(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name='Yorkshire',
-                              displaced_from__name='London').exists())
+            any((get_territory(u['subregion']), u['displaced_from'])
+                == ('yorkshire', 'london')
+                for u in units))
 
     def test_ordering_unit_of_another_country(self):
         # DATC 6.A.6
@@ -168,10 +172,12 @@ class BasicChecks(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name='Trieste',
-                              displaced_from__name='Venice').exists())
+            any((get_territory(u['subregion']), u['displaced_from'])
+                == ('trieste', 'venice')
+                for u in units))
 
     def test_fleets_must_follow_coast(self):
         # DATC 6.A.9
@@ -209,9 +215,9 @@ class BasicChecks(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
-        self.assertTrue(
-            not T.unit_set.filter(dislodged=True).exists())
+        self.assertFalse(any(u['dislodged'] for u in units))
 
     def test_simple_bounce(self):
         # DATC 6.A.11
@@ -231,13 +237,14 @@ class BasicChecks(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Vienna").exists())
+            any(get_territory(u['subregion']) == 'vienna' for u in units))
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Venice").exists())
+            any(get_territory(u['subregion']) == 'venice' for u in units))
         self.assertEqual(
-            T.unit_set.filter(standoff_from__name="Tyrolia").count(), 2)
+            sum(1 for u in units if u['standoff_from'] == 'tyrolia'), 2)
 
     def test_bounce_of_three_units(self):
         # DATC 6.A.12
@@ -259,17 +266,18 @@ class BasicChecks(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Vienna").exists())
+            any(get_territory(u['subregion']) == 'vienna' for u in units))
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Munich").exists())
+            any(get_territory(u['subregion']) == 'munich' for u in units))
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Venice").exists())
+            any(get_territory(u['subregion']) == 'venice' for u in units))
 
-        self.assertEqual(T.unit_set.count(), 3)
+        self.assertEqual(len(units), 3)
         self.assertEqual(
-            T.unit_set.filter(standoff_from__name="Tyrolia").count(), 3)
+            sum(1 for u in units if u['standoff_from'] == 'tyrolia'), 3)
 
 
 class CoastalIssues(TestCase):
@@ -289,7 +297,7 @@ class CoastalIssues(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = [
             factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
+            for p in standard.powers
         ]
 
     def test_move_to_unspecified_coast_when_necessary(self):
@@ -355,16 +363,16 @@ class CoastalIssues(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Spain",
-                              subregion__subname="NC",
-                              government__power__name="France").exists())
+            any((u['subregion'], u['government']) == ('spain.nc.s', 'france')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name=
-                              "Western Mediterranean",
-                              government__power__name="Italy").exists())
+            any((get_territory(u['subregion']), u['government'])
+                == ('western-mediterranean', 'italy')
+                for u in units))
 
     def test_support_from_unreachable_coast_not_allowed(self):
         # DATC 6.B.5
@@ -389,16 +397,17 @@ class CoastalIssues(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Gulf of Lyon",
-                              dislodged=False,
-                              government__power__name="Italy").exists())
+            any((get_territory(u['subregion']), u['dislodged'], u['government'])
+                == ('gulf-of-lyon', False, 'italy')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Marseilles",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('marseilles', 'france', 'F')
+                for u in units))
 
     def test_support_can_be_cut_from_other_coast(self):
         # DATC 6.B.6
@@ -423,11 +432,12 @@ class CoastalIssues(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Mid-Atlantic Ocean",
-                              displaced_from__name="North Atlantic Ocean"
-                              ).exists())
+            any((get_territory(u['subregion']), u['displaced_from'])
+                == ('mid-atlantic-ocean', 'north-atlantic-ocean')
+                for u in units))
 
     # expected fail
     def test_supporting_with_unspecified_coast(self):
@@ -457,22 +467,21 @@ class CoastalIssues(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         # self.assertTrue(
-        #     T.unit_set.filter(subregion__territory__name=
-        #                       "Mid-Atlantic Ocean").exists())
+        #     any(get_territory(u['subregion']) == 'mid-atlantic-ocean' for u in units)
 
         # self.assertTrue(
-        #     T.unit_set.filter(subregion__territory__name=
-        #                       "Western Mediterranean").exists())
+        #     any(get_territory(u['subregion']) == 'western-mediterranean' for u in units)
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Spain",
-                              government__power__name="Italy").exists())
+            any((get_territory(u['subregion']), u['government']) == ('spain', 'italy')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name=
-                              "Mid-Atlantic Ocean").exists())
+            any(get_territory(u['subregion']) == 'mid-atlantic-ocean'
+                for u in units))
 
     # expected fail
     def test_supporting_with_unspecified_coast_when_only_one_possible(self):
@@ -498,24 +507,25 @@ class CoastalIssues(TestCase):
             self.assertTrue(is_legal(o.as_data(), units, owns, T.season))
 
         self.assertFalse(
-            is_legal(models.Order.objects.get(actor__territory__name="Portugal").as_data(), units, owns, T.season))
+            is_legal(models.Order.objects.get(actor__territory__name="Portugal").as_data(),
+                     units, owns, T.season))
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         # self.assertTrue(
-        #     T.unit_set.filter(subregion__territory__name="Gascony").exists())
+        #     any(get_territory(u['subregion']) == 'gascony' for u in units))
 
         # self.assertTrue(
-        #     T.unit_set.filter(subregion__territory__name=
-        #                       "Western Mediterranean").exists())
+        #     any(get_territory(u['subregion']) == 'western-mediterranean' for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Spain",
-                              government__power__name="Italy").exists())
+            any((get_territory(u['subregion']), u['government']) == ('spain', 'italy')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Gascony").exists())
+            any(get_territory(u['subregion']) == 'gascony' for u in units))
 
     # expected fail
     def test_supporting_with_wrong_coast(self):
@@ -539,22 +549,21 @@ class CoastalIssues(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         # self.assertTrue(
-        #     T.unit_set.filter(subregion__territory__name=
-        #                       "Mid-Atlantic Ocean").exists())
+        #     any(get_territory(u['subregion']) == 'mid-atlantic-ocean' for u in units))
 
         # self.assertTrue(
-        #     T.unit_set.filter(subregion__territory__name=
-        #                       "Western Mediterranean").exists())
+        #     any(get_territory(u['subregion']) == 'western-mediterranean' for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name=
-                              "Mid-Atlantic Ocean").exists())
+            any(get_territory(u['subregion']) == 'mid-atlantic-ocean' for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Spain",
-                              government__power__name="Italy").exists())
+            any((get_territory(u['subregion']), u['government'])
+                == ('spain', 'italy')
+                for u in units))
 
     # expected fail
     def test_unit_ordered_with_wrong_coast(self):
@@ -619,13 +628,10 @@ class CoastalIssues(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
-        self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Bulgaria",
-                              subregion__subname='SC').exists())
-        self.assertTrue(
-            not T.unit_set.filter(subregion__territory__name="Bulgaria",
-                                  subregion__subname='EC').exists())
+        self.assertTrue(any(u['subregion'] == 'bulgaria.sc.s' for u in units))
+        self.assertFalse(any(u['subregion'] == 'bulgaria.ec.s' for u in units))
 
     def test_build_with_unspecified_coast(self):
         # DATC 6.B.14
@@ -655,8 +661,9 @@ class CoastalIssues(TestCase):
 
         T.game.generate() # S 1901
         T = T.game.current_turn()
+        units = T.get_units()
 
-        self.assertTrue(not T.unit_set.exists())
+        self.assertFalse(units)
 
 
 class CircularMovement(TestCase):
@@ -673,7 +680,7 @@ class CircularMovement(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = [
             factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
+            for p in standard.powers
         ]
 
     def test_three_unit_circular_move(self):
@@ -694,21 +701,22 @@ class CircularMovement(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Constantinople",
-                              previous__subregion__territory__name="Ankara",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('constantinople', 'ankara', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Smyrna",
-                              previous__subregion__territory__name=
-                              "Constantinople", u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('smyrna', 'constantinople', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ankara",
-                              previous__subregion__territory__name="Smyrna",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('ankara', 'smyrna', 'A')
+                for u in units))
 
     def test_three_unit_circular_move_with_support(self):
         # DATC 6.C.2
@@ -730,21 +738,22 @@ class CircularMovement(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Constantinople",
-                              previous__subregion__territory__name="Ankara",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('constantinople', 'ankara', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Smyrna",
-                              previous__subregion__territory__name=
-                              "Constantinople", u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('smyrna', 'constantinople', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ankara",
-                              previous__subregion__territory__name="Smyrna",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('ankara', 'smyrna', 'A')
+                for u in units))
 
     def test_disrupted_three_unit_circular_move(self):
         # DATC 6.C.3
@@ -766,26 +775,27 @@ class CircularMovement(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ankara",
-                              previous__subregion__territory__name="Ankara",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('ankara', 'ankara', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Constantinople",
-                              previous__subregion__territory__name=
-                              "Constantinople", u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('constantinople', 'constantinople', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Smyrna",
-                              previous__subregion__territory__name="Smyrna",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('smyrna', 'smyrna', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Bulgaria",
-                              previous__subregion__territory__name="Bulgaria",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('bulgaria', 'bulgaria', 'A')
+                for u in units))
 
     def test_circular_move_with_attacked_convoy(self):
         # DATC 6.C.4
@@ -812,27 +822,27 @@ class CircularMovement(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ionian Sea",
-                              government__power__name="Turkey",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('ionian-sea', 'turkey', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__power__name="Turkey",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('trieste', 'turkey', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Serbia",
-                              previous__subregion__territory__name="Trieste",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('serbia', 'trieste', 'austria-hungary', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Bulgaria",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('bulgaria', 'austria-hungary', 'A')
+                for u in units))
 
     def test_circular_move_with_disrupted_convoy(self):
         # DATC 6.C.5
@@ -860,29 +870,27 @@ class CircularMovement(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ionian Sea",
-                              u_type='F', government__power__name="Turkey",
-                              dislodged=True).exists())
+            any((get_territory(u['subregion']), u['u_type'], u['government'], u['dislodged'])
+                == ('ionian-sea', 'F', 'turkey', True)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              previous__subregion__territory__name="Trieste",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('trieste', 'trieste', 'austria-hungary', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Serbia",
-                              previous__subregion__territory__name="Serbia",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('serbia', 'serbia', 'austria-hungary', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Bulgaria",
-                              previous__subregion__territory__name="Bulgaria",
-                              government__power__name="Turkey",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('bulgaria', 'bulgaria', 'turkey', 'A')
+                for u in units))
 
     def test_two_armies_with_two_convoys(self):
         # DATC 6.C.6
@@ -904,16 +912,17 @@ class CircularMovement(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('london', 'france', 'A')
+                for u in units))
 
     def test_bounced_unit_swap(self):
         # DATC 6.C.7
@@ -936,18 +945,19 @@ class CircularMovement(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('london', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Burgundy",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('burgundy', 'france', 'A')
+                for u in units))

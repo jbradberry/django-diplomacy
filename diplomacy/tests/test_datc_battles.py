@@ -3,6 +3,8 @@ from django.test import TestCase
 from . import factories
 from .helpers import create_units, create_orders
 from .. import models
+from ..engine import standard
+from ..engine.utils import get_territory
 from ..models import is_legal
 
 
@@ -20,7 +22,7 @@ class SupportsAndDislodges(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = [
             factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
+            for p in standard.powers
         ]
 
     def test_supported_hold_prevents_dislodgement(self):
@@ -43,16 +45,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Venice",
-                              government__power__name="Italy",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('venice', 'italy', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__power__name="Austria-Hungary"
-                              ).exists())
+            any((get_territory(u['subregion']), u['government'])
+                == ('trieste', 'austria-hungary')
+                for u in units))
 
     def test_move_cuts_support_on_hold(self):
         # DATC 6.D.2
@@ -75,21 +78,22 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Venice",
-                              government__power__name="Italy",
-                              dislodged=True).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('venice', 'italy', True)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Venice",
-                              government__power__name="Austria-Hungary"
-                              ).exists())
+            any((get_territory(u['subregion']), u['government'])
+                == ('venice', 'austria-hungary')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Vienna",
-                              government__power__name="Austria-Hungary"
-                              ).exists())
+            any((get_territory(u['subregion']), u['government'])
+                == ('vienna', 'austria-hungary')
+                for u in units))
 
     def test_move_cuts_support_on_move(self):
         # DATC 6.D.3
@@ -111,21 +115,22 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Venice",
-                              government__power__name="Italy",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('venice', 'italy', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ionian Sea",
-                              government__power__name="Italy"
-                              ).exists())
+            any((get_territory(u['subregion']), u['government'])
+                == ('ionian-sea', 'italy')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__power__name="Austria-Hungary",
-                              ).exists())
+            any((get_territory(u['subregion']), u['government'])
+                == ('trieste', 'austria-hungary')
+                for u in units))
 
     def test_support_to_hold_on_unit_supporting_a_hold(self):
         # DATC 6.D.4
@@ -147,16 +152,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              government__power__name="Germany",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('berlin', 'germany', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('prussia', 'russia', 'A')
+                for u in units))
 
     def test_support_to_hold_on_unit_supporting_a_move(self):
         # DATC 6.D.5
@@ -179,16 +185,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              government__power__name="Germany",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('berlin', 'germany', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('prussia', 'russia', 'A')
+                for u in units))
 
     def test_support_to_hold_on_convoying_unit(self):
         # DATC 6.D.6
@@ -211,21 +218,22 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('sweden', 'germany', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Baltic Sea",
-                              government__power__name="Germany",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('baltic-sea', 'germany', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Livonia",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('livonia', 'russia', 'F')
+                for u in units))
 
     def test_support_to_hold_on_moving_unit(self):
         # DATC 6.D.7
@@ -248,20 +256,22 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Baltic Sea",
-                              government__power__name="Germany",
-                              dislodged=True).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('baltic-sea', 'germany', True)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Baltic Sea",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('baltic-sea', 'russia', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Finland",
-                              government__power__name="Russia").exists())
+            any((get_territory(u['subregion']), u['government'])
+                == ('finland', 'russia')
+                for u in units))
 
     def test_failed_convoyed_army_cannot_receive_hold_support(self):
         # DATC 6.D.8
@@ -284,16 +294,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Greece",
-                              government__power__name="Turkey",
-                              dislodged=True).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('greece', 'turkey', True)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Greece",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('greece', 'austria-hungary', 'A')
+                for u in units))
 
     def test_support_to_move_on_holding_unit(self):
         # DATC 6.D.9
@@ -315,16 +326,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__power__name="Austria-Hungary",
-                              dislodged=True).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('trieste', 'austria-hungary', True)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__power__name="Italy",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('trieste', 'italy', 'A')
+                for u in units))
 
     def test_self_dislodgement_prohibited(self):
         # DATC 6.D.10
@@ -344,15 +356,16 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              dislodged=False,
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['dislodged'], u['u_type'])
+                == ('berlin', False, 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Kiel",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['u_type']) == ('kiel', 'F')
+                for u in units))
 
     def test_no_self_dislodgement_of_returning_unit(self):
         # DATC 6.D.11
@@ -374,19 +387,20 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              dislodged=False,
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['dislodged'], u['u_type'])
+                == ('berlin', False, 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Kiel",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['u_type']) == ('kiel', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Warsaw",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['u_type']) == ('warsaw', 'A')
+                for u in units))
 
     def test_support_foreign_unit_to_dislodge_own_unit(self):
         # DATC 6.D.12
@@ -407,15 +421,16 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['dislodged'], u['u_type'])
+                == ('trieste', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Venice",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['u_type']) == ('venice', 'A')
+                for u in units))
 
     def test_support_foreign_unit_to_dislodge_returning_own_unit(self):
         # DATC 6.D.13
@@ -437,19 +452,20 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['dislodged'], u['u_type'])
+                == ('trieste', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Venice",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['u_type']) == ('venice', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Apulia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['u_type']) == ('apulia', 'F')
+                for u in units))
 
     def test_supporting_foreign_unit_insufficient_to_prevent_dislodge(self):
         # DATC 6.D.14
@@ -472,16 +488,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              dislodged=True,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['dislodged'], u['u_type'])
+                == ('trieste', True, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              previous__subregion__territory__name="Venice",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['u_type'])
+                == ('trieste', 'venice', 'A')
+                for u in units))
 
     def test_defender_cannot_cut_support_for_attack_on_itself(self):
         # DATC 6.D.15
@@ -502,17 +519,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ankara",
-                              government__power__name="Turkey",
-                              dislodged=True,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('ankara', 'turkey', True, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ankara",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('ankara', 'russia', 'F')
+                for u in units))
 
     def test_convoying_a_unit_dislodging_a_unit_of_same_power(self):
         # DATC 6.D.16
@@ -534,17 +551,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="England",
-                              dislodged=True,
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('london', 'england', True, 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="London",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('london', 'france', 'A')
+                for u in units))
 
     def test_dislodgement_cuts_supports(self):
         # DATC 6.D.17
@@ -567,23 +584,22 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Constantinople",
-                              government__power__name="Russia",
-                              displaced_from__name="Ankara",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('constantinople', 'russia', 'ankara', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Constantinople",
-                              previous__subregion__territory__name="Ankara",
-                              government__power__name="Turkey",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('constantinople', 'ankara', 'turkey', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Black Sea",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('black-sea', 'russia', 'F')
+                for u in units))
 
     def test_surviving_unit_will_sustain_support(self):
         # DATC 6.D.18
@@ -607,27 +623,26 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Constantinople",
-                              government__power__name="Russia",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('constantinople', 'russia', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ankara",
-                              government__power__name="Turkey",
-                              displaced_from__name="Black Sea",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('ankara', 'turkey', 'black-sea', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ankara",
-                              previous__subregion__territory__name="Black Sea",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('ankara', 'black-sea', 'russia', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Armenia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['u_type']) == ('armenia', 'A')
+                for u in units))
 
     def test_even_when_surviving_is_in_alternative_way(self):
         # DATC 6.D.19
@@ -649,24 +664,22 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Constantinople",
-                              government__power__name="Russia",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('constantinople', 'russia', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ankara",
-                              previous__subregion__territory__name="Black Sea",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('ankara', 'black-sea', 'russia', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ankara",
-                              government__power__name="Turkey",
-                              displaced_from__name="Black Sea",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('ankara', 'turkey', 'black-sea', 'F')
+                for u in units))
 
     def test_unit_cannot_cut_support_of_its_own_country(self):
         # DATC 6.D.20
@@ -688,22 +701,21 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Yorkshire",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['u_type']) == ('yorkshire', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              government__power__name="France",
-                              displaced_from__name="North Sea",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('english-channel', 'france', 'north-sea', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="English Channel",
-                              previous__subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('english-channel', 'north-sea', 'england', 'F')
+                for u in units))
 
     def test_dislodging_does_not_cancel_support_cut(self):
         # DATC 6.D.21
@@ -729,29 +741,27 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Munich",
-                              government__power__name="Germany",
-                              displaced_from__name="Silesia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('munich', 'germany', 'silesia', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Munich",
-                              previous__subregion__territory__name="Silesia",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('munich', 'silesia', 'russia', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Venice",
-                              government__power__name="Italy",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('vencie', 'italy', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Trieste",
-                              government__power__name="Austria-Hungary",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('trieste', 'austria-hungary', False, 'F')
+                for u in units))
 
     def test_impossible_fleet_move_cannot_be_supported(self):
         # DATC 6.D.22
@@ -777,17 +787,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Kiel",
-                              government__power__name="Germany",
-                              displaced_from__name="Munich",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('kiel', 'germany', 'munich', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Kiel",
-                              previous__subregion__territory__name="Munich",
-                              government__power__name="Russia").exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'])
+                == ('kiel', 'munich', 'russia')
+                for u in units))
 
     def test_impossible_coast_move_cannot_be_supported(self):
         # DATC 6.D.23
@@ -814,17 +824,16 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Spain",
-                              government__power__name="France",
-                              displaced_from__name="Gulf of Lyon",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('spain', 'france', 'gulf-of-lyon', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Spain",
-                              subregion__subname="SC",
-                              government__power__name="Italy").exists())
+            any((u['subregion'], u['government']) == ('spain.sc.s', 'italy')
+                for u in units))
 
     def test_impossible_army_move_cannot_be_supported(self):
         # DATC 6.D.24
@@ -853,22 +862,22 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Gulf of Lyon",
-                              government__power__name="Italy",
-                              displaced_from__name="Western Mediterranean",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('gulf-of-lyon', 'italy', 'western-mediterranean', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Gulf of Lyon",
-                              government__power__name="Turkey",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('gulf-of-lyon', 'turkey', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Marseilles",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('marseilles', 'france', 'A')
+                for u in units))
 
     def test_failing_hold_support_can_be_supported(self):
         # DATC 6.D.25
@@ -890,16 +899,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              government__power__name="Germany",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('berlin', 'germany', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('prussia', 'russia', 'A')
+                for u in units))
 
     def test_failing_move_support_can_be_supported(self):
         # DATC 6.D.26
@@ -921,16 +931,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              government__power__name="Germany",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('berlin', 'germany', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('prussia', 'russia', 'A')
+                for u in units))
 
     def test_failing_convoy_can_be_supported(self):
         # DATC 6.D.27
@@ -954,16 +965,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Baltic Sea",
-                              government__power__name="Russia",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('baltic-sea', 'russia', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Sweden",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('sweden', 'england', 'F')
+                for u in units))
 
     def test_impossible_move_and_support(self):
         # DATC 6.D.28
@@ -990,16 +1002,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Rumania",
-                              government__power__name="Russia",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('rumania', 'russia', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Black Sea",
-                              government__power__name="Turkey",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('black-sea', 'turkey', 'F')
+                for u in units))
 
     def test_move_to_impossible_coast_and_support(self):
         # DATC 6.D.29
@@ -1026,16 +1039,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Rumania",
-                              government__power__name="Russia",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('rumania', 'russia', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Black Sea",
-                              government__power__name="Turkey",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('black-sea', 'turkey', 'F')
+                for u in units))
 
     def test_move_without_coast_and_support(self):
         # DATC 6.D.30
@@ -1062,16 +1076,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Constantinople",
-                              government__power__name="Russia",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('constantinople', 'russia', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Black Sea",
-                              government__power__name="Turkey",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('black-sea', 'turkey', 'F')
+                for u in units))
 
     def test_fleet_cant_support_and_convoy_simultaneously(self):
         # DATC 6.D.31
@@ -1101,16 +1116,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Rumania",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('rumania', 'austria-hungary', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Constantinople",
-                              government__power__name="Turkey",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('constantinople', 'turkey', 'F')
+                for u in units))
 
     def test_missing_fleet_convoy(self):
         # DATC 6.D.32
@@ -1137,16 +1153,17 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Yorkshire",
-                              government__power__name="Germany",
-                              dislodged=False).exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'])
+                == ('yorkshire', 'germany', False)
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Liverpool",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('liverpool', 'england', 'A')
+                for u in units))
 
     def test_unwanted_support_allowed(self):
         # DATC 6.D.33
@@ -1169,22 +1186,22 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Budapest",
-                              previous__subregion__territory__name="Serbia",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('budapest', 'serbia', 'austria-hungary', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Vienna",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('vienna', 'austria-hungary', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Serbia",
-                              government__power__name="Turkey",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('serbia', 'turkey', 'A')
+                for u in units))
 
     def test_support_targeting_own_area_not_allowed(self):
         # DATC 6.D.34
@@ -1213,21 +1230,22 @@ class SupportsAndDislodges(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__power__name="Italy",
-                              displaced_from__name="Berlin").exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'])
+                == ('prussia', 'italy', 'berlin')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('prussia', 'germany', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Livonia",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('livonia', 'russia', 'A')
+                for u in units))
 
 
 class HeadToHeadAndBeleagueredGarrison(TestCase):
@@ -1243,7 +1261,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = [
             factories.GovernmentFactory(game=self.game, power=p)
-            for p in models.Power.objects.all()
+            for p in standard.powers
         ]
 
     def test_dislodged_unit_has_no_effect_on_attackers_area(self):
@@ -1266,24 +1284,22 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              previous__subregion__territory__name="Kiel",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('berlin', 'kiel', 'germany', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Prussia",
-                              previous__subregion__territory__name="Berlin",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('prussia', 'berlin', 'germany', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__power__name="Russia",
-                              displaced_from__name="Berlin",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('prussia', 'russia', 'berlin', 'A')
+                for u in units))
 
     def test_no_self_dislodgement_in_head_to_head_battle(self):
         # DATC 6.E.2
@@ -1303,17 +1319,17 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('berlin', 'germany', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Kiel",
-                              government__power__name="Germany",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('kiel', 'germany', False, 'F')
+                for u in units))
 
     def test_no_help_dislodging_own_unit(self):
         # DATC 6.E.3
@@ -1334,17 +1350,17 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Kiel",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('kiel', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              government__power__name="Germany",
-                              dislodged=False,
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('berlin', 'germany', False, 'A')
+                for u in units))
 
     def test_non_dislodged_loser_still_has_effect(self):
         # DATC 6.E.4
@@ -1374,28 +1390,27 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Holland",
-                              government__power__name="Germany",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('holland', 'germany', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="France",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('north-sea', 'france', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norwegian Sea",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norwegian-sea', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ruhr",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('ruhr', 'austria-hungary', 'A')
+                for u in units))
 
     def test_loser_dislodged_by_another_army_still_has_effect(self):
         # DATC 6.E.5
@@ -1427,28 +1442,27 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Holland",
-                              government__power__name="Germany",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('holland', 'germany', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="France",
-                              displaced_from__name="Norwegian Sea",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['displaced_from'], u['u_type'])
+                == ('north-sea', 'france', 'norwegian-sea', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('north-sea', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ruhr",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('ruhr', 'austria-hungary', 'A')
+                for u in units))
 
     def test_not_dislodged_because_own_support_still_has_effect(self):
         # DATC 6.E.6
@@ -1474,23 +1488,22 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Holland",
-                              government__power__name="Germany",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('holland', 'germany', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="France",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('north-sea', 'france', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ruhr",
-                              government__power__name="Austria-Hungary",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('ruhr', 'austria-hungary', 'A')
+                for u in units))
 
     def test_no_self_dislodgement_with_beleaguered_garrison(self):
         # DATC 6.E.7
@@ -1515,22 +1528,22 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('north-sea', 'england', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norway', 'russia', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Helgoland Bight",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('helgoland-bight', 'germany', 'F')
+                for u in units))
 
     def test_no_self_dislodgement_with_beleaguered_and_head_to_head(self):
         # DATC 6.E.8
@@ -1555,23 +1568,22 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('north-sea', 'england', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              government__power__name="Russia",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('norway', 'russia', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Helgoland Bight",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('helgoland-bight', 'germany', 'F')
+                for u in units))
 
     def test_almost_self_dislodgement_with_beleaguered_garrison(self):
         # DATC 6.E.9
@@ -1596,21 +1608,22 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norwegian Sea",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norwegian-sea', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('north-sea', 'russia', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Helgoland Bight",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('helgoland-bight', 'germany', 'F')
+                for u in units))
 
     def test_almost_circular_move_self_dislodgement_beleaguered_garrison(self):
         # DATC 6.E.10
@@ -1636,27 +1649,27 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="England",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('north-sea', 'england', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norway",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norway', 'russia', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Helgoland Bight",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('helgoland-bight', 'germany', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Denmark",
-                              government__power__name="Germany",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('denmark', 'germany', 'F')
+                for u in units))
 
     def test_no_self_dislodgement_garrison_unit_swap(self):
         # DATC 6.E.11
@@ -1684,23 +1697,22 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Portugal",
-                              previous__subregion__territory__name="Spain",
-                              government__power__name="France",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), get_territory(u['previous']), u['government'], u['u_type'])
+                == ('portugal', 'spain', 'france', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Spain",
-                              government__power__name="Italy",
-                              subregion__subname="NC",
-                              u_type='F').exists())
+            any((u['subregion'], u['government'], u['u_type'])
+                == ('spain.nc.s', 'italy', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Gascony",
-                              government__power__name="Germany",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('gascony', 'germany', 'A')
+                for u in units))
 
     def test_support_attack_on_own_unit_can_be_used_for_other_means(self):
         # DATC 6.E.12
@@ -1724,22 +1736,22 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Budapest",
-                              government__power__name="Austria-Hungary",
-                              dislodged=False,
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('budapest', 'austria-hungary', False, 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Vienna",
-                              government__power__name="Italy",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('vienna', 'italy', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Galicia",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('galicia', 'russia', 'A')
+                for u in units))
 
     def test_three_way_beleaguered_garrison(self):
         # DATC 6.E.13
@@ -1766,27 +1778,27 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="North Sea",
-                              government__power__name="Germany",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('north-sea', 'germany', False, 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Yorkshire",
-                              government__power__name="England",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('yorkshire', 'england', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Belgium",
-                              government__power__name="France",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('belgium', 'france', 'F')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Norwegian Sea",
-                              government__power__name="Russia",
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('norwegian-sea', 'russia', 'F')
+                for u in units))
 
     def test_illegal_head_to_head_battle_can_still_defend(self):
         # DATC 6.E.14
@@ -1812,17 +1824,17 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Liverpool",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('liverpool', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Edinburgh",
-                              government__power__name="Russia",
-                              dislodged=False,
-                              u_type='F').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('edinburgh', 'russia', False, 'F')
+                for u in units))
 
     def test_friendly_head_to_head_battle(self):
         # DATC 6.E.15
@@ -1852,25 +1864,24 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
 
         T.game.generate()
         T = T.game.current_turn()
+        units = T.get_units()
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Kiel",
-                              government__power__name="France",
-                              dislodged=False,
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('kiel', 'france', False, 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Berlin",
-                              government__power__name="Germany",
-                              dislodged=False,
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['dislodged'], u['u_type'])
+                == ('berlin', 'germany', False, 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Ruhr",
-                              government__power__name="England",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('ruhr', 'england', 'A')
+                for u in units))
 
         self.assertTrue(
-            T.unit_set.filter(subregion__territory__name="Prussia",
-                              government__power__name="Russia",
-                              u_type='A').exists())
+            any((get_territory(u['subregion']), u['government'], u['u_type'])
+                == ('prussia', 'russia', 'A')
+                for u in units))
