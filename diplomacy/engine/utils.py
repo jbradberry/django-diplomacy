@@ -53,6 +53,10 @@ def subregion_token(sr_tuple):
     return standard.inv_subregions.get(sr_tuple, u'')
 
 
+def is_supply(sr_token):
+    return bool(standard.starting_state.get(sr_token, (None, None, None))[1])
+
+
 def is_land(sr_token):
     return sr_token.endswith('.l')
 

@@ -10,9 +10,11 @@ from .engine.check import (valid_hold, valid_move, valid_support, valid_convoy,
                            valid_build, valid_disband, is_legal)
 from .engine.main import (builds_available, actionable_subregions,
                           normalize_orders, generate, initialize_game)
-from .engine.utils import get_territory, territory_parts
-from .helpers import unit, convert
+from .engine.utils import (get_territory, territory_parts, is_supply, unit_display,
+                           subregion_display)
 
+
+convert = {'L': 'A', 'S': 'F'}
 
 SEASON_CHOICES = (
     ('S', 'Spring'),
@@ -193,7 +195,7 @@ class Turn(models.Model):
         if not getattr(self, '_government_lookup', None):
             self._government_lookup = {
                 gvt.power: gvt.id
-                for gvt in self.game.government_set.select_related('power')
+                for gvt in self.game.government_set.all()
             }
 
         return self._government_lookup
@@ -252,15 +254,13 @@ class Turn(models.Model):
         return [
             {'territory': o.territory,
              'government': o.government.power,
-             'is_supply': o.territory.is_supply}
+             'is_supply': is_supply(o.territory)}
             for o in self.ownership_set.select_related('government')
         ]
 
     def get_orders(self):
         posts = {}
-        for p in self.posts.prefetch_related('orders__actor__territory',
-                                             'orders__assist__territory',
-                                             'orders__target__territory'):
+        for p in self.posts.prefetch_related('orders'):
             posts[p.government_id] = p
 
         return [o.as_data() for p in posts.itervalues()
@@ -281,15 +281,14 @@ class Turn(models.Model):
 
         units = {}
         for t in turns:
-            units.update((u.id, getattr(u.previous, 'id', None))
-                          for u in t.unit_set.all())
+            units.update((u.id, u.previous) for u in t.unit_set.all())
 
         # dict of dicts of lists; keys=power, original unit id
         orders = defaultdict(partial(defaultdict, list))
 
         for t in turns:
             for o in t.canonicalorder_set.select_related('government__power'):
-                p = unicode(o.government.power)
+                p = o.government.power
                 u = t.unit_set.filter(government=o.government,
                                       subregion=o.actor)
                 u = u.get() if u else None
@@ -377,7 +376,7 @@ class Unit(models.Model):
     standoff_from = models.CharField(max_length=32, blank=True)
 
     def __unicode__(self):
-        return u'{0} {1}'.format(self.u_type, self.subregion.territory)
+        return unit_display(self.subregion)
 
 
 class OrderPost(models.Model):
@@ -411,17 +410,16 @@ class Order(models.Model):
     via_convoy = models.BooleanField()
 
     def __unicode__(self):
-        result = u"{0} {1} {2}".format(
-            convert.get(getattr(self.actor, 'sr_type', None)),
-            self.actor, self.action)
+        result = u"{actor} {action}".format(actor=unit_display(self.actor),
+                                            action=self.action)
         if self.assist:
-            result = u"{0} {1} {2}".format(result,
-                                           convert[self.assist.sr_type],
-                                           self.assist)
+            result = u"{order} {assist}".format(order=result,
+                                                assist=unit_display(self.assist))
         if self.target:
-            result = u"{0} {1}".format(result, self.target)
+            result = u"{order} {target}".format(order=result,
+                                                target=subregion_display(self.target))
         if self.via_convoy:
-            result = u"{0} via Convoy".format(result)
+            result = u"{order} via Convoy".format(order=result)
         return result
 
     def as_data(self):
@@ -458,9 +456,8 @@ class CanonicalOrder(models.Model):
 
     @property
     def full_actor(self):
-        return unit(self.actor)
+        return unit_display(self.actor)
 
     @property
     def full_assist(self):
-        if self.assist:
-            return unit(self.assist)
+        return unit_display(self.assist)

@@ -5,9 +5,8 @@ from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
 
 from .engine.check import is_legal
 from .engine.main import find_convoys, builds_available
-from .engine.utils import get_territory, borders
+from .engine.utils import get_territory, borders, is_army, is_fleet
 from .models import Order, Subregion
-from .helpers import unit
 
 
 msgs = {'s-hold': "{0} has an order to support {1} to hold, but {1} does not"
@@ -160,9 +159,7 @@ class OrderFormSet(BaseFormSet):
                         warnings.append(w)
                         cross_moves.add(get_territory(actor))
                         cross_moves.add(get_territory(t_actor))
-                if (actor.endswith('.l')
-                    and (target not in borders(actor)
-                         or f.instance.via_convoy)):
+                if is_army(actor) and (target not in borders(actor) or f.instance.via_convoy):
 
                     fleets = Subregion.objects.filter(
                         sr_type='S', unit__turn=self.turn
@@ -177,7 +174,7 @@ class OrderFormSet(BaseFormSet):
                             fleets = F
                             break
                     for f2 in self.forms:
-                        if not f2.instance.actor.endswith('.s'):
+                        if not is_fleet(f2.instance.actor):
                             continue
                         if not (f2.instance.action == 'C' and
                                 f2.instance.assist == actor):

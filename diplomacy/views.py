@@ -112,7 +112,7 @@ class GameMasterView(DetailView, BaseFormView):
 
 class OrdersView(DetailView, BaseFormView):
     model = models.Government
-    slug_field = 'power__name__iexact'
+    slug_field = 'power__iexact'
 
     form_class = formset_factory(form=forms.OrderForm,
                                  formset=forms.OrderFormSet,
