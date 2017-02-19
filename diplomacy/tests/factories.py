@@ -27,6 +27,22 @@ class GameFactory(factory.DjangoModelFactory):
 class GovernmentFactory(factory.DjangoModelFactory):
     class Meta:
         model = models.Government
+        django_get_or_create = ('power',)
 
     name = factory.Faker('first_name')
     user = factory.SubFactory(UserFactory)
+
+
+class UnitFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = models.Unit
+
+    previous = ''
+
+
+class OrderFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = models.Order
+
+    assist = ''
+    target = ''
