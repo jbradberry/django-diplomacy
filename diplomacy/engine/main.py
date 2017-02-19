@@ -3,7 +3,8 @@ from itertools import combinations, permutations
 
 from . import standard
 from .compare import assist, head_to_head, construct_dependencies
-from .utils import convert, get_territory, borders, territory_parts, has_land, is_land
+from .utils import (convert, get_territory, borders, territory_parts, has_land,
+                    is_land, is_sea, is_army, is_fleet)
 
 
 def detect_paradox(orders, dep):
@@ -104,7 +105,7 @@ def immediate_fails(orders, units):
             continue
         else:
             assist = orders[get_territory(o['assist'])]
-            if o['target'] is not None:
+            if o['target']:
                 if (assist['action'] == 'M' and
                     assist['target'] == o['target']):
                     continue
@@ -225,7 +226,7 @@ def calculate_supports(state, orders, unit_index, hold_str, attack_str, defend_s
         if not d or order['action'] != 'S':
             continue
 
-        if order['target'] is None:
+        if not order['target']:
             hold_str[get_territory(order['assist'])] += 1
         else:
             if attack_str[get_territory(order['assist'])]:
@@ -406,7 +407,7 @@ def resolve_retreats(orders):
     return decisions
 
 def resolve_adjusts(orders):
-    return [(T, order.get('action') is not None)
+    return [(T, bool(order.get('action')))
             for T, order in orders.iteritems()]
 
 def supplycenters(owns):
@@ -484,19 +485,19 @@ def normalize_orders(turn, orders, units, owns):
         builds = builds_available(units, owns)
         orders_index = {
             (government, index): {
-                'government': government, 'actor': None,
-                'action': None, 'assist': None, 'target': None,
+                'government': government, 'actor': '',
+                'action': '', 'assist': '', 'target': '',
                 'via_convoy': False, 'convoy': False, 'user_issued': False
             }
             for government, B in builds.iteritems()
             for index in xrange(-B if B < 0 else min(B, len(actors.get(government, ()))))
         }
     else:
-        action = 'H' if turn['season'] in ('S', 'F') else None
+        action = 'H' if turn['season'] in ('S', 'F') else ''
         orders_index = {
             (government, a): {
                 'government': government, 'actor': a,
-                'action': action, 'assist': None, 'target': None,
+                'action': action, 'assist': '', 'target': '',
                 'via_convoy': False, 'convoy': False, 'user_issued': False
             }
             for government, actor_set in actors.iteritems()
@@ -562,7 +563,7 @@ def update_retreats(orders, units):
             continue
 
         order = orders[T]
-        if order['action'] is None:
+        if not order['action']:
             order['action'] = 'D'
 
         # units that are displaced must retreat or be disbanded
@@ -598,7 +599,7 @@ def update_movements(orders, units):
                 # only mark a location as disallowed for retreats if it
                 # wasn't via convoy.
                 displaced_from=(
-                    None if orders[displaced[T]].get('convoy') else displaced[T])
+                    '' if orders[displaced[T]].get('convoy') else displaced[T])
             )
 
         target = get_territory(order['target'])
@@ -622,12 +623,12 @@ def update_adjusts(orders, units):
         if o['action'] == 'B' and o['result'] == 'S':
             new_units.append({
                 'government': o['government'],
-                'u_type': convert[o['actor'][2]],
+                'u_type': 'A' if is_army(o['actor']) else 'F',
                 'subregion': o['actor'],
-                'previous': None,
+                'previous': '',
                 'dislodged': False,
-                'displaced_from': None,
-                'standoff_from': None,
+                'displaced_from': '',
+                'standoff_from': '',
             })
 
     return new_units
@@ -646,7 +647,7 @@ def update_autodisbands(orders, units, owns):
         # armies may count both land and water as one space each.
 
         unit_distances = [
-            [None, u['u_type'] == 'A', get_territory(u['subregion']), u]
+            [None, is_army(u['subregion']), get_territory(u['subregion']), u]
             for u in units
             if u['government'] == gvt
         ]
@@ -655,14 +656,14 @@ def update_autodisbands(orders, units, owns):
         examined = {
             sr for T, (power, sc, _) in standard.starting_state.iteritems()
             for sr in territory_parts(T)
-            if sr[2] == 'S' and sc
+            if is_sea(sr) and sc
             and power == gvt
         }
-        while any(not is_army and D is None
-                  for D, is_army, name, u in unit_distances):
+        while any(is_fleet(u['subregion']) and D is None
+                  for D, _, _, u in unit_distances):
             for data in unit_distances:
-                D, is_army, name, u = data
-                if not is_army and D is None and u['subregion'] in examined:
+                D, _, _, u = data
+                if is_fleet(u['subregion']) and D is None and u['subregion'] in examined:
                     # We want them reversed by distance, but non-reversed by name.
                     data[0] = -distance
             adj = {b for sr in examined for b in borders(sr)}
@@ -675,11 +676,11 @@ def update_autodisbands(orders, units, owns):
             for sr in territory_parts(T)
             if sc and power == gvt
         }
-        while any(is_army and D is None
-                  for D, is_army, name, u in unit_distances):
+        while any(is_army(u['subregion']) and D is None
+                  for D, _, _, u in unit_distances):
             for data in unit_distances:
-                D, is_army, name, u = data
-                if is_army and D is None and u['subregion'] in examined:
+                D, _, _, u = data
+                if is_army(u['subregion']) and D is None and u['subregion'] in examined:
                     # We want them reversed by distance, but non-reversed by name.
                     data[0] = -distance
             adj = {
@@ -700,7 +701,7 @@ def update_autodisbands(orders, units, owns):
                 'user_issued': False, 'government': u['government'],
                 'actor': u['subregion'],
                 'action': 'D', 'result': 'D',
-                'assist': None, 'target': None,
+                'assist': '', 'target': '',
                 'via_convoy': False, 'convoy': False
             }
         else:

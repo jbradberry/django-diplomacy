@@ -27,7 +27,7 @@ def head_to_head(T1, o1, T2, o2, c1=False, c2=False):
 
 def hostile_assist_hold(T1, o1, T2, o2):
     return (get_territory(o2['assist']) == get_territory(o1['target'])
-            and o2['target'] is None)
+            and not o2['target'])
 
 def hostile_assist_compete(T1, o1, T2, o2):
     return (get_territory(o2['assist']) != T1 and

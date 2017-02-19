@@ -6,7 +6,7 @@ from .utils import unit_in, get_territory, borders, territory_parts, has_land, i
 def valid_hold(actor, units, owns, season):
     if season in ('S', 'F'):
         if unit_in(actor, units):
-            return {None: {None: False}}
+            return {'': {'': False}}
     return {}
 
 
@@ -53,9 +53,9 @@ def valid_move(actor, units, owns, season):
     if not target:
         return {}
     return {
-        None: {x: (x in convoyable
-                   and any(x == b for b in borders(actor)))
-               for x in target}
+        '': {x: (x in convoyable
+                 and any(x == b for b in borders(actor)))
+             for x in target}
     }
 
 
@@ -71,7 +71,7 @@ def valid_support(actor, units, owns, season):
 
     # support to hold
     results = {
-        a: {None: False} for a in adj
+        a: {'': False} for a in adj
         if unit_in(a, units)
     }
 
@@ -156,7 +156,7 @@ def valid_build(actor, units, owns, season):
         return {}
     # And only if the territory is one of this government's "home" territories.
     if current_government == home_government:
-        return {None: {None: False}}
+        return {'': {'': False}}
     return {}
 
 
@@ -170,20 +170,20 @@ def valid_disband(actor, units, owns, season):
             return {}
     elif builds_available(units, owns).get(unit[0]['government'], 0) >= 0:
         return {}
-    return {None: {None: False}}
+    return {'': {'': False}}
 
 
 def is_legal(order, units, owns, season):
     builds = builds_available(units, owns)
 
-    if order['actor'] is None:
+    if not order['actor']:
         if season != 'FA':
             return False
         unit = ()
     else:
         unit = [u for u in units if u['subregion'] == order['actor']]
 
-    if order['actor'] is None or order['action'] is None:
+    if not order['actor'] or not order['action']:
         return (season == 'FA' and
                 builds.get(order['government'], 0) > 0)
     if order['action'] != 'B' and not unit:
