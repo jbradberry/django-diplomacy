@@ -8,13 +8,13 @@ from ..engine.utils import subregion_display
 
 register = template.Library()
 
-colors = {'Austria-Hungary': '#a41a10',
-          'England': '#1010a3',
-          'France': '#126dc0',
-          'Germany': '#5d5d5d',
-          'Italy': '#30a310',
-          'Russia': '#7110a2',
-          'Turkey': '#e6e617'}
+colors = {'austria-hungary': '#a41a10',
+          'england': '#1010a3',
+          'france': '#126dc0',
+          'germany': '#5d5d5d',
+          'italy': '#30a310',
+          'russia': '#7110a2',
+          'turkey': '#e6e617'}
 
 
 @register.inclusion_tag('diplomacy/map_card.html', takes_context=True)

@@ -774,7 +774,7 @@ def initialize_game():
     units = [
         {'government': government,
          'u_type': convert[unit[1]],
-         'subregion': (T, unit[0], unit[1])}
+         'subregion': standard.inv_subregions[(standard.territories[T], unit[0], unit[1])]}
         for T, (government, sc, unit) in standard.starting_state.iteritems()
         if unit
     ]
