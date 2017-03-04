@@ -7,11 +7,10 @@ from django.db import models
 
 from .engine import standard
 from .engine.check import (valid_hold, valid_move, valid_support, valid_convoy,
-                           valid_build, valid_disband, is_legal)
+                           valid_build, valid_disband)
 from .engine.main import (builds_available, actionable_subregions,
                           normalize_orders, generate, initialize_game)
-from .engine.utils import (get_territory, territory_parts, is_supply, unit_display,
-                           subregion_display)
+from .engine.utils import get_territory, is_supply, unit_display, subregion_display
 
 
 convert = {'L': 'A', 'S': 'F'}

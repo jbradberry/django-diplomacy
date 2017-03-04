@@ -3,7 +3,6 @@ import re
 
 from .. import models
 from ..engine import standard
-from ..engine.utils import get_territory, territory_parts
 
 
 convert = {u'F': u'S', u'A': u'L'}

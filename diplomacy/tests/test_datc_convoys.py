@@ -4,8 +4,8 @@ from . import factories
 from .helpers import create_units, create_orders
 from .. import models
 from ..engine import standard
+from ..engine.check import is_legal
 from ..engine.utils import get_territory
-from ..models import is_legal
 
 
 class Convoys(TestCase):

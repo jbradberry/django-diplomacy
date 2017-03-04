@@ -1,5 +1,5 @@
 from collections import defaultdict, Counter
-from itertools import combinations, permutations
+from itertools import combinations
 
 from . import standard
 from .compare import assist, head_to_head, construct_dependencies
