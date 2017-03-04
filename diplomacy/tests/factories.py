@@ -11,7 +11,7 @@ class UserFactory(factory.DjangoModelFactory):
     first_name = factory.Faker('first_name')
     last_name = factory.Faker('last_name')
     username = factory.Faker('user_name')
-    email = factory.LazyAttribute(lambda a: '{}@example.com'.format(a))
+    email = factory.Sequence(lambda n: 'user{}@example.com'.format(n))
 
 
 class GameFactory(factory.DjangoModelFactory):

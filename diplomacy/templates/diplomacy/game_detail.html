@@ -41,7 +41,7 @@
       {% for government, sc, uc, turnedin in governments %}
       <tr class="{{ government.power|lower }}">
         <td>{{ government }}</td>
-        <td><div class="legend {{ government.power|lower }}"></div>{% if current %}<a href="{% url 'diplomacy_orders' game.slug government.power.name %}">{{ government.power }}</a>{% else %}{{ government.power|default:"N/A" }}{% endif %}</td>
+        <td><div class="legend {{ government.power|lower }}"></div>{% if current %}<a href="{% url 'diplomacy_orders' gameslug=game.slug slug=government.power %}">{{ government.power_display }}</a>{% else %}{{ government.power_display|default:"N/A" }}{% endif %}</td>
         <td>{{ sc }}</td>
         <td>{{ uc }}</td>
         <td><span class="glyphicon glyphicon-{{ turnedin|yesno:'ok,remove' }} text-{{ turnedin|yesno:'success,danger' }}"></span></td>

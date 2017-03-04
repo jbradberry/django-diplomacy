@@ -313,6 +313,10 @@ class Government(models.Model):
     def __unicode__(self):
         return self.name
 
+    @property
+    def power_display(self):
+        return standard.powers.get(self.power, u'')
+
     def filter_orders(self):
         turn = self.game.current_turn()
         season = turn.season
