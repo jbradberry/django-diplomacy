@@ -12,7 +12,8 @@ from django.views.generic import ListView, DetailView
 from django.views.generic.edit import BaseFormView
 
 from . import models, forms
-from .engine.main import builds_available, actionable_subregions, normalize_orders
+from .engine.digest import builds_available, actionable_subregions
+from .engine.main import normalize_orders
 
 
 class GameListView(ListView):

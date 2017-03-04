@@ -1,5 +1,5 @@
 from . import standard
-from .main import find_convoys, builds_available
+from .digest import find_convoys, builds_available
 from .utils import unit_in, get_territory, borders, territory_parts, has_land, is_fleet
 
 

@@ -5,6 +5,7 @@ from .helpers import create_units, create_orders
 from .. import models
 from ..engine import standard
 from ..engine.check import is_legal
+from ..engine.digest import builds_available
 from ..engine.main import initialize_game
 from ..engine.utils import get_territory
 
@@ -663,7 +664,7 @@ class CoastalIssues(TestCase):
 
         units = T.get_units()
         owns = T.get_ownership()
-        builds = models.builds_available(units, owns)
+        builds = builds_available(units, owns)
         self.assertEqual(builds.get('russia', 0), 4)
         order = T.get_orders()[0]
         self.assertEqual(order['actor'], u'')

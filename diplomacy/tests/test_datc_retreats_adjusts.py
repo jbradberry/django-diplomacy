@@ -8,6 +8,7 @@ from .helpers import create_units, create_orders
 from .. import models
 from ..engine import standard
 from ..engine.check import is_legal
+from ..engine.digest import builds_available
 from ..engine.main import initialize_game
 from ..engine.utils import get_territory
 
@@ -916,7 +917,7 @@ class Building(TestCase):
 
         units = T.get_units()
         self.assertEqual(len(units), 2)
-        builds = models.builds_available(units, T.get_ownership())
+        builds = builds_available(units, T.get_ownership())
         self.assertEqual(builds.get('germany', 0), 1)
 
         orders = {"Germany": ("A Warsaw B",

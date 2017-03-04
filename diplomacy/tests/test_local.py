@@ -2,7 +2,7 @@ import re
 
 from django.test import TestCase
 
-from ..engine.main import find_convoys
+from ..engine.digest import find_convoys
 from ..engine.utils import (get_territory, territory_display, unit_display, subregion_token,
                             power_token)
 

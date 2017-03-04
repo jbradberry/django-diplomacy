@@ -5,7 +5,7 @@ from django.forms.models import ModelForm, BaseFormSet
 
 from .engine import standard
 from .engine.check import is_legal
-from .engine.main import find_convoys, builds_available
+from .engine.digest import find_convoys, builds_available
 from .engine.utils import get_territory, borders, is_army, is_fleet, subregion_display, unit_display
 from .models import Order
 
