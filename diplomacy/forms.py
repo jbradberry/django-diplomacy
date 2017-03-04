@@ -1,12 +1,13 @@
 from collections import defaultdict
 
-from django.forms import Form, ValidationError
-from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
+from django.forms import Form, ValidationError, ChoiceField
+from django.forms.models import ModelForm, BaseFormSet
 
+from .engine import standard
 from .engine.check import is_legal
 from .engine.main import find_convoys, builds_available
-from .engine.utils import get_territory, borders, is_army, is_fleet
-from .models import Order, Subregion
+from .engine.utils import get_territory, borders, is_army, is_fleet, subregion_display, unit_display
+from .models import Order
 
 
 msgs = {'s-hold': "{0} has an order to support {1} to hold, but {1} does not"
@@ -30,23 +31,20 @@ msgs = {'s-hold': "{0} has an order to support {1} to hold, but {1} does not"
 
 
 def join(*args):
-    args = [unit(u) for u in args]
+    args = [unit_display(u) for u in args]
     args[-1] = "and {0}".format(args[-1])
     j = ", " if len(args) > 2 else " "
     return j.join(args)
 
 
-class UnitProxyChoiceField(ModelChoiceField):
-    def label_from_instance(self, obj):
-        return unit(obj)
+unit_choices = [('', '---------')] + [(sr, unit_display(sr)) for sr in sorted(standard.subregions)]
+location_choices = [('', '---------')] + [(sr, subregion_display(sr)) for sr in sorted(standard.subregions)]
 
 
 class OrderForm(ModelForm):
-    qs = Subregion.objects.select_related('territory__name').all()
-
-    actor = UnitProxyChoiceField(queryset=qs, required=False)
-    assist = UnitProxyChoiceField(queryset=qs, required=False)
-    target = ModelChoiceField(queryset=qs, required=False)
+    actor = ChoiceField(choices=unit_choices, required=False)
+    assist = ChoiceField(choices=unit_choices, required=False)
+    target = ChoiceField(choices=location_choices, required=False)
 
     class Meta:
         model = Order
@@ -80,6 +78,7 @@ class OrderForm(ModelForm):
 
         order = self.initial.copy()
         order.update(self.cleaned_data)
+        order['government'] = self.government.power
         if not is_legal(order, units, owns, turn.season):
             raise ValidationError("Illegal order.")
 
@@ -124,12 +123,12 @@ class OrderFormSet(BaseFormSet):
                 a_action = orders[get_territory(assist)].action
                 a_target = orders[get_territory(assist)].target
                 if target is None and a_action not in ('H', 'S', 'C'):
-                    w = msgs['s-hold'].format(unit(actor), unit(assist))
+                    w = msgs['s-hold'].format(unit_display(actor), unit_display(assist))
                     warnings.append(w)
                 elif target is not None and (a_action != 'M' or
                                              a_target != target):
                     w = msgs['s-move'].format(
-                        unit(actor), unit(assist), target)
+                        unit_display(actor), unit_display(assist), target)
                     warnings.append(w)
             elif action == 'C':
                 if assist is None or get_territory(assist) not in orders:
@@ -138,7 +137,7 @@ class OrderFormSet(BaseFormSet):
                 a_target = orders[get_territory(assist)].target
                 if a_action != 'M' or a_target != target:
                     w = msgs['c-move'].format(
-                        unit(actor), unit(assist), target)
+                        unit_display(actor), unit_display(assist), target)
                     warnings.append(w)
             elif action == 'M':
                 moves[target].append(f.instance.actor)
@@ -149,23 +148,19 @@ class OrderFormSet(BaseFormSet):
                     t_target = orders[get_territory(target)].target
                     if t_action in ('H', 'S', 'C'):
                         w = msgs['m-hold'].format(
-                            unit(actor), target, unit(target))
+                            unit_display(actor), target, unit_display(target))
                         warnings.append(w)
                     elif (t_action == 'M' and
                           get_territory(t_target) == get_territory(actor)):
                         if get_territory(actor) in cross_moves:
                             continue
-                        w = msgs['m-xing'].format(unit(actor), unit(t_actor))
+                        w = msgs['m-xing'].format(unit_display(actor), unit_display(t_actor))
                         warnings.append(w)
                         cross_moves.add(get_territory(actor))
                         cross_moves.add(get_territory(t_actor))
                 if is_army(actor) and (target not in borders(actor) or f.instance.via_convoy):
-
-                    fleets = Subregion.objects.filter(
-                        sr_type='S', unit__turn=self.turn
-                    ).exclude(territory__subregion__sr_type='L').distinct()
-                    fleets = [sr for sr in fleets]
                     units = self.turn.get_units()
+                    fleets = [u['subregion'] for u in units if is_fleet(u['subregion'])]
                     convoys = find_convoys(units, fleets)
 
                     fleets = set()
@@ -182,7 +177,7 @@ class OrderFormSet(BaseFormSet):
 
                     if not any(actor in A and target in A
                                for F, A in find_convoys(units, fleets)):
-                        w = msgs['m-conv'].format(unit(actor), target)
+                        w = msgs['m-conv'].format(unit_display(actor), target)
                         warnings.append(w)
 
         return warnings + [msgs['m-move'].format(join(*v), t)
