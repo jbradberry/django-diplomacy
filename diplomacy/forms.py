@@ -195,7 +195,7 @@ class OrderFormSet(BaseFormSet):
         actors = set()
         for i in xrange(self.total_form_count()):
             form = self.forms[i]
-            actor = getattr(form.cleaned_data.get('actor'), 'territory', None)
+            actor = get_territory(form.cleaned_data.get('actor'))
             if not actor:
                 continue
             if actor in actors:
