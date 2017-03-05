@@ -7,7 +7,7 @@ from .digest import actionable_subregions, builds_available
 from .resolver import (detect_paradox, immediate_fails, resolve, resolve_retreats,
                        resolve_adjusts)
 from .utils import (convert, get_territory, borders, territory_parts,
-                    is_land, is_sea, is_army, is_fleet)
+                    has_land, is_land, is_sea, is_army, is_fleet)
 
 
 def normalize_orders(turn, orders, units, owns):
@@ -259,7 +259,7 @@ def update_ownership(units, owns):
         (get_territory(u['subregion']),
          {'territory': get_territory(u['subregion']), 'government': u['government']})
         for u in units
-        if u['u_type'] == 'A'
+        if has_land(u['subregion'])
     )
 
     return list(current.itervalues())
