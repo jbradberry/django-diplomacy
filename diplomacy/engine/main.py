@@ -97,6 +97,8 @@ def normalize_orders(turn, orders, units, owns):
 def update_retreats(orders, units):
     new_units = []
     for u in units:
+        u = u.copy()
+
         T = get_territory(u['subregion'])
         if T not in orders or not u['dislodged']:
             new_units.append(u)
@@ -109,6 +111,7 @@ def update_retreats(orders, units):
         # units that are displaced must retreat or be disbanded
         if order['action'] == 'M' and order['result'] == 'S':
             u['subregion'] = order['target']
+            u['dislodged'] = False
             new_units.append(u)
         else:
             order['result'] = 'D'
