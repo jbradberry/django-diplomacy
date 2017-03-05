@@ -123,13 +123,6 @@ class Game(models.Model):
         units = turn.get_units()
         owns = turn.get_ownership()
 
-        # FIXME refactor
-        orders = {
-            get_territory(o['actor']): o
-            for o in normalize_orders(turn.as_data(), orders, units, owns)
-            if o['actor'] is not None
-        }
-
         turn, orders, units, owns = generate(turn.as_data(), orders, units, owns)
 
         turn = self.create_turn(turn)
@@ -200,7 +193,7 @@ class Turn(models.Model):
 
         return self._government_lookup
 
-    def create_canonical_orders(self, orders_index):
+    def create_canonical_orders(self, orders):
         CanonicalOrder.objects.bulk_create([
             CanonicalOrder(**{
                 'turn': self.prev,
@@ -213,7 +206,7 @@ class Turn(models.Model):
                 'user_issued': o.get('user_issued', False),
                 'result': o['result'],
             })
-            for o in orders_index.itervalues()
+            for o in orders
         ])
 
     def create_units(self, units):

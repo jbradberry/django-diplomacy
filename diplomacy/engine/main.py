@@ -275,40 +275,46 @@ def increment_turn(turn):
 
 
 def generate(turn, orders, units, owns):
+    orders_index = {
+        get_territory(o['actor']): o
+        for o in normalize_orders(turn, orders, units, owns)
+        if o['actor'] is not None
+    }
+
     if turn['season'] in ('S', 'F'):
-        dependencies = construct_dependencies(orders)
-        paradox_convoys = detect_paradox(orders, dependencies)
-        fails = immediate_fails(orders, units)
-        decisions = resolve((), orders, dependencies, fails, paradox_convoys, units)
+        dependencies = construct_dependencies(orders_index)
+        paradox_convoys = detect_paradox(orders_index, dependencies)
+        fails = immediate_fails(orders_index, units)
+        decisions = resolve((), orders_index, dependencies, fails, paradox_convoys, units)
     elif turn['season'] in ('SR', 'FR'):
-        decisions = resolve_retreats(orders)
+        decisions = resolve_retreats(orders_index)
     else:
-        decisions = resolve_adjusts(orders)
+        decisions = resolve_adjusts(orders_index)
 
     # Mark the orders with the decisions from the resolver, 'S' for success, 'F' for failure
     for T, d in decisions:
-        orders[T]['result'] = ('S' if d else 'F')
+        orders_index[T]['result'] = ('S' if d else 'F')
 
     # Update the units so that the previous pointer will point to the correct place
     for u in units:
         u['previous'] = u['subregion']
 
     if turn['season'] in ('SR', 'FR'):
-        units = update_retreats(orders, units)
+        units = update_retreats(orders_index, units)
 
     if turn['season'] in ('S', 'F'):
-        units = update_movements(orders, units)
+        units = update_movements(orders_index, units)
 
     if turn['season'] == 'FA':
-        units = update_adjusts(orders, units)
-        units = update_autodisbands(orders, units, owns)
+        units = update_adjusts(orders_index, units)
+        units = update_autodisbands(orders_index, units, owns)
 
     turn = increment_turn(turn)
 
     if turn['season'] == 'FA':
         owns = update_ownership(units, owns)
 
-    return turn, orders, units, owns
+    return turn, orders_index.values(), units, owns
 
 
 def initialize_game():
