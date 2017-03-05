@@ -69,11 +69,12 @@ class Game(models.Model):
 
     def governments(self, turn=None):
         gvts = self.government_set.all()
-        units, owns, posts = (), (), ()
+        units, owns, posts, actors = (), (), (), {}
         if turn:
             units = turn.get_units()
             owns = turn.get_ownership()
             posts = turn.posts.select_related('government')
+            actors = actionable_subregions(turn.as_data(), units, owns)
 
         return sorted(
             ((g,
@@ -81,7 +82,7 @@ class Game(models.Model):
                   if o['government'] == g.power
                   and o['is_supply']),
               sum(1 for u in units if u['government'] == g.power),
-              any(post.government == g for post in posts))
+              any(post.government == g for post in posts) or not actors.get(g.power))
              for g in gvts),
             key=lambda x: (-x[1], -x[2], getattr(x[0].power, 'name', None))
         )
