@@ -210,6 +210,7 @@ class Turn(models.Model):
                 'target': o.get('target', ''),
                 'via_convoy': o['via_convoy'],
                 'user_issued': o.get('user_issued', False),
+                'result': o['result'],
             })
             for o in orders_index.itervalues()
         ])
@@ -272,6 +273,7 @@ class Turn(models.Model):
                    'F': ['S', 'SR'],
                    'FR': ['F'],
                    'FA': ['F', 'FR']}
+
         turns = self.game.turn_set.filter(
             season__in=seasons[self.season],
             number__gt=self.number - 5,
@@ -286,19 +288,19 @@ class Turn(models.Model):
         orders = defaultdict(partial(defaultdict, list))
 
         for t in turns:
-            for o in t.canonicalorder_set.select_related('government__power'):
-                p = o.government.power
+            for o in t.canonicalorder_set.select_related('government'):
+                power = standard.powers.get(o.government.power, u'')
                 u = t.unit_set.filter(government=o.government,
                                       subregion=o.actor)
                 u = u.get() if u else None
                 if u is None:
-                    orders[p]["b{0}".format(o.actor)].append(o)
+                    orders[power]["b.{0}".format(o.actor)].append(o)
                     continue
                 u_id = u.id
                 while u_id in units:
                     n = u_id
                     u_id = units[u_id]
-                orders[p][n].append(o)
+                orders[power][n].append(o)
 
         return sorted((power, sorted(adict.iteritems()))
                       for power, adict in orders.iteritems())
@@ -464,3 +466,7 @@ class CanonicalOrder(models.Model):
     @property
     def full_assist(self):
         return unit_display(self.assist)
+
+    @property
+    def full_target(self):
+        return subregion_display(self.target)
