@@ -81,7 +81,7 @@ class GameMasterView(DetailView, BaseFormView):
             actors = actionable_subregions(turn.as_data(), units, owns)
             context = {
                 'actors': sum(
-                    min(abs(builds.get(g, 0)), len(actorset))
+                    len(actorset) if turn.season != 'FA' else abs(builds.get(g, 0))
                     for g, actorset in actors.iteritems()
                 )
             }
