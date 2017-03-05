@@ -260,7 +260,6 @@ class Turn(models.Model):
         return [o.as_data() for p in posts.itervalues()
                 for o in p.orders.all()]
 
-    # FIXME refactor
     def recent_orders(self):
         seasons = {'S': ['F', 'FR', 'FA'],
                    'SR': ['S'],
@@ -272,29 +271,31 @@ class Turn(models.Model):
             season__in=seasons[self.season],
             number__gt=self.number - 5,
             number__lt=self.number
-        ).select_related('unit', 'canonical_order').order_by('number')
+        ).prefetch_related(
+            'unit_set', 'canonicalorder_set__government'
+        ).order_by('number')
 
-        units = {}
-        for t in turns:
-            units.update((u.id, u.previous) for u in t.unit_set.all())
+        units_index = {
+            (t.number, u.government_id, u.subregion): u.previous
+            for t in turns
+            for u in t.unit_set.all()
+        }
 
         # dict of dicts of lists; keys=power, original unit id
         orders = defaultdict(partial(defaultdict, list))
 
         for t in turns:
-            for o in t.canonicalorder_set.select_related('government'):
-                power = standard.powers.get(o.government.power, u'')
-                u = t.unit_set.filter(government=o.government,
-                                      subregion=o.actor)
-                u = u.get() if u else None
-                if u is None:
-                    orders[power]["b.{0}".format(o.actor)].append(o)
-                    continue
-                u_id = u.id
-                while u_id in units:
-                    n = u_id
-                    u_id = units[u_id]
-                orders[power][n].append(o)
+            for o in t.canonicalorder_set.all():
+                power = o.government.power_display
+                if o.action == 'B':
+                    actor = 'b.{0}'.format(o.actor)
+                else:
+                    N, G, actor = t.number, o.government_id, o.actor
+                    while (N, G, actor) in units_index:
+                        actor = units_index[(N, G, actor)]
+                        N -= 1
+
+                orders[power][actor].append(o)
 
         return sorted((power, sorted(adict.iteritems()))
                       for power, adict in orders.iteritems())
