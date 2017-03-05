@@ -123,6 +123,7 @@ class Game(models.Model):
         units = turn.get_units()
         owns = turn.get_ownership()
 
+        # FIXME refactor
         orders = {
             get_territory(o['actor']): o
             for o in normalize_orders(turn.as_data(), orders, units, owns)
