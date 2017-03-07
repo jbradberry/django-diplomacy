@@ -280,6 +280,7 @@ class Turn(models.Model):
             (t.number, u.government_id, u.subregion): u.previous
             for t in turns
             for u in t.unit_set.all()
+            if u.previous
         }
 
         # dict of dicts of lists; keys=power, original unit id
