@@ -298,9 +298,17 @@ def generate(turn, orders, units, owns):
     for T, d in decisions:
         orders_index[T]['result'] = ('S' if d else 'F')
 
-    # Update the units so that the previous pointer will point to the correct place
-    for u in units:
-        u['previous'] = u['subregion']
+    # Create clean units with the previous pointer set to the correct place
+    units = [
+        {'government': u['government'],
+         'u_type': u['u_type'],
+         'subregion': u['subregion'],
+         'previous': u['subregion'],
+         'dislodged': u['dislodged'],
+         'displaced_from': '',
+         'standoff_from': ''}
+        for u in units
+    ]
 
     if turn['season'] in ('SR', 'FR'):
         units = update_retreats(orders_index, units)

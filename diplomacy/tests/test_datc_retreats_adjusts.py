@@ -338,7 +338,7 @@ class Retreating(TestCase):
         units = T.get_units()
 
         self.assertFalse(
-            any(u['government'] == ('italy') for u in units))
+            any(u['government'] == 'italy' for u in units))
 
     def test_two_retreats_to_same_area_disbands_units(self):
         # DATC 6.H.7
@@ -380,7 +380,7 @@ class Retreating(TestCase):
         units = T.get_units()
 
         self.assertFalse(
-            any(u['government'] == ('italy') for u in units))
+            any(u['government'] == 'italy' for u in units))
 
     def test_three_retreats_to_same_area_disbands_units(self):
         # DATC 6.H.8
