@@ -278,7 +278,7 @@ class Turn(models.Model):
 
         units_index = {
             (t.number, u.government_id, u.subregion): u.previous
-            for t in turns
+            for t in list(turns)[1:]
             for u in t.unit_set.all()
             if u.previous
         }
@@ -455,6 +455,19 @@ class CanonicalOrder(models.Model):
 
     user_issued = models.BooleanField()
     result = models.CharField(max_length=1, choices=RESULT_CHOICES)
+
+    def __unicode__(self):
+        order = u"{actor} {action}".format(actor=unit_display(self.actor),
+                                           action=self.action)
+        if self.assist:
+            order = u"{order} {assist}".format(order=order,
+                                               assist=unit_display(self.assist))
+        if self.target:
+            order = u"{order} {target}".format(order=order,
+                                               target=subregion_display(self.target))
+        if self.via_convoy:
+            order = u"{order} via Convoy".format(order=order)
+        return u"{order} [{result}]".format(order=order, result=self.get_result_display())
 
     @property
     def full_actor(self):
