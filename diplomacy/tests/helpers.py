@@ -2,9 +2,10 @@ from collections import defaultdict
 import re
 
 from .. import models
+from ..engine import standard
 
 
-convert = {'F': 'S', 'A': 'L'}
+convert = {u'F': u'S', u'A': u'L'}
 other = {'L': 'S', 'S': 'L', 'F': 'A', 'A': 'F'}
 
 location = (r"(?{territory}[-\w.]{{2,}}(?: [-\w.]{{2,}})*)"
@@ -12,14 +13,9 @@ location = (r"(?{territory}[-\w.]{{2,}}(?: [-\w.]{{2,}})*)"
 unit = r"(?{u_type}F|A) " + location
 locRE = re.compile(location.format(territory="P<territory>",
                                    subname="P<subname>"))
-unitRE = re.compile(unit.format(u_type="P<u_type>",
+unitRE = re.compile(unit.format(u_type="P<sr_type>",
                                 territory="P<territory>",
                                 subname="P<subname>"))
-unit_enhRE = re.compile(unit.format(u_type="P<u_type>",
-                                    territory="P<territory>",
-                                    subname="P<subname>") +
-                        r"(?:, (displaced_from=[-\w.]+(?: [-\w.]+)*))?" +
-                        r"(?:, (standoff_from=[-\w.]+(?: [-\w.]+)*))?")
 opts = {'u_type': ':', 'territory': ':', 'subname': ':'}
 U, L = unit.format(**opts), location.format(**opts)
 order_patterns = {'H': re.compile(r"(?P<actor>{0}) H$".format(U)),
@@ -33,86 +29,92 @@ order_patterns = {'H': re.compile(r"(?P<actor>{0}) H$".format(U)),
                   'B': re.compile(r"(?P<actor>{0}) B$".format(U)),
                   'D': re.compile(r"(?P<actor>{0}) D$".format(U))}
 
-lookup = defaultdict(list)
-t_dict = {}
 
-def init_lookup():
-    for t in models.Territory.objects.all():
-        for sr in t.subregion_set.all():
-            lookup[(t.name,)].append(sr)
-            lookup[(t.name, sr.subname or '')].append(sr)
-            lookup[(t.name, sr.subname or '', sr.sr_type)].append(sr)
-
-    t_dict.update((t.name, t.id) for t in models.Territory.objects.all())
+subregion_index = defaultdict(list)
+for sr_token, (territory, subname, sr_type) in standard.subregions.iteritems():
+    subregion_index[(territory,)].append(sr_token)
+    subregion_index[(territory, subname)].append(sr_token)
+    subregion_index[(territory, subname, sr_type)].append(sr_token)
 
 
-def fetch(sr_type, territory, subname, strict=False):
-    if not lookup:
-        init_lookup()
+def get_subregion(territory, subname, sr_type, strict=False, **kwargs):
+    sr_type = convert.get(sr_type, sr_type)
+    subname = subname or u''
+    if not subregion_index[(territory,)]:
+        return u''
+    if subname and not subregion_index[(territory, subname)]:
+        subname = u''
 
-    if sr_type in ('F', 'A'):
-        sr_type = convert[sr_type]
-    if subname is None:
-        subname = ''
-    if not lookup[(territory,)]:
-        return
-    if subname != '':
-        if not lookup[(territory, subname)]:
-            subname = ''
-
-    result = lookup[(territory, subname, sr_type)]
+    result = subregion_index[(territory, subname, sr_type)]
     if not result and not strict:
-        result = lookup[(territory, subname, other[sr_type])]
+        result = subregion_index[(territory, subname, other[sr_type])]
     if len(result) == 1:
         return result[0]
+    return u''
 
-def create_unit(turn, gvt, unitstr):
-    u = unit_enhRE.match(unitstr)
-    kwargs = (group.split('=') for group in u.groups('') if '=' in group)
-    kwargs = dict((g[0], territory[g[1]]) for g in kwargs)
-    opts = u.groupdict('')
-    return models.Unit.objects.create(u_type=opts['u_type'],
-                                      subregion=fetch(opts['u_type'],
-                                                      opts['territory'],
-                                                      opts['subname']),
-                                      turn=turn, government=gvt,
-                                      **kwargs)
+def parse(unitstr):
+    unit = {}
+    match = unitRE.match(unitstr)
+    if match:
+        unit.update(**match.groupdict(''))
+    else:
+        match = locRE.match(unitstr)
+        if match:
+            unit.update(**match.groupdict(''))
+    return unit
 
-def create_units(units, turn):
-    for gname, uset in units.iteritems():
-        gvt = models.Government.objects.get(power__name__startswith=gname)
-        for unit in uset:
-            create_unit(turn, gvt, unit)
+def create_units(units, turn, governments):
+    parsed = (
+        (gvt, unitstr[0], parse(unitstr))
+        for gvt, uset in units.iteritems()
+        for unitstr in uset
+    )
+    return models.Unit.objects.bulk_create([
+        models.Unit(turn=turn,
+                    government=governments[gvt],
+                    u_type=u_type,
+                    subregion=get_subregion(udict.get('territory', ''),
+                                            udict.get('subname', ''),
+                                            udict.get('sr_type', '')))
+        for gvt, u_type, udict in parsed
+    ])
 
-def split_unit(ustr, regexp=None):
-    if regexp is None:
-        regexp = unitRE
-    u = regexp.match(ustr)
-    if not u:
-        return ('', '', '')
-    return u.groups('')
+def create_orders(orders, turn, governments):
+    order_posts = {
+        gvt: models.OrderPost.objects.create(turn=turn, government=governments[gvt])
+        for gvt in orders
+    }
 
-def create_order(post, orderstr):
-    for action, regexp in order_patterns.iteritems():
-        o = regexp.match(orderstr)
-        if o is not None:
-            break
-    o_dict = o.groupdict('')
-    actor = fetch(*split_unit(o_dict.get('actor', '')),
-                   strict=(post.turn.season == 'FA'))
-    assist = fetch(*split_unit(o_dict.get('assist', '')))
-    sr_type = assist.sr_type if assist else (actor.sr_type if actor else '')
-    target = fetch(sr_type, *split_unit(o_dict.get('target', ''), locRE)[:2])
+    parsed = (
+        (gvt, action, regexp.match(orderstr))
+        for gvt, oset in orders.iteritems()
+        for orderstr in oset
+        for action, regexp in order_patterns.iteritems()
+    )
+    parsed = (
+        (gvt, action, omatch.groupdict(''))
+        for gvt, action, omatch in parsed
+        if omatch is not None
+    )
+    parsed = (
+        (gvt, action,
+         parse(odict.get('actor', '')),
+         parse(odict.get('assist', '')),
+         parse(odict.get('target', '')),
+         bool(odict.get('via_convoy')))
+        for gvt, action, odict in parsed
+    )
 
-    kwargs = {'actor': actor, 'action': action,
-              'assist': assist, 'target': target,
-              'via_convoy': bool(o_dict.get('via_convoy'))}
-
-    return models.Order.objects.create(post=post, **kwargs)
-
-def create_orders(orders, turn):
-    for gname, oset in orders.iteritems():
-        gvt = models.Government.objects.get(power__name__startswith=gname)
-        post = models.OrderPost.objects.create(turn=turn,
-                                               government=gvt)
-        new_orders = [create_order(post, order) for order in oset]
+    final_orders = [
+        models.Order(post=order_posts[gvt],
+                     actor=get_subregion(strict=(turn.season == 'FA'), **actor),
+                     action=action,
+                     assist=get_subregion(**assist) if assist else '',
+                     target=get_subregion(
+                         sr_type=assist.get('sr_type', '') if assist else actor.get('sr_type', ''),
+                         **target
+                     ) if target else '',
+                     via_convoy=via_convoy)
+        for gvt, action, actor, assist, target, via_convoy in parsed
+    ]
+    return models.Order.objects.bulk_create(final_orders)

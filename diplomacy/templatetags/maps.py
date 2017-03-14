@@ -1,20 +1,20 @@
 import json
-import re
 
 from django import template
 
-from ..models import Territory, Power
+from ..engine import standard
+from ..engine.utils import subregion_display
 
 
 register = template.Library()
 
-colors = {'Austria-Hungary': '#a41a10',
-          'England': '#1010a3',
-          'France': '#126dc0',
-          'Germany': '#5d5d5d',
-          'Italy': '#30a310',
-          'Russia': '#7110a2',
-          'Turkey': '#e6e617'}
+colors = {'austria-hungary': '#a41a10',
+          'england': '#1010a3',
+          'france': '#126dc0',
+          'germany': '#5d5d5d',
+          'italy': '#30a310',
+          'russia': '#7110a2',
+          'turkey': '#e6e617'}
 
 
 @register.inclusion_tag('diplomacy/map_card.html', takes_context=True)
@@ -25,18 +25,22 @@ def map(context, width, height):
 
     data['colors'] = json.dumps(colors)
     if turn:
+        units = turn.get_units()
+        owns = turn.get_ownership()
+
         data['owns'] = json.dumps(
-            [(re.sub('[ .]', '', T.name.lower()), G.power.name)
-             for G in game.government_set.all()
-             for T in Territory.objects.filter(ownership__turn=turn,
-                                               ownership__government=G)])
+            [(o['territory'], o['government']) for o in owns]
+        )
         data['units'] = json.dumps(
-            [(unicode(u.subregion), u.u_type, u.government.power.name)
-             for u in turn.unit_set.filter(dislodged=False)])
+            [(subregion_display(u['subregion']), u['u_type'], u['government'])
+             for u in units
+             if not u['dislodged']]
+        )
     else:
         data['owns'] = json.dumps(
-            [(re.sub('[ .]', '', T.name.lower()), P.name)
-             for P in Power.objects.all()
-             for T in Territory.objects.filter(power=P)])
+            [(T, P)
+             for P in standard.powers
+             for T, (p, sc, unit) in standard.starting_state.iteritems()
+             if p == P])
         data['units'] = json.dumps([])
     return data

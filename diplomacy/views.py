@@ -12,6 +12,8 @@ from django.views.generic import ListView, DetailView
 from django.views.generic.edit import BaseFormView
 
 from . import models, forms
+from .engine.digest import builds_available, actionable_subregions
+from .engine.main import normalize_orders
 
 
 class GameListView(ListView):
@@ -68,10 +70,22 @@ class GameMasterView(DetailView, BaseFormView):
         return obj
 
     def get_context_data(self, **kwargs):
-        context = {
-            'actors': sum(
-                g.actors().count() for g in self.object.government_set.all())
-        }
+        turn = self.object.current_turn()
+        context = {'actors': 0}
+
+        if turn:
+            units = turn.get_units()
+            owns = turn.get_ownership()
+
+            builds = builds_available(units, owns)
+            actors = actionable_subregions(turn.as_data(), units, owns)
+            context = {
+                'actors': sum(
+                    len(actorset) if turn.season != 'FA' else abs(builds.get(g, 0))
+                    for g, actorset in actors.iteritems()
+                )
+            }
+
         context.update(**kwargs)
         return super(GameMasterView, self).get_context_data(**context)
 
@@ -99,7 +113,7 @@ class GameMasterView(DetailView, BaseFormView):
 
 class OrdersView(DetailView, BaseFormView):
     model = models.Government
-    slug_field = 'power__name__iexact'
+    slug_field = 'power__iexact'
 
     form_class = formset_factory(form=forms.OrderForm,
                                  formset=forms.OrderFormSet,
@@ -150,7 +164,21 @@ class OrdersView(DetailView, BaseFormView):
         return super(OrdersView, self).get_context_data(**context)
 
     def get_initial(self):
-        return self.object.game.current_turn().normalize_orders(self.object)
+        turn = self.object.game.current_turn()
+        orders = turn.get_orders()
+        units = turn.get_units()
+        owns = turn.get_ownership()
+
+        normalized = normalize_orders(turn.as_data(), orders, units, owns)
+        return [
+            {'actor': o['actor'],
+             'action': o['action'],
+             'assist': o['assist'],
+             'target': o['target'],
+             'via_convoy': o['via_convoy']}
+            for o in normalized
+            if o['government'] == self.object.power
+        ]
 
     def get_form_kwargs(self):
         kwargs = super(OrdersView, self).get_form_kwargs()
@@ -180,7 +208,7 @@ class OrdersView(DetailView, BaseFormView):
     def get_success_url(self):
         return reverse('diplomacy_orders',
                        kwargs={'gameslug': self.object.game.slug,
-                               'slug': self.object.power.name})
+                               'slug': self.object.power})
 
 
 class MapView(DetailView):

@@ -1,10 +1,13 @@
 from collections import defaultdict
 
-from django.forms import Form, CharField, Textarea, ValidationError
-from django.forms.models import ModelForm, BaseFormSet, ModelChoiceField
+from django.forms import Form, ValidationError, ChoiceField
+from django.forms.models import ModelForm, BaseFormSet
 
-from .models import Order, Subregion, Unit, territory
-from .helpers import unit
+from .engine import standard
+from .engine.check import is_legal
+from .engine.digest import find_convoys, builds_available
+from .engine.utils import get_territory, borders, is_army, is_fleet, subregion_display, unit_display
+from .models import Order
 
 
 msgs = {'s-hold': "{0} has an order to support {1} to hold, but {1} does not"
@@ -28,23 +31,20 @@ msgs = {'s-hold': "{0} has an order to support {1} to hold, but {1} does not"
 
 
 def join(*args):
-    args = [unit(u) for u in args]
+    args = [unit_display(u) for u in args]
     args[-1] = "and {0}".format(args[-1])
     j = ", " if len(args) > 2 else " "
     return j.join(args)
 
 
-class UnitProxyChoiceField(ModelChoiceField):
-    def label_from_instance(self, obj):
-        return unit(obj)
+unit_choices = [('', '---------')] + [(sr, unit_display(sr)) for sr in sorted(standard.subregions)]
+location_choices = [('', '---------')] + [(sr, subregion_display(sr)) for sr in sorted(standard.subregions)]
 
 
 class OrderForm(ModelForm):
-    qs = Subregion.objects.select_related('territory__name').all()
-
-    actor = UnitProxyChoiceField(queryset=qs, required=False)
-    assist = UnitProxyChoiceField(queryset=qs, required=False)
-    target = ModelChoiceField(queryset=qs, required=False)
+    actor = ChoiceField(choices=unit_choices, required=False)
+    assist = ChoiceField(choices=unit_choices, required=False)
+    target = ChoiceField(choices=location_choices, required=False)
 
     class Meta:
         model = Order
@@ -58,16 +58,19 @@ class OrderForm(ModelForm):
         my_css = {'actor': 'unit',
                   'action': 'action',
                   'assist': 'unit',
-                  'target': 'subregion',}
+                  'target': 'subregion'}
         for w, c in my_css.iteritems():
             self.fields[w].widget.attrs['class'] = c
 
     def clean(self):
         turn = self.government.game.current_turn()
+        units = turn.get_units()
+        owns = turn.get_ownership()
         actor = self.cleaned_data.get('actor')
         if turn.season == 'FA':
             # Fall Adjustment builds are optional.
-            if self.government.builds_available() > 0 and actor is None:
+            builds = builds_available(units, owns)
+            if builds.get(self.government.power, 0) > 0 and actor is None:
                 return {}
         else:
             if actor != self.initial['actor']:
@@ -75,7 +78,8 @@ class OrderForm(ModelForm):
 
         order = self.initial.copy()
         order.update(self.cleaned_data)
-        if not turn.is_legal(order):
+        order['government'] = self.government.power
+        if not is_legal(order, units, owns, turn.season):
             raise ValidationError("Illegal order.")
 
         return self.cleaned_data
@@ -104,8 +108,8 @@ class OrderFormSet(BaseFormSet):
         moves = defaultdict(list)
         cross_moves = set()
 
-        orders = dict((territory(f.instance.actor), f.instance)
-                      for f in self.forms)
+        orders = {get_territory(f.instance.actor): f.instance
+                  for f in self.forms}
         for f in self.forms:
             w = None
             actor = f.instance.actor
@@ -114,65 +118,66 @@ class OrderFormSet(BaseFormSet):
             target = f.instance.target
 
             if action == 'S':
-                if assist is None or territory(assist) not in orders:
+                if assist is None or get_territory(assist) not in orders:
                     continue
-                a_action = orders[territory(assist)].action
-                a_target = orders[territory(assist)].target
+                a_action = orders[get_territory(assist)].action
+                a_target = orders[get_territory(assist)].target
                 if target is None and a_action not in ('H', 'S', 'C'):
-                    w = msgs['s-hold'].format(unit(actor), unit(assist))
+                    w = msgs['s-hold'].format(unit_display(actor), unit_display(assist))
                     warnings.append(w)
                 elif target is not None and (a_action != 'M' or
                                              a_target != target):
                     w = msgs['s-move'].format(
-                        unit(actor), unit(assist), target)
+                        unit_display(actor), unit_display(assist), target)
                     warnings.append(w)
             elif action == 'C':
-                if assist is None or territory(assist) not in orders:
+                if assist is None or get_territory(assist) not in orders:
                     continue
-                a_action = orders[territory(assist)].action
-                a_target = orders[territory(assist)].target
+                a_action = orders[get_territory(assist)].action
+                a_target = orders[get_territory(assist)].target
                 if a_action != 'M' or a_target != target:
                     w = msgs['c-move'].format(
-                        unit(actor), unit(assist), target)
+                        unit_display(actor), unit_display(assist), target)
                     warnings.append(w)
             elif action == 'M':
                 moves[target].append(f.instance.actor)
 
-                if territory(target) in orders:
-                    t_actor = orders[territory(target)].actor
-                    t_action = orders[territory(target)].action
-                    t_target = orders[territory(target)].target
+                if get_territory(target) in orders:
+                    t_actor = orders[get_territory(target)].actor
+                    t_action = orders[get_territory(target)].action
+                    t_target = orders[get_territory(target)].target
                     if t_action in ('H', 'S', 'C'):
                         w = msgs['m-hold'].format(
-                            unit(actor), target, unit(target))
+                            unit_display(actor), target, unit_display(target))
                         warnings.append(w)
                     elif (t_action == 'M' and
-                          territory(t_target) == territory(actor)):
-                        if territory(actor) in cross_moves:
+                          get_territory(t_target) == get_territory(actor)):
+                        if get_territory(actor) in cross_moves:
                             continue
-                        w = msgs['m-xing'].format(unit(actor), unit(t_actor))
+                        w = msgs['m-xing'].format(unit_display(actor), unit_display(t_actor))
                         warnings.append(w)
-                        cross_moves.add(territory(actor))
-                        cross_moves.add(territory(t_actor))
-                if (actor.sr_type == 'L' and
-                    (target not in actor.borders.all() or
-                     f.instance.via_convoy)):
-                    convoys = self.turn.find_convoys()
+                        cross_moves.add(get_territory(actor))
+                        cross_moves.add(get_territory(t_actor))
+                if is_army(actor) and (target not in borders(actor) or f.instance.via_convoy):
+                    units = self.turn.get_units()
+                    fleets = [u['subregion'] for u in units if is_fleet(u['subregion'])]
+                    convoys = find_convoys(units, fleets)
+
                     fleets = set()
                     for F, A in convoys:
-                        if actor.id in A and target.id in A:
+                        if actor in A and target in A:
                             fleets = F
                             break
                     for f2 in self.forms:
-                        if f2.instance.actor.sr_type != 'S':
+                        if not is_fleet(f2.instance.actor):
                             continue
                         if not (f2.instance.action == 'C' and
-                                f2.instance.assist_id == actor.id):
-                            F.discard(f2.instance.actor_id)
-                    F = Subregion.objects.filter(id__in=F)
-                    if not any(actor.id in A and target.id in A
-                               for F, A in self.turn.find_convoys(F)):
-                        w = msgs['m-conv'].format(unit(actor), target)
+                                f2.instance.assist == actor):
+                            fleets.discard(f2.instance.actor)
+
+                    if not any(actor in A and target in A
+                               for F, A in find_convoys(units, fleets)):
+                        w = msgs['m-conv'].format(unit_display(actor), target)
                         warnings.append(w)
 
         return warnings + [msgs['m-move'].format(join(*v), t)
@@ -190,7 +195,7 @@ class OrderFormSet(BaseFormSet):
         actors = set()
         for i in xrange(self.total_form_count()):
             form = self.forms[i]
-            actor = getattr(form.cleaned_data.get('actor'), 'territory', None)
+            actor = get_territory(form.cleaned_data.get('actor'))
             if not actor:
                 continue
             if actor in actors:
@@ -199,7 +204,9 @@ class OrderFormSet(BaseFormSet):
             actors.add(actor)
 
         if self.season == 'FA':
-            builds = self.government.builds_available()
+            builds = builds_available(
+                self.turn.get_units(), self.turn.get_ownership()
+            ).get(self.government.power)
             if builds >= 0 and len(actors) > builds:
                 raise ValidationError("You may not build more units than"
                                       " you have supply centers.")

@@ -19,15 +19,6 @@ class GovernmentAdmin(admin.ModelAdmin):
     list_display = ('game', 'user', 'name', 'power')
 
 
-class TerritoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'power', 'is_supply')
-    ordering = ('power',)
-
-
-class SubregionAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'sr_type', 'init_unit')
-
-
 class DiplomacyPrefsAdmin(admin.ModelAdmin):
     list_display = ('user', 'warnings')
 
@@ -35,6 +26,4 @@ class DiplomacyPrefsAdmin(admin.ModelAdmin):
 admin.site.register(models.Game, GameAdmin)
 admin.site.register(models.Turn, TurnAdmin)
 admin.site.register(models.Government, GovernmentAdmin)
-admin.site.register(models.Territory, TerritoryAdmin)
-admin.site.register(models.Subregion, SubregionAdmin)
 admin.site.register(models.DiplomacyPrefs, DiplomacyPrefsAdmin)

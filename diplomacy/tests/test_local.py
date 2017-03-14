@@ -1,16 +1,32 @@
+import re
+
 from django.test import TestCase
 
-from .helpers import create_units, create_orders
-from .. import models
+from ..engine.digest import find_convoys
+from ..engine.utils import (get_territory, territory_display, unit_display, subregion_token,
+                            power_token)
+
+
+convert = {'F': 'S', 'A': 'L'}
+unitRE = re.compile(
+    r"(?P<u_type>F|A) (?P<territory>[-\w.]{2,}(?: [-\w.]{2,})*)(?: \((?P<subname>\w+)\))?")
 
 
 class CorrectnessHelperTest(TestCase):
-    fixtures = ['basic_game.json']
+    def parse_unit_subregion(self, unit):
+        data = unitRE.match(unit).groupdict()
+        return subregion_token(
+            (data['territory'], data['subname'] or '', convert[data['u_type']])
+        )
 
-    def setUp(self):
-        unit_subs = dict(("{0} {1}".format(models.convert[s.sr_type], unicode(s)), s)
-                         for s in models.Subregion.objects.select_related('territory'))
-        self.subs_unit = dict((v.id, k) for k,v in unit_subs.iteritems())
+    def parse_units(self, units):
+        return [
+            {'government': power_token(g),
+             'u_type': unitstr[0],
+             'subregion': self.parse_unit_subregion(unitstr)}
+            for g, uset in units.iteritems()
+            for unitstr in uset
+        ]
 
     def test_find_convoys(self):
         units = {'England': ('F Mid-Atlantic Ocean',
@@ -23,11 +39,10 @@ class CorrectnessHelperTest(TestCase):
                              'F Gulf of Bothnia',
                              'A Gascony',
                              'A Sweden')}
-        T = models.Turn.objects.get()
-        create_units(units, T)
-        legal = T.find_convoys()
 
-        full_sr = models.Subregion.objects.select_related('territory')
+        parsed = self.parse_units(units)
+        fleets = [u['subregion'] for u in parsed if u['u_type'] == 'F']
+        legal = find_convoys(parsed, fleets)
 
         self.assertEqual(len(legal), 2)
         (seas1, lands1), (seas2, lands2) = legal
@@ -36,23 +51,27 @@ class CorrectnessHelperTest(TestCase):
             lands1, lands2 = lands2, lands1
 
         self.assertEqual(len(seas1), 3)
-        self.assertEqual(
-            set(self.subs_unit[sr.id] for sr in full_sr.filter(id__in=seas1)),
-            set(n for n in units['England'][:3]))
+        self.assertItemsEqual(
+            [unit_display(sr) for sr in seas1],
+            units['England'][:3]
+        )
 
         self.assertEqual(len(lands1), 10)
-        self.assertEqual(
-            set(sr.territory.name for sr in full_sr.filter(id__in=lands1)),
-            set(['Tunisia', 'North Africa', 'London', 'Wales', 'Spain',
-                 'Brest', 'Gascony', 'Picardy', 'Belgium', 'Portugal']))
+        self.assertItemsEqual(
+            [territory_display(get_territory(sr)) for sr in lands1],
+            ['Tunisia', 'North Africa', 'London', 'Wales', 'Spain',
+             'Brest', 'Gascony', 'Picardy', 'Belgium', 'Portugal']
+        )
 
         self.assertEqual(len(seas2), 2)
-        self.assertEqual(
-            set(self.subs_unit[sr.id] for sr in full_sr.filter(id__in=seas2)),
-            set(n for n in units['England'][6:8]))
+        self.assertItemsEqual(
+            [unit_display(sr) for sr in seas2],
+            units['England'][6:8]
+        )
 
         self.assertEqual(len(lands2), 8)
-        self.assertEqual(
-            set(sr.territory.name for sr in full_sr.filter(id__in=lands2)),
-            set(['Prussia', 'Berlin', 'Kiel', 'Denmark', 'Sweden',
-                 'Finland', 'St. Petersburg', 'Livonia']))
+        self.assertItemsEqual(
+            [territory_display(get_territory(sr)) for sr in lands2],
+            ['Prussia', 'Berlin', 'Kiel', 'Denmark', 'Sweden',
+             'Finland', 'St. Petersburg', 'Livonia']
+        )

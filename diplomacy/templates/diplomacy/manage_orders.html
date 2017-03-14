@@ -1,13 +1,13 @@
 {% extends "diplomacy/game_detail.html" %}
 {% load maps %}
 
-{% block title %}{{ form.government.power }} | {{ block.super }}{% endblock %}
+{% block title %}{{ form.government.power_display }} | {{ block.super }}{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ STATIC_URL }}css/orders.css" type="text/css">
 {% endblock %}
 
-{% block header_title %}{{ block.super }} - {{ form.government.power }}{% endblock %}
+{% block header_title %}{{ block.super }} - {{ form.government.power_display }}{% endblock %}
 
 {% block content %}
   {% map 800 670 %}
