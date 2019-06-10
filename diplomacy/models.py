@@ -409,7 +409,7 @@ class Order(models.Model):
                               null=True, blank=True)
     assist = models.CharField(max_length=64, blank=True)
     target = models.CharField(max_length=64, blank=True)
-    via_convoy = models.BooleanField()
+    via_convoy = models.BooleanField(default=False)
 
     def __unicode__(self):
         result = u"{actor} {action}".format(actor=unit_display(self.actor),
@@ -451,9 +451,9 @@ class CanonicalOrder(models.Model):
                               null=True, blank=True)
     assist = models.CharField(max_length=64, blank=True)
     target = models.CharField(max_length=64, blank=True)
-    via_convoy = models.BooleanField()
+    via_convoy = models.BooleanField(default=False)
 
-    user_issued = models.BooleanField()
+    user_issued = models.BooleanField(default=True)
     result = models.CharField(max_length=1, choices=RESULT_CHOICES)
 
     def __unicode__(self):
