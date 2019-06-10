@@ -1,6 +1,8 @@
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
+from django.contrib.auth.views import login
 
-urlpatterns = patterns('',
+
+urlpatterns = [
     url(r'^', include('diplomacy.urls')),
-    (r'^accounts/login/$', 'django.contrib.auth.views.login'),
-)
+    url(r'^accounts/login/$', login),
+]
