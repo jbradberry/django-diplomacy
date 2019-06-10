@@ -59,7 +59,7 @@ class OrderForm(ModelForm):
                   'action': 'action',
                   'assist': 'unit',
                   'target': 'subregion'}
-        for w, c in my_css.iteritems():
+        for w, c in my_css.items():
             self.fields[w].widget.attrs['class'] = c
 
     def clean(self):
@@ -181,7 +181,7 @@ class OrderFormSet(BaseFormSet):
                         warnings.append(w)
 
         return warnings + [msgs['m-move'].format(join(*v), t)
-                           for t, v in moves.iteritems() if len(v) > 1]
+                           for t, v in moves.items() if len(v) > 1]
 
     def clean(self):
         if any(self.errors):
@@ -193,7 +193,7 @@ class OrderFormSet(BaseFormSet):
             raise ValidationError("You may not delete orders.")
 
         actors = set()
-        for i in xrange(self.total_form_count()):
+        for i in range(self.total_form_count()):
             form = self.forms[i]
             actor = get_territory(form.cleaned_data.get('actor'))
             if not actor:

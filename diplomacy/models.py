@@ -258,7 +258,7 @@ class Turn(models.Model):
         for p in self.posts.prefetch_related('orders'):
             posts[p.government_id] = p
 
-        return [o.as_data() for p in posts.itervalues()
+        return [o.as_data() for p in posts.values()
                 for o in p.orders.all()]
 
     def recent_orders(self):
@@ -299,8 +299,8 @@ class Turn(models.Model):
 
                 orders[power][actor].append(o)
 
-        return sorted((power, sorted(adict.iteritems()))
-                      for power, adict in orders.iteritems())
+        return sorted((power, sorted(adict.items()))
+                      for power, adict in orders.items())
 
 
 class Government(models.Model):
@@ -344,9 +344,9 @@ class Government(models.Model):
                 tree.setdefault(a, {})[x] = {
                     (assist or u''): {
                         target or u'': v
-                        for target, v in targets.iteritems()
+                        for target, v in targets.items()
                     }
-                    for assist, targets in result.iteritems()
+                    for assist, targets in result.items()
                 }
 
         if season == 'FA' and builds.get(self.power, 0) > 0:

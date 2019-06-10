@@ -51,7 +51,7 @@ DEPENDENCIES = {('C', 'M'): (attack_us,),
 
 def construct_dependencies(orders):
     dep = defaultdict(list)
-    for (T1, o1), (T2, o2) in permutations(orders.iteritems(), 2):
+    for (T1, o1), (T2, o2) in permutations(orders.items(), 2):
         depend = False
         act1, act2 = o1['action'], o2['action']
         if (act1, act2) in DEPENDENCIES:

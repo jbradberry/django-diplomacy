@@ -27,7 +27,7 @@ def find_convoys(units, fleets):
             index[f1] |= index[f2]
             index.update((x, index[f1]) for x in index[f2])
 
-    groups = {frozenset(S) for S in index.itervalues()}
+    groups = {frozenset(S) for S in index.values()}
 
     armies = {u['subregion'] for u in units if u['u_type'] == 'A'}
 

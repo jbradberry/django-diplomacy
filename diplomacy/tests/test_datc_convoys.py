@@ -22,7 +22,7 @@ class Convoys(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = {
             pname: factories.GovernmentFactory(game=self.game, power=p)
-            for p, pname in standard.powers.iteritems()
+            for p, pname in standard.powers.items()
         }
         self.governments['Austria'] = self.governments['Austria-Hungary']
 
@@ -1119,7 +1119,7 @@ class ConvoyingToAdjacent(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = {
             pname: factories.GovernmentFactory(game=self.game, power=p)
-            for p, pname in standard.powers.iteritems()
+            for p, pname in standard.powers.items()
         }
         self.governments['Austria'] = self.governments['Austria-Hungary']
 

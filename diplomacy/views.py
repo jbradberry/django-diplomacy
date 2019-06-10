@@ -82,7 +82,7 @@ class GameMasterView(DetailView, BaseFormView):
             context = {
                 'actors': sum(
                     len(actorset) if turn.season != 'FA' else abs(builds.get(g, 0))
-                    for g, actorset in actors.iteritems()
+                    for g, actorset in actors.items()
                 )
             }
 

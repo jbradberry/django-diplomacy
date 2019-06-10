@@ -11,7 +11,7 @@ powers = {
     u'turkey': u'Turkey'
 }
 
-inv_powers = {v: k for k, v in powers.iteritems()}
+inv_powers = {v: k for k, v in powers.items()}
 
 territories = {
     u'adriatic-sea': u'Adriatic Sea',
@@ -91,7 +91,7 @@ territories = {
     u'yorkshire': u'Yorkshire'
 }
 
-inv_territories = {v: k for k, v in territories.iteritems()}
+inv_territories = {v: k for k, v in territories.items()}
 
 subregions = {
     u'adriatic-sea.s': (u'Adriatic Sea', u'', u'S'),
@@ -216,7 +216,7 @@ subregions = {
     u'yorkshire.s': (u'Yorkshire', u'', u'S')
 }
 
-inv_subregions = {v: k for k, v in subregions.iteritems()}
+inv_subregions = {v: k for k, v in subregions.items()}
 
 # For every territory, specify:
 #   - the initial owning empire, or None
@@ -771,5 +771,5 @@ names = {
 # Provide a case-insensitve lookup of user-provided names or
 # abbreviations to the canonical form.
 name_lookup = {
-    abbrev.lower(): n for n, abbrevs in names.iteritems() for abbrev in abbrevs
+    abbrev.lower(): n for n, abbrevs in names.items() for abbrev in abbrevs
 }

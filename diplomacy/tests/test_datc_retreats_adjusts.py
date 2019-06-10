@@ -26,7 +26,7 @@ class Retreating(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = {
             pname: factories.GovernmentFactory(game=self.game, power=p)
-            for p, pname in standard.powers.iteritems()
+            for p, pname in standard.powers.items()
         }
         self.governments['Austria'] = self.governments['Austria-Hungary']
 
@@ -76,7 +76,7 @@ class Retreating(TestCase):
         units = T.get_units()
 
         self.assertEqual(
-            max(Counter(get_territory(u['subregion']) for u in units).itervalues()), 1)
+            max(Counter(get_territory(u['subregion']) for u in units).values()), 1)
 
         self.assertEqual(
             sum(1 for u in units if u['government'] == 'austria-hungary'), 1)
@@ -137,7 +137,7 @@ class Retreating(TestCase):
         units = T.get_units()
 
         self.assertEqual(
-            max(Counter(get_territory(u['subregion']) for u in units).itervalues()), 1)
+            max(Counter(get_territory(u['subregion']) for u in units).values()), 1)
 
         self.assertEqual(
             sum(1 for u in units if u['government'] == 'england'), 2)
@@ -197,7 +197,7 @@ class Retreating(TestCase):
         units = T.get_units()
 
         self.assertEqual(
-            max(Counter(get_territory(u['subregion']) for u in units).itervalues()), 1)
+            max(Counter(get_territory(u['subregion']) for u in units).values()), 1)
 
         self.assertEqual(
             sum(1 for u in units if u['government'] == 'england'), 1)
@@ -248,7 +248,7 @@ class Retreating(TestCase):
         units = T.get_units()
 
         self.assertEqual(
-            max(Counter(get_territory(u['subregion']) for u in units).itervalues()), 1)
+            max(Counter(get_territory(u['subregion']) for u in units).values()), 1)
 
         self.assertTrue(
             any((u['government'], get_territory(u['subregion']), get_territory(u['previous']))
@@ -295,7 +295,7 @@ class Retreating(TestCase):
         units = T.get_units()
 
         self.assertEqual(
-            max(Counter(get_territory(u['subregion']) for u in units).itervalues()), 1)
+            max(Counter(get_territory(u['subregion']) for u in units).values()), 1)
 
         self.assertFalse(
             any(u['government'] == 'turkey' for u in units))
@@ -902,7 +902,7 @@ class Building(TestCase):
         self.turn = self.game.create_turn({'number': 4, 'year': 1900, 'season': 'FA'})
         self.governments = {
             pname: factories.GovernmentFactory(game=self.game, power=p)
-            for p, pname in standard.powers.iteritems()
+            for p, pname in standard.powers.items()
         }
         self.governments['Austria'] = self.governments['Austria-Hungary']
         _, _, owns = initialize_game()
@@ -1096,7 +1096,7 @@ class CivilDisorderAndDisbands(TestCase):
         self.turn = self.game.create_turn({'number': 4, 'year': 1900, 'season': 'FA'})
         self.governments = {
             pname: factories.GovernmentFactory(game=self.game, power=p)
-            for p, pname in standard.powers.iteritems()
+            for p, pname in standard.powers.items()
         }
         self.governments['Austria'] = self.governments['Austria-Hungary']
         _, _, owns = initialize_game()

@@ -1,10 +1,15 @@
 import re
 
 from django.test import TestCase
+from django.utils import six
 
 from ..engine.digest import find_convoys
 from ..engine.utils import (get_territory, territory_display, unit_display, subregion_token,
                             power_token)
+
+
+if six.PY2:
+    TestCase.assertCountEqual = six.assertCountEqual
 
 
 convert = {'F': 'S', 'A': 'L'}
@@ -24,7 +29,7 @@ class CorrectnessHelperTest(TestCase):
             {'government': power_token(g),
              'u_type': unitstr[0],
              'subregion': self.parse_unit_subregion(unitstr)}
-            for g, uset in units.iteritems()
+            for g, uset in units.items()
             for unitstr in uset
         ]
 
@@ -51,26 +56,26 @@ class CorrectnessHelperTest(TestCase):
             lands1, lands2 = lands2, lands1
 
         self.assertEqual(len(seas1), 3)
-        self.assertItemsEqual(
+        self.assertCountEqual(
             [unit_display(sr) for sr in seas1],
             units['England'][:3]
         )
 
         self.assertEqual(len(lands1), 10)
-        self.assertItemsEqual(
+        self.assertCountEqual(
             [territory_display(get_territory(sr)) for sr in lands1],
             ['Tunisia', 'North Africa', 'London', 'Wales', 'Spain',
              'Brest', 'Gascony', 'Picardy', 'Belgium', 'Portugal']
         )
 
         self.assertEqual(len(seas2), 2)
-        self.assertItemsEqual(
+        self.assertCountEqual(
             [unit_display(sr) for sr in seas2],
             units['England'][6:8]
         )
 
         self.assertEqual(len(lands2), 8)
-        self.assertItemsEqual(
+        self.assertCountEqual(
             [territory_display(get_territory(sr)) for sr in lands2],
             ['Prussia', 'Berlin', 'Kiel', 'Denmark', 'Sweden',
              'Finland', 'St. Petersburg', 'Livonia']
