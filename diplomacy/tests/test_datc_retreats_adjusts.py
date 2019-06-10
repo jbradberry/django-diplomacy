@@ -1,7 +1,6 @@
 from collections import Counter
 
 from django.test import TestCase
-from django.utils.unittest import expectedFailure
 
 from . import factories
 from .helpers import create_units, create_orders
