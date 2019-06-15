@@ -1,5 +1,4 @@
 {% extends "diplomacy/game_list.html" %}
-{% load url from future %}
 {% load maps %}
 
 {% block title %}{% if not current and not setup %}{{ turn }} | {% endif %}{{ game.name }} | {{ block.super }}{% endblock %}
