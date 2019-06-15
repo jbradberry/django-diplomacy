@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 from django.db import models, migrations
 from django.conf import settings
+import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
@@ -33,7 +34,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('warnings', models.BooleanField(default=True)),
-                ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL)),
+                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'verbose_name_plural': 'diplomacyprefs',
@@ -50,7 +51,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('state', models.CharField(default=b'S', max_length=1, choices=[(b'S', b'Setup'), (b'A', b'Active'), (b'P', b'Paused'), (b'F', b'Finished')])),
                 ('open_joins', models.BooleanField(default=True)),
-                ('owner', models.ForeignKey(related_name='diplomacy_games', to=settings.AUTH_USER_MODEL)),
+                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.SET_NULL, related_name='diplomacy_games', to=settings.AUTH_USER_MODEL)),
             ],
             options={
             },
@@ -62,8 +63,8 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('name', models.CharField(max_length=100)),
                 ('power', models.CharField(max_length=32, blank=True)),
-                ('game', models.ForeignKey(to='diplomacy.Game')),
-                ('user', models.ForeignKey(blank=True, to=settings.AUTH_USER_MODEL, null=True)),
+                ('game', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='diplomacy.Game')),
+                ('user', models.ForeignKey(blank=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL, null=True)),
             ],
             options={
             },
@@ -88,7 +89,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('timestamp', models.DateTimeField(auto_now_add=True)),
-                ('government', models.ForeignKey(related_name='posts', to='diplomacy.Government')),
+                ('government', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='posts', to='diplomacy.Government')),
             ],
             options={
                 'ordering': ('timestamp',),
@@ -101,7 +102,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('territory', models.CharField(max_length=32, blank=True)),
-                ('government', models.ForeignKey(to='diplomacy.Government')),
+                ('government', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='diplomacy.Government')),
             ],
             options={
             },
@@ -115,7 +116,7 @@ class Migration(migrations.Migration):
                 ('year', models.IntegerField()),
                 ('season', models.CharField(max_length=2, choices=[(b'S', b'Spring'), (b'SR', b'Spring Retreat'), (b'F', b'Fall'), (b'FR', b'Fall Retreat'), (b'FA', b'Fall Adjustment')])),
                 ('generated', models.DateTimeField(auto_now_add=True)),
-                ('game', models.ForeignKey(to='diplomacy.Game')),
+                ('game', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='diplomacy.Game')),
             ],
             options={
                 'ordering': ('-generated',),
@@ -133,8 +134,8 @@ class Migration(migrations.Migration):
                 ('dislodged', models.BooleanField(default=False)),
                 ('displaced_from', models.CharField(max_length=32, blank=True)),
                 ('standoff_from', models.CharField(max_length=32, blank=True)),
-                ('government', models.ForeignKey(to='diplomacy.Government')),
-                ('turn', models.ForeignKey(to='diplomacy.Turn')),
+                ('government', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='diplomacy.Government')),
+                ('turn', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='diplomacy.Turn')),
             ],
             options={
                 'ordering': ('-turn', 'government', 'subregion'),
@@ -144,7 +145,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='ownership',
             name='turn',
-            field=models.ForeignKey(to='diplomacy.Turn'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='diplomacy.Turn'),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -154,25 +155,25 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='orderpost',
             name='turn',
-            field=models.ForeignKey(related_name='posts', to='diplomacy.Turn'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='posts', to='diplomacy.Turn'),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='order',
             name='post',
-            field=models.ForeignKey(related_name='orders', to='diplomacy.OrderPost'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='orders', to='diplomacy.OrderPost'),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='canonicalorder',
             name='government',
-            field=models.ForeignKey(to='diplomacy.Government'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='diplomacy.Government'),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='canonicalorder',
             name='turn',
-            field=models.ForeignKey(to='diplomacy.Turn'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='diplomacy.Turn'),
             preserve_default=True,
         ),
     ]
