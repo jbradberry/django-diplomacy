@@ -1,6 +1,11 @@
 from django.test import TestCase
+from django.utils import six
 
 from ..engine import main
+
+
+if six.PY2:
+    TestCase.assertCountEqual = six.assertCountEqual
 
 
 class UpdateOwnershipTest(TestCase):
@@ -10,7 +15,7 @@ class UpdateOwnershipTest(TestCase):
 
         new_owns = main.update_ownership(units, owns)
 
-        self.assertItemsEqual(new_owns, [{'territory': 'paris', 'government': 'france'}])
+        self.assertCountEqual(new_owns, [{'territory': 'paris', 'government': 'france'}])
 
     def test_army(self):
         units = [
@@ -26,7 +31,7 @@ class UpdateOwnershipTest(TestCase):
 
         new_owns = main.update_ownership(units, owns)
 
-        self.assertItemsEqual(new_owns, [{'territory': 'spain', 'government': 'france'}])
+        self.assertCountEqual(new_owns, [{'territory': 'spain', 'government': 'france'}])
 
     def test_fleet(self):
         units = [
@@ -42,7 +47,7 @@ class UpdateOwnershipTest(TestCase):
 
         new_owns = main.update_ownership(units, owns)
 
-        self.assertItemsEqual(new_owns, [{'territory': 'norway', 'government': 'england'}])
+        self.assertCountEqual(new_owns, [{'territory': 'norway', 'government': 'england'}])
 
     def test_fleet_on_coast(self):
         units = [
@@ -58,7 +63,7 @@ class UpdateOwnershipTest(TestCase):
 
         new_owns = main.update_ownership(units, owns)
 
-        self.assertItemsEqual(new_owns,
+        self.assertCountEqual(new_owns,
                               [{'territory': 'bulgaria', 'government': 'austria-hungary'}])
 
     def test_fleet_on_sea(self):
@@ -75,7 +80,7 @@ class UpdateOwnershipTest(TestCase):
 
         new_owns = main.update_ownership(units, owns)
 
-        self.assertItemsEqual(new_owns, [])
+        self.assertCountEqual(new_owns, [])
 
 
 class IncrementTurnTest(TestCase):

@@ -4,13 +4,14 @@ from random import shuffle
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.urls import reverse
 
 from .engine import standard
 from .engine.check import (valid_hold, valid_move, valid_support, valid_convoy,
                            valid_build, valid_disband)
 from .engine.digest import builds_available, actionable_subregions
-from .engine.main import normalize_orders, generate, initialize_game
-from .engine.utils import get_territory, is_supply, unit_display, subregion_display
+from .engine.main import generate, initialize_game
+from .engine.utils import is_supply, unit_display, subregion_display
 
 
 convert = {'L': 'A', 'S': 'F'}
@@ -38,7 +39,7 @@ class DiplomacyPrefs(models.Model):
     class Meta:
         verbose_name_plural = "diplomacyprefs"
 
-    user = models.OneToOneField("auth.User")
+    user = models.OneToOneField("auth.User", on_delete=models.CASCADE)
     warnings = models.BooleanField(default=True)
 
     def __unicode__(self):
@@ -55,7 +56,7 @@ class Game(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
     description = models.TextField(blank=True)
-    owner = models.ForeignKey(User, related_name="diplomacy_games")
+    owner = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name="diplomacy_games")
     created = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=1, choices=STATE_CHOICES, default='S')
     open_joins = models.BooleanField(default=True)
@@ -63,9 +64,8 @@ class Game(models.Model):
     def __unicode__(self):
         return self.name
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('diplomacy_game_detail', (), {'slug': self.slug})
+        return reverse('diplomacy_game_detail', kwargs={'slug': self.slug})
 
     def governments(self, turn=None):
         gvts = self.government_set.all()
@@ -141,7 +141,7 @@ class Turn(models.Model):
         get_latest_by = 'generated'
         ordering = ('-generated',)
 
-    game = models.ForeignKey(Game)
+    game = models.ForeignKey(Game, on_delete=models.CASCADE)
     number = models.IntegerField()
     year = models.IntegerField()
     season = models.CharField(max_length=2, choices=SEASON_CHOICES)
@@ -150,12 +150,15 @@ class Turn(models.Model):
     def __unicode__(self):
         return "{0} {1}".format(self.get_season_display(), self.year)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('diplomacy_turn_detail', (), {
-            'slug': self.game.slug,
-            'season': self.season,
-            'year': str(self.year),})
+        return reverse(
+            'diplomacy_turn_detail',
+            kwargs={
+                'slug': self.game.slug,
+                'season': self.season,
+                'year': str(self.year),
+            }
+        )
 
     def as_data(self):
         return {
@@ -258,7 +261,7 @@ class Turn(models.Model):
         for p in self.posts.prefetch_related('orders'):
             posts[p.government_id] = p
 
-        return [o.as_data() for p in posts.itervalues()
+        return [o.as_data() for p in posts.values()
                 for o in p.orders.all()]
 
     def recent_orders(self):
@@ -299,14 +302,14 @@ class Turn(models.Model):
 
                 orders[power][actor].append(o)
 
-        return sorted((power, sorted(adict.iteritems()))
-                      for power, adict in orders.iteritems())
+        return sorted((power, sorted(adict.items()))
+                      for power, adict in orders.items())
 
 
 class Government(models.Model):
     name = models.CharField(max_length=100)
-    user = models.ForeignKey(User, null=True, blank=True)
-    game = models.ForeignKey(Game)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    game = models.ForeignKey(Game, on_delete=models.CASCADE)
     power = models.CharField(max_length=32, blank=True)
 
     def __unicode__(self):
@@ -344,9 +347,9 @@ class Government(models.Model):
                 tree.setdefault(a, {})[x] = {
                     (assist or u''): {
                         target or u'': v
-                        for target, v in targets.iteritems()
+                        for target, v in targets.items()
                     }
-                    for assist, targets in result.iteritems()
+                    for assist, targets in result.items()
                 }
 
         if season == 'FA' and builds.get(self.power, 0) > 0:
@@ -359,8 +362,8 @@ class Ownership(models.Model):
     class Meta:
         unique_together = ('turn', 'territory')
 
-    turn = models.ForeignKey(Turn)
-    government = models.ForeignKey(Government)
+    turn = models.ForeignKey(Turn, on_delete=models.CASCADE)
+    government = models.ForeignKey(Government, on_delete=models.CASCADE)
     territory = models.CharField(max_length=32, blank=True)
 
 
@@ -368,8 +371,8 @@ class Unit(models.Model):
     class Meta:
         ordering = ('-turn', 'government', 'subregion')
 
-    turn = models.ForeignKey(Turn)
-    government = models.ForeignKey(Government)
+    turn = models.ForeignKey(Turn, on_delete=models.CASCADE)
+    government = models.ForeignKey(Government, on_delete=models.CASCADE)
     u_type = models.CharField(max_length=1, choices=UNIT_CHOICES)
     subregion = models.CharField(max_length=64, blank=True)
     previous = models.CharField(max_length=64, blank=True)
@@ -382,8 +385,8 @@ class Unit(models.Model):
 
 
 class OrderPost(models.Model):
-    turn = models.ForeignKey(Turn, related_name='posts')
-    government = models.ForeignKey(Government, related_name='posts')
+    turn = models.ForeignKey(Turn, on_delete=models.CASCADE, related_name='posts')
+    government = models.ForeignKey(Government, on_delete=models.CASCADE, related_name='posts')
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -402,14 +405,14 @@ ACTION_CHOICES = (
 
 
 class Order(models.Model):
-    post = models.ForeignKey(OrderPost, related_name='orders')
+    post = models.ForeignKey(OrderPost, on_delete=models.CASCADE, related_name='orders')
 
     actor = models.CharField(max_length=64, blank=True)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,
                               null=True, blank=True)
     assist = models.CharField(max_length=64, blank=True)
     target = models.CharField(max_length=64, blank=True)
-    via_convoy = models.BooleanField()
+    via_convoy = models.BooleanField(default=False)
 
     def __unicode__(self):
         result = u"{actor} {action}".format(actor=unit_display(self.actor),
@@ -443,17 +446,17 @@ class CanonicalOrder(models.Model):
         ('D', 'Destroyed'),
     )
 
-    turn = models.ForeignKey(Turn)
-    government = models.ForeignKey(Government)
+    turn = models.ForeignKey(Turn, on_delete=models.CASCADE)
+    government = models.ForeignKey(Government, on_delete=models.CASCADE)
 
     actor = models.CharField(max_length=64, blank=True)
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,
                               null=True, blank=True)
     assist = models.CharField(max_length=64, blank=True)
     target = models.CharField(max_length=64, blank=True)
-    via_convoy = models.BooleanField()
+    via_convoy = models.BooleanField(default=False)
 
-    user_issued = models.BooleanField()
+    user_issued = models.BooleanField(default=True)
     result = models.CharField(max_length=1, choices=RESULT_CHOICES)
 
     def __unicode__(self):

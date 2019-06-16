@@ -28,8 +28,8 @@ def normalize_orders(turn, orders, units, owns):
                 'action': '', 'assist': '', 'target': '',
                 'via_convoy': False, 'convoy': False, 'user_issued': False
             }
-            for government, B in builds.iteritems()
-            for index in xrange(-B if B < 0 else min(B, len(actors.get(government, ()))))
+            for government, B in builds.items()
+            for index in range(-B if B < 0 else min(B, len(actors.get(government, ()))))
         }
     else:
         action = 'H' if turn['season'] in ('S', 'F') else ''
@@ -39,7 +39,7 @@ def normalize_orders(turn, orders, units, owns):
                 'action': action, 'assist': '', 'target': '',
                 'via_convoy': False, 'convoy': False, 'user_issued': False
             }
-            for government, actor_set in actors.iteritems()
+            for government, actor_set in actors.items()
             for a in actor_set
         }
 
@@ -63,7 +63,7 @@ def normalize_orders(turn, orders, units, owns):
             orders_index[(o['government'], i)] = o
 
     if turn['season'] in ('S', 'F'):
-        for (g, i), o in orders_index.iteritems():
+        for (g, i), o in orders_index.items():
             # This block concerns the convoyability of units, so if the unit
             # isn't moving or isn't an army, ignore it.
             if o['action'] != 'M' or not is_land(o['actor']):
@@ -72,7 +72,7 @@ def normalize_orders(turn, orders, units, owns):
             # Find all of the convoy orders that match the current move,
             # both overall and specifically by this user's government.
             matching = [
-                (g2, o2) for (g2, i2), o2 in orders_index.iteritems()
+                (g2, o2) for (g2, i2), o2 in orders_index.items()
                 if o2['action'] == 'C'
                 and assist(get_territory(o['actor']), o, get_territory(o2['actor']), o2)
             ]
@@ -91,7 +91,7 @@ def normalize_orders(turn, orders, units, owns):
                 # any specified supporting convoy orders.
                 o['convoy'] = bool(matching)
 
-    return [v for k, v in sorted(orders_index.iteritems())]
+    return [v for k, v in sorted(orders_index.items())]
 
 
 def update_retreats(orders, units):
@@ -164,7 +164,7 @@ def update_adjusts(orders, units):
         else:
             new_units.append(u)
 
-    for T, o in orders.iteritems():
+    for T, o in orders.items():
         if o['action'] == 'B' and o['result'] == 'S':
             new_units.append({
                 'government': o['government'],
@@ -182,7 +182,7 @@ def update_adjusts(orders, units):
 def update_autodisbands(orders, units, owns):
     builds = builds_available(units, owns)
     autodisbands = set()
-    for gvt, count in builds.iteritems():
+    for gvt, count in builds.items():
         if count >= 0:
             continue
 
@@ -200,7 +200,7 @@ def update_autodisbands(orders, units, owns):
 
         distance = 0
         examined = {
-            sr for T, (power, sc, _) in standard.starting_state.iteritems()
+            sr for T, (power, sc, _) in standard.starting_state.items()
             for sr in territory_parts(T)
             if is_sea(sr) and sc
             and power == gvt
@@ -218,7 +218,7 @@ def update_autodisbands(orders, units, owns):
 
         distance = 0
         examined = {
-            sr for T, (power, sc, _) in standard.starting_state.iteritems()
+            sr for T, (power, sc, _) in standard.starting_state.items()
             for sr in territory_parts(T)
             if sc and power == gvt
         }
@@ -265,7 +265,7 @@ def update_ownership(units, owns):
         if has_land(u['subregion'])
     )
 
-    return list(current.itervalues())
+    return list(current.values())
 
 
 def increment_turn(turn):
@@ -339,7 +339,7 @@ def initialize_game():
         {'government': government,
          'u_type': convert[unit[1]],
          'subregion': standard.inv_subregions[(standard.territories[T], unit[0], unit[1])]}
-        for T, (government, sc, unit) in standard.starting_state.iteritems()
+        for T, (government, sc, unit) in standard.starting_state.items()
         if unit
     ]
 
@@ -347,7 +347,7 @@ def initialize_game():
         {'territory': T,
          'government': government,
          'is_supply': sc}
-        for T, (government, sc, unit) in standard.starting_state.iteritems()
+        for T, (government, sc, unit) in standard.starting_state.items()
         if government
     ]
 

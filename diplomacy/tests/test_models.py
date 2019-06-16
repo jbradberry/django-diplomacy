@@ -1,13 +1,18 @@
 from django.test import TestCase
+from django.utils import six
 
 from .. import models
 from . import factories
 
 
+if six.PY2:
+    TestCase.assertCountEqual = six.assertCountEqual
+
+
 class TurnTest(TestCase):
     def setUp(self):
         self.game = factories.GameFactory(state='S')
-        for x in xrange(7):
+        for x in range(7):
             factories.GovernmentFactory(game=self.game)
         self.assertTrue(self.game.activate())
 
@@ -66,7 +71,7 @@ class TurnTest(TestCase):
         self.assertEqual(power, gvt.power_display)
         self.assertEqual(len(orders), 2)
         (actor1, orders1), (actor2, orders2) = orders
-        self.assertItemsEqual([actor1, actor2], ['b.brest.l', 'gascony.l'])
+        self.assertCountEqual([actor1, actor2], ['b.brest.l', 'gascony.l'])
         orders = {actor1: orders1, actor2: orders2}
         self.assertEqual([(o.turn.season, o.turn.year) for o in orders['b.brest.l']],
                          [('FA', 1900)])
@@ -115,7 +120,7 @@ class TurnTest(TestCase):
         self.assertEqual(power, gvt.power_display)
         self.assertEqual(len(orders), 2)
         (actor1, orders1), (actor2, orders2) = orders
-        self.assertItemsEqual([actor1, actor2], ['brest.l', 'piedmont.l'])
+        self.assertCountEqual([actor1, actor2], ['brest.l', 'piedmont.l'])
         orders = {actor1: orders1, actor2: orders2}
         self.assertEqual([(o.turn.season, o.turn.year) for o in orders['brest.l']],
                          [('S', 1901)])
@@ -178,7 +183,7 @@ class TurnTest(TestCase):
         self.assertEqual(power, gvt.power_display)
         self.assertEqual(len(orders), 2)
         (actor1, orders1), (actor2, orders2) = orders
-        self.assertItemsEqual([actor1, actor2], ['brest.l', 'piedmont.l'])
+        self.assertCountEqual([actor1, actor2], ['brest.l', 'piedmont.l'])
         orders = {actor1: orders1, actor2: orders2}
         self.assertEqual([(o.turn.season, o.turn.year) for o in orders['brest.l']],
                          [('S', 1901), ('SR', 1901)])
@@ -230,7 +235,7 @@ class TurnTest(TestCase):
         self.assertEqual(power, gvt.power_display)
         self.assertEqual(len(orders), 2)
         (actor1, orders1), (actor2, orders2) = orders
-        self.assertItemsEqual([actor1, actor2], ['paris.l', 'tuscany.l'])
+        self.assertCountEqual([actor1, actor2], ['paris.l', 'tuscany.l'])
         orders = {actor1: orders1, actor2: orders2}
         self.assertEqual([(o.turn.season, o.turn.year) for o in orders['paris.l']],
                          [('F', 1901)])
@@ -293,7 +298,7 @@ class TurnTest(TestCase):
         self.assertEqual(power, gvt.power_display)
         self.assertEqual(len(orders), 2)
         (actor1, orders1), (actor2, orders2) = orders
-        self.assertItemsEqual([actor1, actor2], ['paris.l', 'tuscany.l'])
+        self.assertCountEqual([actor1, actor2], ['paris.l', 'tuscany.l'])
         orders = {actor1: orders1, actor2: orders2}
         self.assertEqual([(o.turn.season, o.turn.year) for o in orders['paris.l']],
                          [('F', 1901)])

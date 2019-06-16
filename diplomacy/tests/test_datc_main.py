@@ -24,7 +24,7 @@ class BasicChecks(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = {
             pname: factories.GovernmentFactory(game=self.game, power=p)
-            for p, pname in standard.powers.iteritems()
+            for p, pname in standard.powers.items()
         }
         self.governments['Austria'] = self.governments['Austria-Hungary']
 
@@ -305,7 +305,7 @@ class CoastalIssues(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = {
             pname: factories.GovernmentFactory(game=self.game, power=p)
-            for p, pname in standard.powers.iteritems()
+            for p, pname in standard.powers.items()
         }
         self.governments['Austria'] = self.governments['Austria-Hungary']
 
@@ -650,13 +650,13 @@ class CoastalIssues(TestCase):
         _, _, owns = initialize_game()
         T.create_ownership(owns)  # set up the proper ownership objects
 
-        T.game.generate() # SR 1900
+        T.game.generate()  # SR 1900
         T = T.game.current_turn()
-        T.game.generate() # F 1900
+        T.game.generate()  # F 1900
         T = T.game.current_turn()
-        T.game.generate() # FR 1900
+        T.game.generate()  # FR 1900
         T = T.game.current_turn()
-        T.game.generate() # FA 1900
+        T.game.generate()  # FA 1900
         T = T.game.current_turn()
 
         orders = {"Russia": ("F St. Petersburg B",)}
@@ -670,7 +670,7 @@ class CoastalIssues(TestCase):
         self.assertEqual(order['actor'], u'')
         self.assertTrue(is_legal(order, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -691,7 +691,7 @@ class CircularMovement(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = {
             pname: factories.GovernmentFactory(game=self.game, power=p)
-            for p, pname in standard.powers.iteritems()
+            for p, pname in standard.powers.items()
         }
         self.governments['Austria'] = self.governments['Austria-Hungary']
 

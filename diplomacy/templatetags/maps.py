@@ -40,7 +40,7 @@ def map(context, width, height):
         data['owns'] = json.dumps(
             [(T, P)
              for P in standard.powers
-             for T, (p, sc, unit) in standard.starting_state.iteritems()
+             for T, (p, sc, unit) in standard.starting_state.items()
              if p == P])
         data['units'] = json.dumps([])
     return data

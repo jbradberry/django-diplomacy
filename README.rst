@@ -15,8 +15,8 @@ See also `http://en.wikipedia.org/wiki/Diplomacy_(game)`
 Requirements
 ------------
 
-- Python >= 2.7
-- Django >= 1.4, < 1.7
+- Python 2.7, 3.5+
+- Django >= 1.10, < 2.3
 
 
 Recommended
@@ -57,7 +57,10 @@ Also, be sure to include ``diplomacy.urls`` in your root urlconf.
 
 Example::
 
-    urlpatterns = patterns('',
-        (r'^', include('diplomacy.urls')),
-        (r'^admin/', include(admin.site.urls)),
-    )
+    from django.conf.urls import include, url
+
+    urlpatterns = [
+        url(r'^', include('diplomacy.urls')),
+        url(r'^admin/', include('admin.site.urls')),
+        url(r'^accounts/', include('django.contrib.auth.urls'),
+    ]

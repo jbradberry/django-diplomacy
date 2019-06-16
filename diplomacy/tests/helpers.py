@@ -31,7 +31,7 @@ order_patterns = {'H': re.compile(r"(?P<actor>{0}) H$".format(U)),
 
 
 subregion_index = defaultdict(list)
-for sr_token, (territory, subname, sr_type) in standard.subregions.iteritems():
+for sr_token, (territory, subname, sr_type) in standard.subregions.items():
     subregion_index[(territory,)].append(sr_token)
     subregion_index[(territory, subname)].append(sr_token)
     subregion_index[(territory, subname, sr_type)].append(sr_token)
@@ -52,6 +52,7 @@ def get_subregion(territory, subname, sr_type, strict=False, **kwargs):
         return result[0]
     return u''
 
+
 def parse(unitstr):
     unit = {}
     match = unitRE.match(unitstr)
@@ -63,10 +64,11 @@ def parse(unitstr):
             unit.update(**match.groupdict(''))
     return unit
 
+
 def create_units(units, turn, governments):
     parsed = (
         (gvt, unitstr[0], parse(unitstr))
-        for gvt, uset in units.iteritems()
+        for gvt, uset in units.items()
         for unitstr in uset
     )
     return models.Unit.objects.bulk_create([
@@ -79,6 +81,7 @@ def create_units(units, turn, governments):
         for gvt, u_type, udict in parsed
     ])
 
+
 def create_orders(orders, turn, governments):
     order_posts = {
         gvt: models.OrderPost.objects.create(turn=turn, government=governments[gvt])
@@ -87,9 +90,9 @@ def create_orders(orders, turn, governments):
 
     parsed = (
         (gvt, action, regexp.match(orderstr))
-        for gvt, oset in orders.iteritems()
+        for gvt, oset in orders.items()
         for orderstr in oset
-        for action, regexp in order_patterns.iteritems()
+        for action, regexp in order_patterns.items()
     )
     parsed = (
         (gvt, action, omatch.groupdict(''))

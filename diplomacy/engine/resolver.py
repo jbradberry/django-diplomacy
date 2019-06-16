@@ -46,12 +46,12 @@ def detect_paradox(orders, dep):
 
 def immediate_fails(orders, units):
     results = set()
-    for T, o in orders.iteritems():
+    for T, o in orders.items():
         if o['action'] == 'M':
             if o['target'] not in borders(o['actor']):
                 matching = [
                     o2['actor']
-                    for T2, o2 in orders.iteritems()
+                    for T2, o2 in orders.items()
                     if o2['action'] == 'C'
                     and o2['assist'] == o['actor']
                     and o2['target'] == o['target']
@@ -66,8 +66,7 @@ def immediate_fails(orders, units):
         else:
             assist = orders[get_territory(o['assist'])]
             if o['target']:
-                if (assist['action'] == 'M' and
-                    assist['target'] == o['target']):
+                if assist['action'] == 'M' and assist['target'] == o['target']:
                     continue
             else:
                 if assist['action'] in ('H', 'C', 'S'):
@@ -84,13 +83,13 @@ def calculate_paths(state, orders, paradox, units):
     convoy = defaultdict(lambda: False)
 
     path = {}
-    for T, order in orders.iteritems():
+    for T, order in orders.items():
         if order['action'] == 'M':
             path[T], P = False, False
 
             # matching successful convoy orders
             matching = [
-                orders[T2]['actor'] for T2, d2 in state.iteritems()
+                orders[T2]['actor'] for T2, d2 in state.items()
                 if d2
                 and orders[T2]['action'] == 'C'
                 and assist(T, order, T2, orders[T2])
@@ -146,7 +145,7 @@ def calculate_base_strengths(state, orders, unit_index, path, convoy):
     # The strength of competing attacks into a territory.
     prevent_str = defaultdict(int)
 
-    for T, order in orders.iteritems():
+    for T, order in orders.items():
         if order['action'] == 'M':
             defend_str[T] = 1
             if path[T]:
@@ -183,7 +182,7 @@ def calculate_base_strengths(state, orders, unit_index, path, convoy):
 def calculate_supports(state, orders, unit_index, hold_str, attack_str, defend_str,
                        prevent_str, convoy):
     """Calculate additions to strengths due to support orders."""
-    for T, d in state.iteritems():
+    for T, d in state.items():
         order = orders[T]
 
         if not d or order['action'] != 'S':
@@ -217,17 +216,19 @@ def consistent_move(T, d, orders, fails, hold_str, attack_str, defend_str, preve
     target = get_territory(order['target'])
     move = True
     # Fail in a head-to-head attack
-    if (target in orders
+    if (
+        target in orders
         and head_to_head(T, order, target, orders[target],
                          convoy[T], convoy[target])
-        and attack_str[T] <= defend_str[target]):
+        and attack_str[T] <= defend_str[target]
+    ):
         move = False
     # Fail in a standard attack
     if attack_str[T] <= hold_str[target]:
         move = False
     # Fail in a competing attack
     if any(attack_str[T] <= prevent_str[T2]
-           for T2, o2 in orders.iteritems()
+           for T2, o2 in orders.items()
            if T != T2 and o2['action'] == 'M'
            and get_territory(o2['target']) == target):
         move = False
@@ -249,7 +250,7 @@ def consistent_move(T, d, orders, fails, hold_str, attack_str, defend_str, preve
 def consistent_support(T, d, orders, fails, hold_str, attack_str):
     order = orders[T]
     target = get_territory(order['target'])
-    attackers = set(T2 for T2, o2 in orders.iteritems()
+    attackers = set(T2 for T2, o2 in orders.items()
                     if o2['action'] == 'M'
                     and get_territory(o2['target']) == T)
     # Is the support cut?
@@ -273,7 +274,7 @@ def consistent_hold(T, d, orders, fails, hold_str, attack_str, prevent_str):
     if T in fails:
         hold = False
 
-    attackers = set(T2 for T2, o2 in orders.iteritems()
+    attackers = set(T2 for T2, o2 in orders.items()
                     if o2['action'] == 'M'
                     and get_territory(o2['target']) == T)
     # Is there enough to dislodge this unit?
@@ -305,7 +306,7 @@ def consistent(state, orders, fails, paradox, units):
                        prevent_str, convoy)
 
     # determine if the strength calculations are consistent with the state
-    for T, d in state.iteritems():
+    for T, d in state.items():
         order = orders[T]
         if order['action'] == 'M':
             if not consistent_move(T, d, orders, fails, hold_str, attack_str, defend_str,
@@ -361,12 +362,12 @@ def resolve(state, orders, dep, fails, paradox, units):
 def resolve_retreats(orders):
     decisions = []
     target_count = defaultdict(int)
-    for T, order in orders.iteritems():
+    for T, order in orders.items():
         if order['action'] == 'M':
             target_count[get_territory(order['target'])] += 1
         else:
             decisions.append((T, None))
-    for T, order in orders.iteritems():
+    for T, order in orders.items():
         if order['action'] != 'M':
             continue
         if target_count[get_territory(order['target'])] == 1:
@@ -378,4 +379,4 @@ def resolve_retreats(orders):
 
 def resolve_adjusts(orders):
     return [(T, bool(order.get('action')))
-            for T, order in orders.iteritems()]
+            for T, order in orders.items()]

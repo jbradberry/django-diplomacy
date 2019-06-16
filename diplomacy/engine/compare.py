@@ -7,12 +7,15 @@ from .utils import get_territory, borders
 def assist(T1, o1, T2, o2):
     return get_territory(o2['assist']) == T1
 
+
 def attack_us(T1, o1, T2, o2):
     return get_territory(o2['target']) == T1
+
 
 def attack_us_from_target(T1, o1, T2, o2):
     return (get_territory(o2['assist']) == get_territory(o1['target'])
             and get_territory(o2['target']) == T1)
+
 
 def head_to_head(T1, o1, T2, o2, c1=False, c2=False):
     actor = o2['assist'] if o2['assist'] else o2['actor']
@@ -25,13 +28,16 @@ def head_to_head(T1, o1, T2, o2, c1=False, c2=False):
         return False
     return get_territory(o2['target']) == T1 and get_territory(o1['target']) == T2
 
+
 def hostile_assist_hold(T1, o1, T2, o2):
     return (get_territory(o2['assist']) == get_territory(o1['target'])
             and not o2['target'])
 
+
 def hostile_assist_compete(T1, o1, T2, o2):
     return (get_territory(o2['assist']) != T1 and
             get_territory(o2['target']) == get_territory(o1['target']))
+
 
 def move_away(T1, o1, T2, o2):
     return (get_territory(o1['target']) == T2 and
@@ -49,9 +55,10 @@ DEPENDENCIES = {('C', 'M'): (attack_us,),
                 ('M', 'C'): (assist, hostile_assist_compete),
                 ('M', 'M'): (move_away,)}
 
+
 def construct_dependencies(orders):
     dep = defaultdict(list)
-    for (T1, o1), (T2, o2) in permutations(orders.iteritems(), 2):
+    for (T1, o1), (T2, o2) in permutations(orders.items(), 2):
         depend = False
         act1, act2 = o1['action'], o2['action']
         if (act1, act2) in DEPENDENCIES:

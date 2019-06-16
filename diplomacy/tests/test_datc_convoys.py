@@ -22,7 +22,7 @@ class Convoys(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = {
             pname: factories.GovernmentFactory(game=self.game, power=p)
-            for p, pname in standard.powers.iteritems()
+            for p, pname in standard.powers.items()
         }
         self.governments['Austria'] = self.governments['Austria-Hungary']
 
@@ -886,7 +886,7 @@ class Convoys(TestCase):
                   "France": ("F Irish Sea S F Mid-Atlantic Ocean"
                              " - North Atlantic Ocean",
                              "F Mid-Atlantic Ocean M North Atlantic Ocean"),
-                  "England": ("A Liverpool M Clyde *", # via convoy
+                  "England": ("A Liverpool M Clyde *",  # via convoy
                               "F North Atlantic Ocean C A Liverpool - Clyde",
                               "F Clyde S F North Atlantic Ocean")}
         create_orders(orders, T, self.governments)
@@ -1052,16 +1052,20 @@ class Convoys(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T, self.governments)
 
-        orders = {"England":
-                      ("F Edinburgh M North Sea",
-                       "F London S F Edinburgh - North Sea",
-                       "F Irish Sea M English Channel",
-                       "F Mid-Atlantic Ocean S F Irish Sea - English Channel"),
-                  "France": ("A Brest M London",
-                             "F English Channel C A Brest - London",
-                             "F Belgium S F English Channel"),
-                  "Russia": ("A Norway M Belgium",
-                             "F North Sea C A Norway - Belgium")}
+        orders = {
+            "England": (
+                "F Edinburgh M North Sea",
+                "F London S F Edinburgh - North Sea",
+                "F Irish Sea M English Channel",
+                "F Mid-Atlantic Ocean S F Irish Sea - English Channel"),
+            "France": (
+                "A Brest M London",
+                "F English Channel C A Brest - London",
+                "F Belgium S F English Channel"),
+            "Russia": (
+                "A Norway M Belgium",
+                "F North Sea C A Norway - Belgium")
+        }
         create_orders(orders, T, self.governments)
 
         units = T.get_units()
@@ -1119,7 +1123,7 @@ class ConvoyingToAdjacent(TestCase):
         self.turn = self.game.create_turn({'number': 0, 'year': 1900, 'season': 'S'})
         self.governments = {
             pname: factories.GovernmentFactory(game=self.game, power=p)
-            for p, pname in standard.powers.iteritems()
+            for p, pname in standard.powers.items()
         }
         self.governments['Austria'] = self.governments['Austria-Hungary']
 
@@ -1196,12 +1200,14 @@ class ConvoyingToAdjacent(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T, self.governments)
 
-        orders = {"France":
-                      ("F Brest M English Channel",
-                       "A Picardy M Belgium",
-                       "A Burgundy S A Picardy - Belgium",
-                       "F Mid-Atlantic Ocean S F Brest - English Channel"),
-                  "England": ("F English Channel C A Picardy - Belgium",)}
+        orders = {
+            "France": (
+                "F Brest M English Channel",
+                "A Picardy M Belgium",
+                "A Burgundy S A Picardy - Belgium",
+                "F Mid-Atlantic Ocean S F Brest - English Channel"),
+            "England": ("F English Channel C A Picardy - Belgium",)
+        }
         create_orders(orders, T, self.governments)
 
         units = T.get_units()
@@ -1237,13 +1243,16 @@ class ConvoyingToAdjacent(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T, self.governments)
 
-        orders = {"France":
-                      ("F Brest M English Channel",
-                       "A Picardy M Belgium",
-                       "A Burgundy S A Picardy - Belgium",
-                       "F Mid-Atlantic Ocean S F Brest - English Channel"),
-                 "England": ("F English Channel C A Picardy - Belgium",
-                             "A Belgium M Picardy")}
+        orders = {
+            "France": (
+                "F Brest M English Channel",
+                "A Picardy M Belgium",
+                "A Burgundy S A Picardy - Belgium",
+                "F Mid-Atlantic Ocean S F Brest - English Channel"),
+            "England": (
+                "F English Channel C A Picardy - Belgium",
+                "A Belgium M Picardy")
+        }
         create_orders(orders, T, self.governments)
 
         units = T.get_units()
@@ -1396,7 +1405,7 @@ class ConvoyingToAdjacent(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T, self.governments)
 
-        orders = {"France": ("A Belgium M Holland *",), # via convoy
+        orders = {"France": ("A Belgium M Holland *",),  # via convoy
                   "England": ("F North Sea M Helgoland Bight",
                               "A Holland M Kiel")}
         create_orders(orders, T, self.governments)
@@ -1463,7 +1472,7 @@ class ConvoyingToAdjacent(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T, self.governments)
 
-        orders = {"England": ("A Norway M Sweden *", # via convoy
+        orders = {"England": ("A Norway M Sweden *",  # via convoy
                               "F Denmark S A Norway - Sweden",
                               "F Finland S A Norway - Sweden"),
                   "Germany": ("F Skagerrak C A Norway - Sweden",),
@@ -1546,14 +1555,17 @@ class ConvoyingToAdjacent(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T, self.governments)
 
-        orders = {"England":
-                      ("A Liverpool M Edinburgh *", # via convoy
-                       "F North Atlantic Ocean C A Liverpool - Edinburgh",
-                       "F Norwegian Sea C A Liverpool - Edinburgh"),
-                  "Germany": ("A Edinburgh M Liverpool *", # via convoy
-                              "F North Sea C A Edinburgh - Liverpool",
-                              "F English Channel C A Edinburgh - Liverpool",
-                              "F Irish Sea C A Edinburgh - Liverpool")}
+        orders = {
+            "England": (
+                "A Liverpool M Edinburgh *",  # via convoy
+                "F North Atlantic Ocean C A Liverpool - Edinburgh",
+                "F Norwegian Sea C A Liverpool - Edinburgh"),
+            "Germany": (
+                "A Edinburgh M Liverpool *",  # via convoy
+                "F North Sea C A Edinburgh - Liverpool",
+                "F English Channel C A Edinburgh - Liverpool",
+                "F Irish Sea C A Edinburgh - Liverpool")
+        }
         create_orders(orders, T, self.governments)
 
         units = T.get_units()
@@ -1584,7 +1596,7 @@ class ConvoyingToAdjacent(TestCase):
         create_units(units, T, self.governments)
 
         orders = {"Austria": ("F Adriatic Sea C A Trieste - Venice",
-                              "A Trieste M Venice *"), # via convoy
+                              "A Trieste M Venice *"),  # via convoy
                   "Italy": ("A Venice S F Albania - Trieste",
                             "F Albania M Trieste")}
         create_orders(orders, T, self.governments)
@@ -1624,7 +1636,7 @@ class ConvoyingToAdjacent(TestCase):
                   "France": ("F Norwegian Sea M Norway",
                              "F North Sea S F Norwegian Sea - Norway"),
                   "Germany": ("F Skagerrak C A Sweden - Norway",),
-                  "Russia": ("A Sweden M Norway *", # via convoy
+                  "Russia": ("A Sweden M Norway *",  # via convoy
                              "F Barents Sea S A Sweden - Norway"),
                   }
         create_orders(orders, T, self.governments)
@@ -1665,9 +1677,9 @@ class ConvoyingToAdjacent(TestCase):
         orders = {"England": ("F North Sea C A London - Belgium",
                               "A Holland S A London - Belgium",
                               "A Yorkshire M London",
-                              "A London M Belgium *"), # via convoy
+                              "A London M Belgium *"),  # via convoy
                   "France": ("F English Channel C A Belgium - London",
-                             "A Belgium M London *")} # via convoy
+                             "A Belgium M London *")}  # via convoy
         create_orders(orders, T, self.governments)
 
         units = T.get_units()
@@ -1707,7 +1719,7 @@ class ConvoyingToAdjacent(TestCase):
                               "A Denmark S A Norway - Sweden",
                               "F Baltic Sea S A Norway - Sweden",
                               "F North Sea M Norway"),
-                  "Russia": ("A Sweden M Norway *", # via convoy
+                  "Russia": ("A Sweden M Norway *",  # via convoy
                              "F Skagerrak C A Sweden - Norway",
                              "F Norwegian Sea S A Sweden - Norway")}
         create_orders(orders, T, self.governments)
@@ -1748,7 +1760,7 @@ class ConvoyingToAdjacent(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T, self.governments)
 
-        orders = {"England": ("A Norway M Sweden *", # via convoy
+        orders = {"England": ("A Norway M Sweden *",  # via convoy
                               "A Denmark S A Norway - Sweden",
                               "F Baltic Sea S A Norway - Sweden",
                               "F Skagerrak C A Norway - Sweden",
