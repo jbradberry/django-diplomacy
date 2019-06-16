@@ -2,6 +2,9 @@
 Diplomacy
 =========
 
+.. image:: https://travis-ci.com/jbradberry/django-diplomacy.svg?branch=master
+    :target: https://travis-ci.com/jbradberry/django-diplomacy
+
 Diplomacy is a turn-based strategy game, set in Europe at the start of
 World War I.  Each player represents one of the seven European Great
 Powers.
