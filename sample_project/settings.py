@@ -2,7 +2,6 @@ import os
 
 
 DEBUG = True
-TEMPLATE_DEBUG = DEBUG
 
 DATABASES = {
     'default': {
@@ -39,6 +38,7 @@ STATICFILES_FINDERS = (
 SECRET_KEY = 'ej17g+om@63l!-j%f!@(7xzr!3nw8s4i+zizw%jmee*n1rho&amp;s'
 
 MIDDLEWARE_CLASSES = (
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -52,10 +52,13 @@ ROOT_URLCONF = 'sample_project.urls'
 
 WSGI_APPLICATION = 'sample_project.wsgi.application'
 
-TEMPLATE_DIRS = (
-    os.path.abspath(
-        os.path.join(os.path.curdir, 'sample_project', 'templates')),
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'APP_DIRS': True,
+        'DIRS': [os.path.abspath(os.path.join(os.path.curdir, 'sample_project', 'templates'))],
+    },
+]
 
 INSTALLED_APPS = (
     'django.contrib.auth',
