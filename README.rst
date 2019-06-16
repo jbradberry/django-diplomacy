@@ -16,7 +16,7 @@ Requirements
 ------------
 
 - Python 2.7, 3.5+
-- Django >= 1.8, < 2
+- Django >= 1.10, < 2
 
 
 Recommended
@@ -58,12 +58,9 @@ Also, be sure to include ``diplomacy.urls`` in your root urlconf.
 Example::
 
     from django.conf.urls import include, url
-    from django.contrib import admin
-    from django.contrib.auth.views import login
-
 
     urlpatterns = [
         url(r'^', include('diplomacy.urls')),
-        url(r'^admin/', include(admin.site.urls)),
-        url(r'^accounts/login/$', login),
+        url(r'^admin/', include('admin.site.urls')),
+        url(r'^accounts/', include('django.contrib.auth.urls'),
     ]

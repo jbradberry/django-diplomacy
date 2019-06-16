@@ -4,6 +4,7 @@ from random import shuffle
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.urls import reverse
 
 from .engine import standard
 from .engine.check import (valid_hold, valid_move, valid_support, valid_convoy,
@@ -63,9 +64,8 @@ class Game(models.Model):
     def __unicode__(self):
         return self.name
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('diplomacy_game_detail', (), {'slug': self.slug})
+        return reverse('diplomacy_game_detail', kwargs={'slug': self.slug})
 
     def governments(self, turn=None):
         gvts = self.government_set.all()
@@ -150,12 +150,15 @@ class Turn(models.Model):
     def __unicode__(self):
         return "{0} {1}".format(self.get_season_display(), self.year)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('diplomacy_turn_detail', (), {
-            'slug': self.game.slug,
-            'season': self.season,
-            'year': str(self.year),})
+        return reverse(
+            'diplomacy_turn_detail',
+            kwargs={
+                'slug': self.game.slug,
+                'season': self.season,
+                'year': str(self.year),
+            }
+        )
 
     def as_data(self):
         return {
