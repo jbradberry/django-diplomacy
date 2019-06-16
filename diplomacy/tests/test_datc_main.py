@@ -650,13 +650,13 @@ class CoastalIssues(TestCase):
         _, _, owns = initialize_game()
         T.create_ownership(owns)  # set up the proper ownership objects
 
-        T.game.generate() # SR 1900
+        T.game.generate()  # SR 1900
         T = T.game.current_turn()
-        T.game.generate() # F 1900
+        T.game.generate()  # F 1900
         T = T.game.current_turn()
-        T.game.generate() # FR 1900
+        T.game.generate()  # FR 1900
         T = T.game.current_turn()
-        T.game.generate() # FA 1900
+        T.game.generate()  # FA 1900
         T = T.game.current_turn()
 
         orders = {"Russia": ("F St. Petersburg B",)}
@@ -670,7 +670,7 @@ class CoastalIssues(TestCase):
         self.assertEqual(order['actor'], u'')
         self.assertTrue(is_legal(order, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 

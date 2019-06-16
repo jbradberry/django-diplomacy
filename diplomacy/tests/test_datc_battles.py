@@ -1725,7 +1725,7 @@ class HeadToHeadAndBeleagueredGarrison(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T, self.governments)
 
-        orders = {"France": ("A Spain M Portugal *", # * = via Convoy
+        orders = {"France": ("A Spain M Portugal *",  # * = via Convoy
                              "F Mid-Atlantic Ocean C A Spain - Portugal",
                              "F Gulf of Lyon S F Portugal - Spain (NC)"),
                   "Germany": ("A Marseilles S A Gascony - Spain",

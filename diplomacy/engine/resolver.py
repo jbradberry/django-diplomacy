@@ -66,8 +66,7 @@ def immediate_fails(orders, units):
         else:
             assist = orders[get_territory(o['assist'])]
             if o['target']:
-                if (assist['action'] == 'M' and
-                    assist['target'] == o['target']):
+                if assist['action'] == 'M' and assist['target'] == o['target']:
                     continue
             else:
                 if assist['action'] in ('H', 'C', 'S'):
@@ -217,10 +216,12 @@ def consistent_move(T, d, orders, fails, hold_str, attack_str, defend_str, preve
     target = get_territory(order['target'])
     move = True
     # Fail in a head-to-head attack
-    if (target in orders
+    if (
+        target in orders
         and head_to_head(T, order, target, orders[target],
                          convoy[T], convoy[target])
-        and attack_str[T] <= defend_str[target]):
+        and attack_str[T] <= defend_str[target]
+    ):
         move = False
     # Fail in a standard attack
     if attack_str[T] <= hold_str[target]:

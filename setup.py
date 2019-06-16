@@ -15,7 +15,9 @@ setuptools.setup(
     long_description_content_type='test/x-rst',
     url='http://github.com/jbradberry/django-diplomacy',
     packages=setuptools.find_packages(),
-    entry_points={'turngeneration.plugins': ['diplomacy = diplomacy.plugins:TurnGeneration'],},
+    entry_points={
+        'turngeneration.plugins': ['diplomacy = diplomacy.plugins:TurnGeneration'],
+    },
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',

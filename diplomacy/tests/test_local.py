@@ -37,9 +37,9 @@ class CorrectnessHelperTest(TestCase):
         units = {'England': ('F Mid-Atlantic Ocean',
                              'F English Channel',
                              'F Western Mediterranean',
-                             'F Spain (NC)',   # coastal, can't participate
-                             'F Ionian Sea',   # fake group
-                             'F Adriatic Sea', # fake group
+                             'F Spain (NC)',    # coastal, can't participate
+                             'F Ionian Sea',    # fake group
+                             'F Adriatic Sea',  # fake group
                              'F Baltic Sea',
                              'F Gulf of Bothnia',
                              'A Gascony',

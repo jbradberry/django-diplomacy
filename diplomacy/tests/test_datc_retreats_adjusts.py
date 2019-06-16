@@ -567,7 +567,7 @@ class Retreating(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T, self.governments)
 
-        orders = {"France": ("A Gascony M Marseilles *", # via convoy
+        orders = {"France": ("A Gascony M Marseilles *",  # via convoy
                              "A Burgundy S A Gascony - Marseilles",
                              "F Mid-Atlantic Ocean C A Gascony - Marseilles",
                              "F Western Mediterranean C A Gascony - Marseilles",
@@ -623,7 +623,7 @@ class Retreating(TestCase):
         T = models.Turn.objects.get()
         create_units(units, T, self.governments)
 
-        orders = {"England": ("A Liverpool M Edinburgh *", # via convoy
+        orders = {"England": ("A Liverpool M Edinburgh *",  # via convoy
                               "F Irish Sea C A Liverpool - Edinburgh",
                               "F English Channel C A Liverpool - Edinburgh",
                               "F North Sea C A Liverpool - Edinburgh"),
@@ -631,7 +631,7 @@ class Retreating(TestCase):
                       ("F Brest M English Channel",
                        "F Mid-Atlantic Ocean S F Brest - English Channel"),
                   "Russia":
-                      ("A Edinburgh M Liverpool *", # via convoy
+                      ("A Edinburgh M Liverpool *",  # via convoy
                        "F Norwegian Sea C A Edinburgh - Liverpool",
                        "F North Atlantic Ocean C A Edinburgh - Liverpool",
                        "A Clyde S A Edinburgh - Liverpool")}
@@ -934,7 +934,7 @@ class Building(TestCase):
             else:
                 self.assertTrue(is_legal(o, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -966,7 +966,7 @@ class Building(TestCase):
         order = T.get_orders()[0]
         self.assertTrue(is_legal(order, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
 
         self.assertEqual(
@@ -991,7 +991,7 @@ class Building(TestCase):
         order = T.get_orders()[0]
         self.assertFalse(is_legal(order, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
 
         self.assertEqual(
@@ -1011,7 +1011,7 @@ class Building(TestCase):
         order = T.get_orders()[0]
         self.assertFalse(is_legal(order, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
 
         self.assertEqual(
@@ -1035,7 +1035,7 @@ class Building(TestCase):
         order = T.get_orders()[0]
         self.assertFalse(is_legal(order, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
 
         self.assertEqual(
@@ -1055,7 +1055,7 @@ class Building(TestCase):
         order = T.get_orders()[0]
         self.assertFalse(is_legal(order, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
 
         self.assertEqual(
@@ -1075,7 +1075,7 @@ class Building(TestCase):
         for o in orders:
             self.assertTrue(is_legal(o, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
         self.assertEqual(
@@ -1126,7 +1126,7 @@ class CivilDisorderAndDisbands(TestCase):
             else:
                 self.assertFalse(is_legal(o, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -1158,7 +1158,7 @@ class CivilDisorderAndDisbands(TestCase):
         for o in orders:
             self.assertTrue(is_legal(o, units, owns, T.season))
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -1180,7 +1180,7 @@ class CivilDisorderAndDisbands(TestCase):
         units = {"Russia": ("A Livonia", "A Sweden")}
         create_units(units, T, self.governments)
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -1202,7 +1202,7 @@ class CivilDisorderAndDisbands(TestCase):
         units = {"Russia": ("A Livonia", "A Ukraine")}
         create_units(units, T, self.governments)
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -1224,7 +1224,7 @@ class CivilDisorderAndDisbands(TestCase):
         units = {"Russia": ("F Skagerrak", "F Berlin")}
         create_units(units, T, self.governments)
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -1246,7 +1246,7 @@ class CivilDisorderAndDisbands(TestCase):
         units = {"Russia": ("F Berlin", "F Helgoland Bight")}
         create_units(units, T, self.governments)
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -1269,7 +1269,7 @@ class CivilDisorderAndDisbands(TestCase):
         units = {"Russia": ("A Bohemia", "F Skagerrak", "F North Sea")}
         create_units(units, T, self.governments)
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -1296,7 +1296,7 @@ class CivilDisorderAndDisbands(TestCase):
         units = {"Russia": ("A Tyrolia", "F Baltic Sea")}
         create_units(units, T, self.governments)
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -1318,7 +1318,7 @@ class CivilDisorderAndDisbands(TestCase):
         units = {"Russia": ("A Tyrolia", "F Skagerrak")}
         create_units(units, T, self.governments)
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -1341,7 +1341,7 @@ class CivilDisorderAndDisbands(TestCase):
         units = {"Italy": ("F Ionian Sea", "A Greece", "A Silesia")}
         create_units(units, T, self.governments)
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 
@@ -1368,7 +1368,7 @@ class CivilDisorderAndDisbands(TestCase):
         units = {"Italy": ("A Greece", "A Silesia")}
         create_units(units, T, self.governments)
 
-        T.game.generate() # S 1901
+        T.game.generate()  # S 1901
         T = T.game.current_turn()
         units = T.get_units()
 

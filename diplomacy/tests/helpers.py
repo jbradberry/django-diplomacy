@@ -52,6 +52,7 @@ def get_subregion(territory, subname, sr_type, strict=False, **kwargs):
         return result[0]
     return u''
 
+
 def parse(unitstr):
     unit = {}
     match = unitRE.match(unitstr)
@@ -62,6 +63,7 @@ def parse(unitstr):
         if match:
             unit.update(**match.groupdict(''))
     return unit
+
 
 def create_units(units, turn, governments):
     parsed = (
@@ -78,6 +80,7 @@ def create_units(units, turn, governments):
                                             udict.get('sr_type', '')))
         for gvt, u_type, udict in parsed
     ])
+
 
 def create_orders(orders, turn, governments):
     order_posts = {
